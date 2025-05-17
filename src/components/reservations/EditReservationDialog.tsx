@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "react-hook-form";
+import { Label } from "@/components/ui/label"; // Fixed import
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useReservation, Reservation } from "@/context/ReservationContext";
