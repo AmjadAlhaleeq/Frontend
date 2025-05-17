@@ -7,6 +7,15 @@ type JoinedPlayer = {
   position?: number;
 };
 
+type Highlight = {
+  id: number;
+  minute: number;
+  type: "goal" | "assist" | "yellowCard" | "redCard";
+  playerId: string;
+  playerName: string;
+  description?: string;
+};
+
 const initialReservationsData = [
   {
     id: 1,
@@ -18,7 +27,8 @@ const initialReservationsData = [
     location: "Downtown, Football City",
     price: 25,
     status: "open",
-    joinedPlayers: [{ userId: "user1", position: 8 }]
+    joinedPlayers: [{ userId: "user1", position: 8 }],
+    highlights: []
   },
   {
     id: 2,
@@ -30,7 +40,8 @@ const initialReservationsData = [
     location: "Eastside, Football City",
     price: 30,
     status: "full",
-    joinedPlayers: []
+    joinedPlayers: [],
+    highlights: []
   },
   {
     id: 3,
@@ -42,7 +53,8 @@ const initialReservationsData = [
     location: "Northside, Football City",
     price: 40,
     status: "open",
-    joinedPlayers: []
+    joinedPlayers: [],
+    highlights: []
   },
   {
     id: 4,
@@ -54,7 +66,37 @@ const initialReservationsData = [
     location: "Westside, Football City",
     price: 20,
     status: "completed",
-    joinedPlayers: [{ userId: "user1", position: 8 }]
+    joinedPlayers: [{ userId: "user1", position: 8 }],
+    highlights: [
+      {
+        id: 1,
+        minute: 14,
+        type: "goal",
+        playerId: "player1",
+        playerName: "John D."
+      },
+      {
+        id: 2,
+        minute: 32,
+        type: "yellowCard",
+        playerId: "player2",
+        playerName: "Michael S."
+      },
+      {
+        id: 3,
+        minute: 47,
+        type: "goal",
+        playerId: "player3",
+        playerName: "Sarah L."
+      },
+      {
+        id: 4,
+        minute: 63,
+        type: "goal",
+        playerId: "player4",
+        playerName: "Alex P."
+      }
+    ]
   },
   {
     id: 5,
@@ -66,7 +108,8 @@ const initialReservationsData = [
     location: "Downtown, Football City",
     price: 25,
     status: "completed",
-    joinedPlayers: []
+    joinedPlayers: [],
+    highlights: []
   },
 ];
 
@@ -81,6 +124,7 @@ export interface Reservation {
   price: number;
   status: "open" | "full" | "started" | "completed";
   joinedPlayers: JoinedPlayer[];
+  highlights: Highlight[];
 }
 
 interface ReservationContextType {
@@ -94,9 +138,11 @@ interface ReservationContextType {
   getReservationsForDate: (date: Date) => Reservation[];
   getReservationsForPitch: (pitchName: string) => Reservation[];
   getUserReservations: () => Reservation[];
-  addReservation: (reservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'joinedPlayers'>) => void;
+  addReservation: (reservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'joinedPlayers' | 'highlights'>) => void;
   deleteReservation: (id: number) => void;
   editReservation: (id: number, updatedData: Partial<Reservation>) => void;
+  addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
+  removeHighlight: (reservationId: number, highlightId: number) => void;
 }
 
 const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
@@ -280,7 +326,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return reservations.filter(r => r.joinedPlayers.some(p => p.userId === currentUser));
   };
 
-  const addReservation = (newReservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'joinedPlayers'>) => {
+  const addReservation = (newReservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'joinedPlayers' | 'highlights'>) => {
     const newId = Math.max(...reservations.map(r => r.id), 0) + 1;
     
     setReservations(prevReservations => [
@@ -290,7 +336,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         id: newId,
         status: "open",
         playersJoined: 0,
-        joinedPlayers: []
+        joinedPlayers: [],
+        highlights: []
       }
     ]);
     
@@ -337,6 +384,56 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   };
 
+  // New functions to manage highlights
+  const addHighlight = (reservationId: number, highlight: Omit<Highlight, 'id'>) => {
+    setReservations(prevReservations => {
+      return prevReservations.map(reservation => {
+        if (reservation.id === reservationId) {
+          const newHighlightId = reservation.highlights.length > 0 
+            ? Math.max(...reservation.highlights.map(h => h.id)) + 1 
+            : 1;
+            
+          const newHighlight = {
+            ...highlight,
+            id: newHighlightId
+          };
+          
+          toast({
+            title: "Highlight Added",
+            description: `${highlight.type === 'goal' ? 'Goal' : 'Event'} at ${highlight.minute}' has been added.`,
+            duration: 3000,
+          });
+          
+          return {
+            ...reservation,
+            highlights: [...reservation.highlights, newHighlight]
+          };
+        }
+        return reservation;
+      });
+    });
+  };
+  
+  const removeHighlight = (reservationId: number, highlightId: number) => {
+    setReservations(prevReservations => {
+      return prevReservations.map(reservation => {
+        if (reservation.id === reservationId) {
+          toast({
+            title: "Highlight Removed",
+            description: "The highlight has been removed.",
+            duration: 3000,
+          });
+          
+          return {
+            ...reservation,
+            highlights: reservation.highlights.filter(h => h.id !== highlightId)
+          };
+        }
+        return reservation;
+      });
+    });
+  };
+
   return (
     <ReservationContext.Provider value={{ 
       reservations, 
@@ -351,7 +448,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       getUserReservations,
       addReservation,
       deleteReservation,
-      editReservation
+      editReservation,
+      addHighlight,
+      removeHighlight
     }}>
       {children}
     </ReservationContext.Provider>
