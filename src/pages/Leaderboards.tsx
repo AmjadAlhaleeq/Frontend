@@ -1,3 +1,4 @@
+
 // This is the Leaderboards.tsx page. It handles UI and logic for Leaderboards.
 
 import { useState } from "react";
@@ -87,7 +88,7 @@ const Leaderboards = () => {
       <Tabs
         defaultValue="current"
         value={season}
-        onValueChange={(val) => setSeason(val)}
+        onValueChange={(val: "current" | "last") => setSeason(val)}
         className="w-full"
       >
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -201,6 +202,9 @@ const Leaderboards = () => {
                           </div>
                           <div className="flex-1">
                             <h4 className="font-medium">{player.name}</h4>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Matches played: {player.gamesPlayed}
+                            </div>
                           </div>
                           <div className="text-right">
                             <div className="flex items-center justify-end gap-1">

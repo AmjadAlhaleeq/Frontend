@@ -1,6 +1,7 @@
+
 import { faker } from "@faker-js/faker";
 
-export interface Player {
+export type Player = {
   id: number;
   name: string;
   avatar: string;
@@ -9,59 +10,45 @@ export interface Player {
   losses: number;
   goalsScored: number;
   assists: number;
-  gamesPlayed: number; // total matches
+  gamesPlayed: number;
   achievements: string[];
   mvps: number;
   winRate: number;
-  cleanSheets: number; // NEW
-  tackles: number; // NEW
-  status: "active" | "inactive"; // NEW
-}
+  cleanSheets: number;
+  tackles: number;
+  status: "active" | "inactive";
+};
 
-const achievements = [
-  "MVP",
-  "Top Scorer",
-  "Hat-trick Hero",
-  "Top Assists",
-  "Team Player",
-  "Defensive Rock",
-  "Iron Man",
-  "Rising Star",
-  "Most Improved",
-  "Golden Boot",
-  "Playmaker",
-  "Clean Sheet King",
-  "Goal Machine",
-  "Midfield Maestro",
-  "Speed Demon",
-];
-
-export const generateRandomPlayers = (count: number): Player[] => {
-  return Array.from({ length: count }, (_, index) => {
-    const wins = faker.number.int({ min: 10, max: 45 });
-    const losses = faker.number.int({ min: 5, max: 20 });
-    const gamesPlayed = wins + losses;
-    const winRate = Number(((wins / gamesPlayed) * 100).toFixed(1));
-
+/**
+ * Generates a specified number of random player profiles
+ * @param count Number of players to generate
+ * @returns Array of player objects
+ */
+export function generateRandomPlayers(count: number): Player[] {
+  return Array.from({ length: count }).map((_, index) => {
+    const gamesPlayed = faker.number.int({ min: 10, max: 50 });
+    const wins = faker.number.int({ min: 0, max: gamesPlayed });
+    const losses = faker.number.int({ min: 0, max: gamesPlayed - wins });
+    const winRate = Math.round((wins / gamesPlayed) * 100);
+    
     return {
       id: index + 1,
       name: faker.person.fullName(),
-      avatar: faker.image.avatar(),
-      points: faker.number.int({ min: 500, max: 2000 }),
+      avatar: faker.image.urlLoremFlickr({ category: 'people', width: 128, height: 128 }),
+      points: faker.number.int({ min: 100, max: 1000 }),
       wins,
       losses,
-      goalsScored: faker.number.int({ min: 5, max: 50 }),
-      assists: faker.number.int({ min: 3, max: 40 }),
+      goalsScored: faker.number.int({ min: 0, max: 30 }),
+      assists: faker.number.int({ min: 0, max: 25 }),
       gamesPlayed,
-      achievements: faker.helpers.arrayElements(achievements, {
-        min: 0,
-        max: 3,
-      }),
-      mvps: faker.number.int({ min: 0, max: 15 }),
+      achievements: Array.from({ length: faker.number.int({ min: 0, max: 5 }) }).map(() => 
+        faker.helpers.arrayElement(['Top Scorer', 'MVP', 'Clean Sheet', 'Hat-trick', 'Team Captain', 'Best Defender'])
+      ),
+      mvps: faker.number.int({ min: 0, max: 10 }),
       winRate,
-      cleanSheets: faker.number.int({ min: 0, max: 20 }), // random clean sheets
-      tackles: faker.number.int({ min: 10, max: 100 }), // random tackles
-      status: Math.random() > 0.2 ? "active" : "inactive", // 80% active
+      cleanSheets: faker.number.int({ min: 0, max: 15 }),
+      tackles: faker.number.int({ min: 5, max: 50 }),
+      status: faker.helpers.arrayElement(['active', 'inactive']) as "active" | "inactive"
     };
-  }).sort((a, b) => b.points - a.points);
-};
+  });
+}

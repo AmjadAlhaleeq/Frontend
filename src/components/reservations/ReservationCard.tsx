@@ -18,7 +18,6 @@ interface ReservationCardProps {
   onJoinWaitingList?: (id: number) => void;
   isUserJoined?: boolean;
   hasUserJoinedOnDate?: (date: string) => boolean;
-  onShowLineup?: () => void;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -102,12 +101,22 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      "Are you sure you want to delete this reservation?"
-                    )
-                  ) {
-                    deleteReservation(reservation.id);
+                  if (type === "past") {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to delete this past reservation?"
+                      )
+                    ) {
+                      deleteReservation(reservation.id);
+                    }
+                  } else {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to delete this reservation?"
+                      )
+                    ) {
+                      deleteReservation(reservation.id);
+                    }
                   }
                 }}
                 className="text-red-500 border-red-200 hover:bg-red-50"
@@ -198,8 +207,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                   ? "Already Joined"
                   : userAlreadyJoinedOnDate
                   ? "Already Booked Today"
-                  : reservation.status === "full"
-                  ? "Join Waiting List"
                   : "Join Game"}
               </Button>
             </div>
