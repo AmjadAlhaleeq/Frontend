@@ -404,29 +404,29 @@ const getFacilityIcon = (facilityName: string): JSX.Element => {
   const lowerFacilityName = facilityName.toLowerCase();
   switch (lowerFacilityName) {
     case "showers":
-      return <ShowerHead size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <ShowerHead size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "parking":
     case "free parking":
-      return <ParkingCircle size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <ParkingCircle size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "wifi":
-      return <Wifi size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <Wifi size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "gym":
-      return <Dumbbell size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <Dumbbell size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "changing rooms":
     case "public restrooms":
     case "professional locker rooms":
-      return <Users size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <Users size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "water fountains":
-      return <Droplets size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <Droplets size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "cafe":
-       return <Coffee size={18} className="text-[#0F766E]" title={facilityName} />;
+       return <Coffee size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "equipment rental":
-       return <Wrench size={18} className="text-[#0F766E]" title={facilityName} />;
+       return <Wrench size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "picnic area":
-       return <Utensils size={18} className="text-[#0F766E]" title={facilityName} />;
+       return <Utensils size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     // Add more specific cases as needed from allowed icons or common ones
     default:
-      return <CheckCircle size={18} className="text-[#0F766E]" title={facilityName} />;
+      return <CheckCircle size={18} className="text-[#0F766E]" aria-label={facilityName} />;
   }
 };
 
