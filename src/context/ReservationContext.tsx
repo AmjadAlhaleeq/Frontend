@@ -33,6 +33,7 @@ export interface Reservation {
   waitingList: string[]; // Array of userIds
   lineup: Player[];
   highlights: Highlight[];
+  imageUrl?: string; // Added imageUrl property
   // adminId?: string; // Optional: if you want to associate an admin with a reservation
 }
 
@@ -64,8 +65,8 @@ interface ReservationContextType {
   pitches: Pitch[];
   addPitch: (pitchData: NewPitchData) => void;
   deletePitch: (pitchId: number) => void;
-  addReservation: (reservationData: NewReservationData) => void; // Added
-  deleteReservation: (reservationId: number) => void; // Added
+  addReservation: (reservationData: NewReservationData) => void; 
+  deleteReservation: (reservationId: number) => void; 
   joinGame: (id: number, position?: number, userId?: string) => void;
   cancelReservation: (id: number, userId?: string) => void;
   joinWaitingList: (id: number, userId?: string) => void;
@@ -79,10 +80,10 @@ interface ReservationContextType {
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   editHighlight: (reservationId: number, highlightId: number, updatedHighlight: Partial<Omit<Highlight, 'id'>>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
-  isUserJoined: (reservationId: number, userId?: string) => boolean; // Added
-  hasUserJoinedOnDate: (date: string, userId?: string) => boolean; // Added
-  getReservationsForDate: (targetDate: Date) => Reservation[]; // Added
-  getUserReservations: (userId: string) => Reservation[]; // Added
+  isUserJoined: (reservationId: number, userId?: string) => boolean; 
+  hasUserJoinedOnDate: (date: string, userId?: string) => boolean; 
+  getReservationsForDate: (targetDate: Date) => Reservation[]; 
+  getUserReservations: (userId: string) => Reservation[]; 
 }
 
 // ... keep existing code (Pitch interface, initialPitchesData)
@@ -175,8 +176,17 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (savedReservations) {
       try {
         const parsed = JSON.parse(savedReservations);
-        // Basic validation to ensure it's an array
-        return Array.isArray(parsed) ? parsed : initialReservationsData;
+        if (Array.isArray(parsed)) {
+          // Ensure each reservation has lineup and highlights initialized
+          return parsed.map((res: any) => ({
+            ...res,
+            lineup: Array.isArray(res.lineup) ? res.lineup : Array.from({ length: res.maxPlayers || 0 }, (_, i) => ({ id: i, status: 'empty' })),
+            highlights: Array.isArray(res.highlights) ? res.highlights : [],
+            // Ensure imageUrl is carried over if present, or defaults if logic requires
+            imageUrl: res.imageUrl || undefined, 
+          }));
+        }
+        return initialReservationsData;
       } catch (error) {
         console.error("Error parsing reservations from localStorage:", error);
         return initialReservationsData;
@@ -248,7 +258,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const newId = prev.length > 0 ? Math.max(...prev.map(r => r.id)) + 1 : 1;
       const newReservation: Reservation = {
         id: newId,
-        ...reservationData,
+        ...reservationData, // Spreads imageUrl if present in reservationData
         playersJoined: 0,
         status: 'open',
         waitingList: [],
@@ -465,13 +475,13 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const isUserJoined = (reservationId: number, userId: string = "user1"): boolean => {
     const reservation = reservations.find(r => r.id === reservationId);
-    return reservation ? reservation.lineup.some(p => p.userId === userId && p.status === 'joined') : false;
+    return reservation ? (reservation.lineup || []).some(p => p.userId === userId && p.status === 'joined') : false;
   };
 
   const hasUserJoinedOnDate = (date: string, userId: string = "user1"): boolean => {
     return reservations.some(res => 
       res.date === date && 
-      res.lineup.some(p => p.userId === userId && p.status === 'joined') &&
+      (res.lineup || []).some(p => p.userId === userId && p.status === 'joined') &&
       res.status !== 'completed' && res.status !== 'cancelled'
     );
   };
@@ -483,7 +493,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const getUserReservations = (userId: string): Reservation[] => {
     return reservations.filter(res => 
-      res.lineup.some(p => p.userId === userId && p.status === 'joined')
+      (res.lineup || []).some(p => p.userId === userId && p.status === 'joined')
     );
   };
 

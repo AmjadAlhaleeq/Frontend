@@ -265,8 +265,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         onOpenChange={setShowCancelDialog}
         onConfirm={handleCancelConfirm}
         pitchName={reservation.pitchName}
-        reservationTime={reservation.time}
-        reservationDate={reservation.date}
+        time={reservation.time} {/* Changed from reservationTime to time */}
+        date={reservation.date} {/* Renamed from reservationDate to date (assuming dialog expects 'date') */}
       />
     </div>
   );
