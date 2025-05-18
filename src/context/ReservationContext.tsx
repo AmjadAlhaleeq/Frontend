@@ -16,100 +16,148 @@ type Highlight = {
   description?: string;
 };
 
-const initialReservationsData = [
+// Define the Pitch interface
+export interface Pitch {
+  id: number;
+  name: string;
+  image: string;
+  location: string;
+  rating: number;
+  features: string[];
+  playersPerSide: number;
+  isAdmin: boolean; // This can be used to control edit/delete privileges later
+  details: {
+    description: string;
+    openingHours: string;
+    address: string; // Detailed address, can be same as location for new pitches
+    price: string; // e.g., "$25 per hour"
+    facilities: string[];
+    surfaceType: string;
+    pitchSize: string;
+    rules: string[];
+  };
+}
+
+// Initial pitch data, moved from Pitches.tsx
+const initialPitchesData: Pitch[] = [
   {
     id: 1,
-    pitchName: "Green Valley Pitch",
-    date: "2025-04-15",
-    time: "18:00 - 19:30",
-    playersJoined: 7,
-    maxPlayers: 10,
+    name: "Green Valley Pitch",
+    image:
+      "https://images.unsplash.com/photo-1459865264687-595d652de67e?q=80&w=500&auto=format&fit=crop",
     location: "Downtown, Football City",
-    price: 25,
-    status: "open",
-    joinedPlayers: [{ userId: "user1", position: 8 }],
-    highlights: []
+    rating: 4.8,
+    features: ["Indoor", "Floodlights", "Changing Rooms"],
+    playersPerSide: 5,
+    isAdmin: true,
+    details: {
+      description:
+        "Premier indoor football facility with high-quality artificial turf and state-of-the-art lighting system.",
+      openingHours: "Mon-Fri: 8:00 - 22:00, Sat-Sun: 9:00 - 20:00",
+      address: "123 Main St, Downtown, Football City",
+      price: "$25 per hour",
+      facilities: [
+        "Changing Rooms",
+        "Showers",
+        "Parking",
+        "Cafe",
+        "Equipment Rental",
+        "Wifi",
+      ],
+      surfaceType: "Premium Artificial Turf (FIFA Quality Pro)",
+      pitchSize: "40m x 20m",
+      rules: [
+        "No smoking",
+        "Clean football boots only",
+        "No food on the pitch",
+      ],
+    },
   },
   {
     id: 2,
-    pitchName: "Central Park Field",
-    date: "2025-04-16",
-    time: "19:00 - 20:30",
-    playersJoined: 14,
-    maxPlayers: 14,
+    name: "Central Park Field",
+    image:
+      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?q=80&w=500&auto=format&fit=crop",
     location: "Eastside, Football City",
-    price: 30,
-    status: "full",
-    joinedPlayers: [],
-    highlights: []
+    rating: 4.5,
+    features: ["Outdoor", "Floodlights", "Parking"],
+    playersPerSide: 7,
+    isAdmin: false,
+    details: {
+      description:
+        "Natural grass pitch located in the heart of Central Park. Perfect for casual games and amateur leagues.",
+      openingHours: "Open daily: 7:00 - 22:00",
+      address: "Central Park, Eastside, Football City",
+      price: "$30 per hour",
+      facilities: ["Public Restrooms", "Water Fountains", "Picnic Area", "Gym"],
+      surfaceType: "Natural Grass",
+      pitchSize: "60m x 40m",
+      rules: [
+        "No cleats on wet ground",
+        "Public use priority on weekends",
+        "No private coaching without permit",
+      ],
+    },
   },
   {
     id: 3,
-    pitchName: "Stadium Pro",
-    date: "2025-04-18",
-    time: "17:30 - 19:00",
-    playersJoined: 8,
-    maxPlayers: 22,
+    name: "Stadium Pro",
+    image:
+      "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=500&auto=format&fit=crop",
     location: "Northside, Football City",
-    price: 40,
-    status: "open",
-    joinedPlayers: [],
-    highlights: []
+    rating: 4.9,
+    features: ["Indoor", "Changing Rooms", "Cafeteria"],
+    playersPerSide: 11,
+    isAdmin: true,
+    details: {
+      description:
+        "Professional-grade stadium with full-size pitch. Used by local professional teams for training and matches.",
+      openingHours: "By reservation only",
+      address: "55 Stadium Road, Northside, Football City",
+      price: "$40 per hour",
+      facilities: [
+        "Professional Locker Rooms",
+        "Media Room",
+        "VIP Boxes",
+        "Medical Staff",
+        "Performance Analysis",
+        "Showers",
+        "Wifi"
+      ],
+      surfaceType: "Hybrid Grass (Natural + Artificial)",
+      pitchSize: "105m x 68m (Full Size)",
+      rules: [
+        "Professional conduct required",
+        "Referee mandatory for matches",
+        "No unauthorized media",
+      ],
+    },
   },
   {
     id: 4,
-    pitchName: "Riverside Turf",
-    date: "2025-04-12",
-    time: "14:00 - 15:30",
-    playersJoined: 10,
-    maxPlayers: 10,
+    name: "Riverside Turf",
+    image:
+      "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=500&auto=format&fit=crop",
     location: "Westside, Football City",
-    price: 20,
-    status: "completed",
-    joinedPlayers: [{ userId: "user1", position: 8 }],
-    highlights: [
-      {
-        id: 1,
-        minute: 14,
-        type: "goal",
-        playerId: "player1",
-        playerName: "John D."
-      },
-      {
-        id: 2,
-        minute: 32,
-        type: "yellowCard",
-        playerId: "player2",
-        playerName: "Michael S."
-      },
-      {
-        id: 3,
-        minute: 47,
-        type: "goal",
-        playerId: "player3",
-        playerName: "Sarah L."
-      },
-      {
-        id: 4,
-        minute: 63,
-        type: "goal",
-        playerId: "player4",
-        playerName: "Alex P."
-      }
-    ]
-  },
-  {
-    id: 5,
-    pitchName: "Green Valley Pitch",
-    date: "2025-04-10",
-    time: "18:00 - 19:30",
-    playersJoined: 8,
-    maxPlayers: 10,
-    location: "Downtown, Football City",
-    price: 25,
-    status: "completed",
-    joinedPlayers: [],
-    highlights: []
+    rating: 4.2,
+    features: ["Outdoor", "Artificial Grass", "Parking"],
+    playersPerSide: 5,
+    isAdmin: false,
+    details: {
+      description:
+        "Convenient 5-a-side pitches with beautiful riverside views. Popular for after-work leagues.",
+      openingHours: "Mon-Fri: 16:00 - 22:00, Sat-Sun: 10:00 - 22:00",
+      address: "78 River Road, Westside, Football City",
+      price: "$20 per hour",
+      facilities: ["Changing Rooms", "Bar", "Spectator Area", "Free Parking"],
+      surfaceType: "3G Artificial Turf",
+      pitchSize: "30m x 20m",
+      rules: [
+        "No alcohol on pitches",
+        "Maximum 7 players per team",
+        "Flat-soled or turf shoes only",
+      ],
+    },
   },
 ];
 
@@ -129,6 +177,8 @@ export interface Reservation {
 
 interface ReservationContextType {
   reservations: Reservation[];
+  pitches: Pitch[]; // Add pitches state
+  addPitch: (pitchData: Omit<Pitch, 'id' | 'rating' | 'features' | 'isAdmin' | 'details'> & { playersPerSide: string; price: string; description: string; openingHours: string; surfaceType: string; pitchSize: string; }) => void; // Function to add a new pitch
   joinGame: (id: number, position?: number) => void;
   cancelReservation: (id: number) => void;
   joinWaitingList: (id: number) => void;
@@ -160,14 +210,25 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const savedReservations = localStorage.getItem("reservations");
     return savedReservations ? JSON.parse(savedReservations) : initialReservationsData;
   });
+
+  // Add state for pitches, initialized from localStorage or initialPitchesData
+  const [pitches, setPitches] = useState<Pitch[]>(() => {
+    const savedPitches = localStorage.getItem("pitches");
+    return savedPitches ? JSON.parse(savedPitches) : initialPitchesData;
+  });
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const currentUser = "user1";
+  const currentUser = "user1"; // Assuming admin adds pitches
 
   useEffect(() => {
     localStorage.setItem("reservations", JSON.stringify(reservations));
   }, [reservations]);
+
+  // Persist pitches to localStorage
+  useEffect(() => {
+    localStorage.setItem("pitches", JSON.stringify(pitches));
+  }, [pitches]);
 
   const hasUserJoinedOnDate = (date: string) => {
     return reservations.some(reservation => 
@@ -434,9 +495,44 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   };
 
+  // Function to add a new pitch
+  const addPitch = (newPitchData: Omit<Pitch, 'id' | 'rating' | 'features' | 'isAdmin' | 'details'> & { playersPerSide: string; price: string; description: string; openingHours: string; surfaceType: string; pitchSize: string; }) => {
+    setPitches(prevPitches => {
+      const newId = prevPitches.length > 0 ? Math.max(...prevPitches.map(p => p.id)) + 1 : 1;
+      const newPitch: Pitch = {
+        id: newId,
+        name: newPitchData.name,
+        location: newPitchData.location,
+        image: newPitchData.image,
+        playersPerSide: parseInt(newPitchData.playersPerSide, 10) || 5, // Convert to number, default to 5
+        rating: 0, // Default rating for new pitches
+        features: [], // Default empty features
+        isAdmin: true, // Assuming admin adds this pitch
+        details: {
+          description: newPitchData.description,
+          openingHours: newPitchData.openingHours,
+          address: newPitchData.location, // Use location as address for simplicity
+          price: newPitchData.price, // Already a string
+          facilities: [], // Default empty facilities
+          surfaceType: newPitchData.surfaceType,
+          pitchSize: newPitchData.pitchSize,
+          rules: [], // Default empty rules
+        }
+      };
+      toast({
+        title: "Pitch Added",
+        description: `${newPitch.name} has been successfully added.`,
+        duration: 3000,
+      });
+      return [...prevPitches, newPitch];
+    });
+  };
+
   return (
     <ReservationContext.Provider value={{ 
       reservations, 
+      pitches, // Expose pitches
+      addPitch, // Expose addPitch
       joinGame,
       cancelReservation,
       joinWaitingList, 

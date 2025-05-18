@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { useReservation } from "@/context/ReservationContext";
 
 const AddPitch = () => {
   const [pitchData, setPitchData] = useState({
@@ -20,18 +19,27 @@ const AddPitch = () => {
     pitchSize: "",
   });
 
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { addPitch } = useReservation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Here you would typically make an API call to save the pitch
-    // For now, we'll just show a success message
-    toast({
-      title: "Success",
-      description: "New pitch has been added successfully!",
-      duration: 3000,
+    if (!pitchData.name || !pitchData.location || !pitchData.playersPerSide || !pitchData.price) {
+      console.error("Form validation failed: Please fill all required fields.");
+      return;
+    }
+
+    addPitch({
+        name: pitchData.name,
+        location: pitchData.location,
+        image: pitchData.image,
+        playersPerSide: pitchData.playersPerSide,
+        description: pitchData.description,
+        openingHours: pitchData.openingHours,
+        price: pitchData.price,
+        surfaceType: pitchData.surfaceType,
+        pitchSize: pitchData.pitchSize,
     });
     
     navigate('/pitches');
@@ -60,6 +68,7 @@ const AddPitch = () => {
                 value={pitchData.name}
                 onChange={handleChange}
                 required
+                placeholder="e.g., Community Football Arena"
               />
             </div>
             
@@ -71,6 +80,7 @@ const AddPitch = () => {
                 value={pitchData.location}
                 onChange={handleChange}
                 required
+                placeholder="e.g., City Park, North Entrance"
               />
             </div>
             
@@ -82,6 +92,7 @@ const AddPitch = () => {
                 value={pitchData.image}
                 onChange={handleChange}
                 required
+                placeholder="https://example.com/pitch-image.jpg"
               />
             </div>
             
@@ -94,6 +105,7 @@ const AddPitch = () => {
                 value={pitchData.playersPerSide}
                 onChange={handleChange}
                 required
+                placeholder="e.g., 5"
               />
             </div>
             
@@ -105,6 +117,7 @@ const AddPitch = () => {
                 value={pitchData.price}
                 onChange={handleChange}
                 required
+                placeholder="e.g., $20 per hour or 20" 
               />
             </div>
             
@@ -116,6 +129,19 @@ const AddPitch = () => {
                 value={pitchData.surfaceType}
                 onChange={handleChange}
                 required
+                placeholder="e.g., Artificial Turf, Natural Grass"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="pitchSize" className="text-sm font-medium">Pitch Size</label>
+              <Input
+                id="pitchSize"
+                name="pitchSize"
+                value={pitchData.pitchSize}
+                onChange={handleChange}
+                required
+                placeholder="e.g., 40m x 20m"
               />
             </div>
           </div>
@@ -128,6 +154,7 @@ const AddPitch = () => {
               value={pitchData.openingHours}
               onChange={handleChange}
               required
+              placeholder="e.g., Mon-Fri: 9 AM - 10 PM"
             />
           </div>
           
@@ -140,6 +167,7 @@ const AddPitch = () => {
               onChange={handleChange}
               required
               rows={4}
+              placeholder="Brief description of the pitch and its key features."
             />
           </div>
           

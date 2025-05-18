@@ -27,7 +27,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, Pitch as PitchType } from "@/context/ReservationContext";
 import {
   Dialog,
   DialogContent,
@@ -37,146 +37,18 @@ import {
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 
-const pitchesData = [
-  {
-    id: 1,
-    name: "Green Valley Pitch",
-    image:
-      "https://images.unsplash.com/photo-1459865264687-595d652de67e?q=80&w=500&auto=format&fit=crop",
-    location: "Downtown, Football City",
-    rating: 4.8,
-    features: ["Indoor", "Floodlights", "Changing Rooms"],
-    playersPerSide: 5,
-    isAdmin: true,
-    details: {
-      description:
-        "Premier indoor football facility with high-quality artificial turf and state-of-the-art lighting system.",
-      openingHours: "Mon-Fri: 8:00 - 22:00, Sat-Sun: 9:00 - 20:00",
-      address: "123 Main St, Downtown, Football City",
-      price: "$25 per hour",
-      facilities: [
-        "Changing Rooms",
-        "Showers",
-        "Parking",
-        "Cafe",
-        "Equipment Rental",
-        "Wifi",
-      ],
-      surfaceType: "Premium Artificial Turf (FIFA Quality Pro)",
-      pitchSize: "40m x 20m",
-      rules: [
-        "No smoking",
-        "Clean football boots only",
-        "No food on the pitch",
-      ],
-    },
-  },
-  {
-    id: 2,
-    name: "Central Park Field",
-    image:
-      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?q=80&w=500&auto=format&fit=crop",
-    location: "Eastside, Football City",
-    rating: 4.5,
-    features: ["Outdoor", "Floodlights", "Parking"],
-    playersPerSide: 7,
-    isAdmin: false,
-    details: {
-      description:
-        "Natural grass pitch located in the heart of Central Park. Perfect for casual games and amateur leagues.",
-      openingHours: "Open daily: 7:00 - 22:00",
-      address: "Central Park, Eastside, Football City",
-      price: "$30 per hour",
-      facilities: ["Public Restrooms", "Water Fountains", "Picnic Area", "Gym"],
-      surfaceType: "Natural Grass",
-      pitchSize: "60m x 40m",
-      rules: [
-        "No cleats on wet ground",
-        "Public use priority on weekends",
-        "No private coaching without permit",
-      ],
-    },
-  },
-  {
-    id: 3,
-    name: "Stadium Pro",
-    image:
-      "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=500&auto=format&fit=crop",
-    location: "Northside, Football City",
-    rating: 4.9,
-    features: ["Indoor", "Changing Rooms", "Cafeteria"],
-    playersPerSide: 11,
-    isAdmin: true,
-    details: {
-      description:
-        "Professional-grade stadium with full-size pitch. Used by local professional teams for training and matches.",
-      openingHours: "By reservation only",
-      address: "55 Stadium Road, Northside, Football City",
-      price: "$40 per hour",
-      facilities: [
-        "Professional Locker Rooms",
-        "Media Room",
-        "VIP Boxes",
-        "Medical Staff",
-        "Performance Analysis",
-        "Showers",
-        "Wifi"
-      ],
-      surfaceType: "Hybrid Grass (Natural + Artificial)",
-      pitchSize: "105m x 68m (Full Size)",
-      rules: [
-        "Professional conduct required",
-        "Referee mandatory for matches",
-        "No unauthorized media",
-      ],
-    },
-  },
-  {
-    id: 4,
-    name: "Riverside Turf",
-    image:
-      "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=500&auto=format&fit=crop",
-    location: "Westside, Football City",
-    rating: 4.2,
-    features: ["Outdoor", "Artificial Grass", "Parking"],
-    playersPerSide: 5,
-    isAdmin: false,
-    details: {
-      description:
-        "Convenient 5-a-side pitches with beautiful riverside views. Popular for after-work leagues.",
-      openingHours: "Mon-Fri: 16:00 - 22:00, Sat-Sun: 10:00 - 22:00",
-      address: "78 River Road, Westside, Football City",
-      price: "$20 per hour",
-      facilities: ["Changing Rooms", "Bar", "Spectator Area", "Free Parking"],
-      surfaceType: "3G Artificial Turf",
-      pitchSize: "30m x 20m",
-      rules: [
-        "No alcohol on pitches",
-        "Maximum 7 players per team",
-        "Flat-soled or turf shoes only",
-      ],
-    },
-  },
-];
-
 const Pitches = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [isAdmin] = useState(true);
-  const [selectedPitch, setSelectedPitch] = useState<
-    PitchProps["pitch"] | null
-  >(null);
+  const [selectedPitch, setSelectedPitch] = useState<PitchType | null>(null);
   const {
+    pitches,
     navigateToReservation,
-    // getReservationsForPitch, // These seem unused in this component
-    // isUserJoined,
-    // joinGame,
-    // cancelReservation,
-    // hasUserJoinedOnDate,
   } = useReservation();
   const navigate = useNavigate();
 
-  const filteredPitches = pitchesData.filter(
+  const filteredPitches = pitches.filter(
     (pitch) =>
       pitch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pitch.location.toLowerCase().includes(searchTerm.toLowerCase())
@@ -192,12 +64,6 @@ const Pitches = () => {
       return;
     }
     navigate("/admin/add-pitch");
-    // The toast below might be redundant if AddPitch page shows its own confirmation
-    // toast({
-    //   title: "Add Pitch",
-    //   description: "You can now create a new pitch",
-    //   duration: 3000,
-    // });
   };
 
   return (
@@ -235,7 +101,7 @@ const Pitches = () => {
       {filteredPitches.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 dark:text-gray-400 text-lg">
-            No pitches found. Try adjusting your search.
+            No pitches found. Try adjusting your search or add a new one!
           </p>
         </div>
       ) : (
@@ -263,26 +129,7 @@ const Pitches = () => {
 };
 
 interface PitchProps {
-  pitch: {
-    id: number;
-    name: string;
-    image: string;
-    location: string;
-    rating: number;
-    features: string[];
-    playersPerSide: number;
-    isAdmin: boolean;
-    details?: {
-      description: string;
-      openingHours: string;
-      address: string;
-      price: string;
-      facilities: string[];
-      surfaceType: string;
-      pitchSize: string;
-      rules: string[];
-    };
-  };
+  pitch: PitchType;
   onViewDetails: () => void;
   onBookPitch: () => void;
 }
@@ -293,7 +140,6 @@ const RenderStars = ({ rating }: { rating: number }) => {
   const hasHalfStar = rating % 1 >= 0.3 && rating % 1 < 0.8; // Threshold for half star
   const filledByHalfOrFull = rating % 1 >= 0.8 ? Math.ceil(rating) : fullStars + (hasHalfStar ? 1: 0) ;
 
-
   const starsArray = [];
   for (let i = 1; i <= totalStars; i++) {
     if (i <= fullStars) {
@@ -301,7 +147,6 @@ const RenderStars = ({ rating }: { rating: number }) => {
     } else if (i === fullStars + 1 && hasHalfStar) {
       starsArray.push(<StarHalf key="half" className="h-4 w-4 text-yellow-500 fill-yellow-500" />);
     } else {
-      // Render a full star but with no fill for an "empty" look, or use a specific empty star icon if available
       starsArray.push(<Star key={`empty-${i}`} className="h-4 w-4 text-yellow-500" />);
     }
   }
@@ -349,10 +194,6 @@ const PitchCard: React.FC<PitchProps> = ({
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-semibold">{pitch.name}</h3>
           <div className="flex items-center">
-             {/* Old rating display:
-            <Star className="h-4 w-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium">{pitch.rating}</span> 
-            */}
             <RenderStars rating={pitch.rating} />
             <span className="text-sm font-medium ml-1">{pitch.rating.toFixed(1)}</span>
           </div>
@@ -431,7 +272,7 @@ const getFacilityIcon = (facilityName: string): JSX.Element => {
 };
 
 interface PitchDetailsDialogProps {
-  pitch: PitchProps["pitch"];
+  pitch: PitchType;
   onClose: () => void;
   onBookPitch: () => void;
 }
@@ -488,7 +329,6 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              {/* Opening Hours removed */}
               <div className="flex items-start">
                 <Users className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
                 <div>
@@ -517,10 +357,8 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              {/* Surface Type removed */}
-              {/* Pitch Size removed */}
               <div className="flex items-start">
-                <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" /> {/* Using Star as a generic icon for Price */}
+                <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
                 <div>
                   <h4 className="text-sm font-medium">Price</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
