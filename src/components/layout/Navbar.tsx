@@ -180,7 +180,7 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-      </div>
+      </nav>
 
       {isOpen && (
         <div className="md:hidden">
@@ -246,6 +246,7 @@ const Navbar = () => {
           </div>
         </div>
       )}
+      <LoginDialog isOpen={isLoginDialogOpen} onClose={() => setIsLoginDialogOpen(false)} onLoginSuccess={handleLoginSuccess} />
     </>
   );
 };
