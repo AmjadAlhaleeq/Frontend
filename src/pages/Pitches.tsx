@@ -25,6 +25,8 @@ import {
   Coffee,
   Wrench,
   Utensils,
+  Edit3,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useReservation, Pitch as PitchType } from "@/context/ReservationContext";
@@ -36,17 +38,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 
 const Pitches = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [isAdmin] = useState(true);
-  const [selectedPitch, setSelectedPitch] = useState<PitchType | null>(null);
+  const [selectedPitchForDetails, setSelectedPitchForDetails] = useState<PitchType | null>(null);
   const {
     pitches,
     navigateToReservation,
+    deletePitch,
   } = useReservation();
   const navigate = useNavigate();
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pitchToDelete, setPitchToDelete] = useState<PitchType | null>(null);
 
   const filteredPitches = pitches.filter(
     (pitch) =>
@@ -64,6 +71,28 @@ const Pitches = () => {
       return;
     }
     navigate("/admin/add-pitch");
+  };
+
+  const handleOpenDeleteDialog = (pitch: PitchType) => {
+    setPitchToDelete(pitch);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pitchToDelete) {
+      deletePitch(pitchToDelete.id);
+      setPitchToDelete(null);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleEditPitch = (pitchId: number) => {
+    if (!isAdmin) {
+      toast({ title: "Access Denied", description: "Only admins can edit pitches.", variant: "destructive" });
+      return;
+    }
+    navigate(`/admin/edit-pitch/${pitchId}`);
+    toast({ title: "Edit Pitch", description: `Navigating to edit page for pitch ID: ${pitchId}. (Page not yet implemented)`});
   };
 
   return (
@@ -110,35 +139,51 @@ const Pitches = () => {
             <PitchCard
               key={pitch.id}
               pitch={pitch}
-              onViewDetails={() => setSelectedPitch(pitch)}
+              isAdmin={isAdmin}
+              onViewDetails={() => setSelectedPitchForDetails(pitch)}
               onBookPitch={() => navigateToReservation(pitch.name)}
+              onEditClick={() => handleEditPitch(pitch.id)}
+              onDeleteClick={() => handleOpenDeleteDialog(pitch)}
             />
           ))}
         </div>
       )}
 
-      {selectedPitch && (
+      {selectedPitchForDetails && (
         <PitchDetailsDialog
-          pitch={selectedPitch}
-          onBookPitch={() => navigateToReservation(selectedPitch.name)}
-          onClose={() => setSelectedPitch(null)}
+          pitch={selectedPitchForDetails}
+          onBookPitch={() => navigateToReservation(selectedPitchForDetails.name)}
+          onClose={() => setSelectedPitchForDetails(null)}
+        />
+      )}
+
+      {pitchToDelete && (
+        <DeleteConfirmationDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={handleConfirmDelete}
+          itemName={pitchToDelete.name}
+          itemType="pitch"
         />
       )}
     </div>
   );
 };
 
-interface PitchProps {
+interface PitchCardProps {
   pitch: PitchType;
+  isAdmin: boolean;
   onViewDetails: () => void;
   onBookPitch: () => void;
+  onEditClick: () => void;
+  onDeleteClick: () => void;
 }
 
 const RenderStars = ({ rating }: { rating: number }) => {
   const totalStars = 5;
   const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.3 && rating % 1 < 0.8; // Threshold for half star
-  const filledByHalfOrFull = rating % 1 >= 0.8 ? Math.ceil(rating) : fullStars + (hasHalfStar ? 1: 0) ;
+  const hasHalfStar = rating % 1 >= 0.3 && rating % 1 < 0.8;
+  const filledByHalfOrFull = rating % 1 >= 0.8 ? Math.ceil(rating) : fullStars + (hasHalfStar ? 1: 0);
 
   const starsArray = [];
   for (let i = 1; i <= totalStars; i++) {
@@ -153,10 +198,13 @@ const RenderStars = ({ rating }: { rating: number }) => {
   return <div className="flex items-center">{starsArray}</div>;
 };
 
-const PitchCard: React.FC<PitchProps> = ({
+const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
+  isAdmin,
   onViewDetails,
   onBookPitch,
+  onEditClick,
+  onDeleteClick,
 }) => {
   const getFeatureIcon = (feature: string) => {
     switch (feature.toLowerCase()) {
@@ -180,17 +228,16 @@ const PitchCard: React.FC<PitchProps> = ({
   const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
       <div className="relative h-48 overflow-hidden">
         <img
           src={pitch.image}
           alt={pitch.name}
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
         />
-        {/* Admin badge removed as per request */}
       </div>
 
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 flex-grow">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-semibold">{pitch.name}</h3>
           <div className="flex items-center">
@@ -206,7 +253,7 @@ const PitchCard: React.FC<PitchProps> = ({
             target="_blank" 
             rel="noopener noreferrer"
             className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-            title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+            aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
           >
             {pitch.location}
           </a>
@@ -226,16 +273,28 @@ const PitchCard: React.FC<PitchProps> = ({
         </div>
       </CardContent>
 
-      <CardFooter className="flex gap-2 pt-0">
-        <Button variant="outline" onClick={onViewDetails} className="flex-1">
-          View Details
-        </Button>
-        <Button
-          onClick={onBookPitch}
-          className="flex-1 bg-[#0F766E] hover:bg-[#0d6d66]"
-        >
-          Book Now
-        </Button>
+      <CardFooter className="flex flex-col gap-2 pt-0 mt-auto">
+        <div className="flex gap-2 w-full">
+          <Button variant="outline" onClick={onViewDetails} className="flex-1">
+            View Details
+          </Button>
+          <Button
+            onClick={onBookPitch}
+            className="flex-1 bg-[#0F766E] hover:bg-[#0d6d66]"
+          >
+            Book Now
+          </Button>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2 w-full mt-2">
+            <Button variant="outline" onClick={onEditClick} className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600">
+              <Edit3 size={16} className="mr-2" /> Edit
+            </Button>
+            <Button variant="outline" onClick={onDeleteClick} className="flex-1 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600">
+              <Trash2 size={16} className="mr-2" /> Delete
+            </Button>
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
@@ -265,7 +324,6 @@ const getFacilityIcon = (facilityName: string): JSX.Element => {
        return <Wrench size={18} className="text-[#0F766E]" aria-label={facilityName} />;
     case "picnic area":
        return <Utensils size={18} className="text-[#0F766E]" aria-label={facilityName} />;
-    // Add more specific cases as needed from allowed icons or common ones
     default:
       return <CheckCircle size={18} className="text-[#0F766E]" aria-label={facilityName} />;
   }
@@ -297,7 +355,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+                aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
               >
                 {pitch.location}
               </a>
@@ -348,7 +406,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
-                    title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+                    aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
                   >
                     {pitch.details?.address}
                   </a>
@@ -363,6 +421,15 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                   <h4 className="text-sm font-medium">Price</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     {pitch.details?.price}
+                  </p>
+                </div>
+              </div>
+               <div className="flex items-start">
+                <CalendarIcon className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+                <div>
+                  <h4 className="text-sm font-medium">Opening Hours</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    {pitch.details?.openingHours}
                   </p>
                 </div>
               </div>
@@ -386,8 +453,6 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               </div>
             </div>
           )}
-          
-          {/* Pitch Rules removed */}
         </div>
 
         <div className="mt-6 flex justify-end space-x-2">
@@ -405,15 +470,5 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
     </Dialog>
   );
 };
-
-// Format date for display (This function seems unused in Pitches.tsx, might be from a copy-paste or for other parts of the app)
-// const formatDate = (dateString: string) => {
-//   const options: Intl.DateTimeFormatOptions = {
-//     weekday: "short",
-//     month: "short",
-//     day: "numeric",
-//   };
-//   return new Date(dateString).toLocaleDateString("en-US", options);
-// };
 
 export default Pitches;

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut,
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "../shared/Logo";
+import LoginDialog from "@/components/auth/LoginDialog";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,6 +21,8 @@ const Navbar = () => {
   const { toast } = useToast();
   const location = useLocation();
   const { language, setLanguage, t } = useLanguage();
+
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   
@@ -46,139 +48,140 @@ const Navbar = () => {
     setIsLoggedIn(false);
     toast({
       title: t('nav.logout'),
+      description: "You have been successfully logged out.",
       duration: 3000,
     });
   };
 
-  const handleLogin = () => {
-    // In a real app, this would open a login modal
+  const handleLoginButtonClick = () => {
+    setIsLoginDialogOpen(true);
+  };
+
+  const handleLoginSuccess = () => {
     setIsLoggedIn(true);
+    setIsLoginDialogOpen(false);
     toast({
       title: t('nav.login'),
+      description: "Welcome back!",
       duration: 3000,
     });
   };
 
-  // Check if the current path matches the NavLink path
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          {/* Left side - Logo and main links */}
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link to="/">
-                <Logo />
-              </Link>
+    <>
+      <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <div className="flex-shrink-0 flex items-center">
+                <Link to="/">
+                  <Logo />
+                </Link>
+              </div>
+              <div className="hidden md:ml-6 md:flex md:space-x-2">
+                <NavLink to="/" icon={<Home size={18} />} text={t('nav.home')} isActive={isActive("/")} />
+                <NavLink to="/pitches" icon={<MapPin size={18} />} text={t('nav.pitches')} isActive={isActive("/pitches")} />
+                <NavLink to="/reservations" icon={<Calendar size={18} />} text={t('nav.reservations')} isActive={isActive("/reservations")} />
+                <NavLink to="/leaderboards" icon={<Trophy size={18} />} text={t('nav.leaderboards')} isActive={isActive("/leaderboards")} />
+              </div>
             </div>
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:ml-6 md:flex md:space-x-2">
-              <NavLink to="/" icon={<Home size={18} />} text={t('nav.home')} isActive={isActive("/")} />
-              <NavLink to="/pitches" icon={<MapPin size={18} />} text={t('nav.pitches')} isActive={isActive("/pitches")} />
-              <NavLink to="/reservations" icon={<Calendar size={18} />} text={t('nav.reservations')} isActive={isActive("/reservations")} />
-              <NavLink to="/leaderboards" icon={<Trophy size={18} />} text={t('nav.leaderboards')} isActive={isActive("/leaderboards")} />
-            </div>
-          </div>
-
-          {/* Right side - User actions */}
-          <div className="hidden md:flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              onClick={toggleLanguage}
-              className="flex items-center space-x-1"
-              aria-label="Change language"
-            >
-              <Globe size={20} />
-              <span className="ms-1">{language === 'en' ? 'العربية' : 'English'}</span>
-            </Button>
-
-            {isLoggedIn ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative p-1">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Profile" />
-                      <AvatarFallback>P</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>{t('nav.profile')}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/reservations" className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>{t('nav.bookings')}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>{t('nav.logout')}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button onClick={handleLogin} className="flex items-center">
-                <LogIn className="mr-2 h-4 w-4" />
-                <span>{t('nav.login')}</span>
+            <div className="hidden md:flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </Button>
-            )}
-          </div>
+              
+              <Button 
+                variant="ghost" 
+                onClick={toggleLanguage}
+                className="flex items-center space-x-1"
+                aria-label="Change language"
+              >
+                <Globe size={20} />
+                <span className="ms-1">{language === 'en' ? 'العربية' : 'English'}</span>
+              </Button>
 
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-              className="mr-1"
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </Button>
-
-            <Button 
-              variant="ghost" 
-              onClick={toggleLanguage}
-              aria-label="Change language"
-              className="mr-1"
-            >
-              <Globe size={20} />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              onClick={toggleMenu} 
-              aria-expanded="false"
-            >
-              {isOpen ? (
-                <X className="block h-6 w-6" aria-hidden="true" />
+              {isLoggedIn ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative p-1">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Profile" />
+                        <AvatarFallback>P</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>{t('nav.profile')}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/reservations" className="flex items-center">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>{t('nav.bookings')}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>{t('nav.logout')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <Menu className="block h-6 w-6" aria-hidden="true" />
+                <Button onClick={handleLoginButtonClick} className="flex items-center bg-[#0F766E] hover:bg-[#0d6d66] text-white">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  <span>{t('nav.login')}</span>
+                </Button>
               )}
-            </Button>
+            </div>
+            <div className="flex items-center md:hidden">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+                className="mr-1"
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </Button>
+
+              <Button 
+                variant="ghost" 
+                onClick={toggleLanguage}
+                aria-label="Change language"
+                className="mr-1"
+              >
+                <Globe size={20} />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                onClick={toggleMenu} 
+                aria-expanded="false"
+                aria-label="Toggle mobile menu"
+              >
+                {isOpen ? (
+                  <X className="block h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu, show/hide based on menu state */}
       {isOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -232,8 +235,8 @@ const Navbar = () => {
                 </>
               ) : (
                 <Button 
-                  onClick={handleLogin} 
-                  className="w-full justify-start"
+                  onClick={handleLoginButtonClick} 
+                  className="w-full justify-start bg-[#0F766E] hover:bg-[#0d6d66] text-white"
                 >
                   <LogIn className="mr-2 h-5 w-5" />
                   <span>{t('nav.login')}</span>
@@ -243,11 +246,10 @@ const Navbar = () => {
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 };
 
-// Desktop Navigation Link
 const NavLink = ({ to, icon, text, isActive }: { to: string; icon: React.ReactNode; text: string; isActive: boolean }) => (
   <Link
     to={to}
@@ -263,7 +265,6 @@ const NavLink = ({ to, icon, text, isActive }: { to: string; icon: React.ReactNo
   </Link>
 );
 
-// Mobile Navigation Link
 const MobileNavLink = ({ to, text, isActive }: { to: string; text: string; isActive: boolean }) => (
   <Link
     to={to}
