@@ -1,6 +1,6 @@
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -17,8 +17,14 @@ import {
   Clock,
   User,
   CheckCircle,
-  X,
-  AlertCircle,
+  StarHalf,
+  ShowerHead,
+  ParkingCircle,
+  Wifi,
+  Dumbbell,
+  Coffee,
+  Wrench,
+  Utensils,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useReservation } from "@/context/ReservationContext";
@@ -29,7 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { useNavigate } from "react-router-dom";
 
 const pitchesData = [
@@ -55,6 +60,7 @@ const pitchesData = [
         "Parking",
         "Cafe",
         "Equipment Rental",
+        "Wifi",
       ],
       surfaceType: "Premium Artificial Turf (FIFA Quality Pro)",
       pitchSize: "40m x 20m",
@@ -81,7 +87,7 @@ const pitchesData = [
       openingHours: "Open daily: 7:00 - 22:00",
       address: "Central Park, Eastside, Football City",
       price: "$30 per hour",
-      facilities: ["Public Restrooms", "Water Fountains", "Picnic Area"],
+      facilities: ["Public Restrooms", "Water Fountains", "Picnic Area", "Gym"],
       surfaceType: "Natural Grass",
       pitchSize: "60m x 40m",
       rules: [
@@ -113,6 +119,8 @@ const pitchesData = [
         "VIP Boxes",
         "Medical Staff",
         "Performance Analysis",
+        "Showers",
+        "Wifi"
       ],
       surfaceType: "Hybrid Grass (Natural + Artificial)",
       pitchSize: "105m x 68m (Full Size)",
@@ -160,11 +168,11 @@ const Pitches = () => {
   >(null);
   const {
     navigateToReservation,
-    getReservationsForPitch,
-    isUserJoined,
-    joinGame,
-    cancelReservation,
-    hasUserJoinedOnDate,
+    // getReservationsForPitch, // These seem unused in this component
+    // isUserJoined,
+    // joinGame,
+    // cancelReservation,
+    // hasUserJoinedOnDate,
   } = useReservation();
   const navigate = useNavigate();
 
@@ -183,15 +191,13 @@ const Pitches = () => {
       });
       return;
     }
-
-    // Navigate to add pitch page
     navigate("/admin/add-pitch");
-
-    toast({
-      title: "Add Pitch",
-      description: "You can now create a new pitch",
-      duration: 3000,
-    });
+    // The toast below might be redundant if AddPitch page shows its own confirmation
+    // toast({
+    //   title: "Add Pitch",
+    //   description: "You can now create a new pitch",
+    //   duration: 3000,
+    // });
   };
 
   return (
@@ -281,6 +287,27 @@ interface PitchProps {
   onBookPitch: () => void;
 }
 
+const RenderStars = ({ rating }: { rating: number }) => {
+  const totalStars = 5;
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.3 && rating % 1 < 0.8; // Threshold for half star
+  const filledByHalfOrFull = rating % 1 >= 0.8 ? Math.ceil(rating) : fullStars + (hasHalfStar ? 1: 0) ;
+
+
+  const starsArray = [];
+  for (let i = 1; i <= totalStars; i++) {
+    if (i <= fullStars) {
+      starsArray.push(<Star key={`full-${i}`} className="h-4 w-4 text-yellow-500 fill-yellow-500" />);
+    } else if (i === fullStars + 1 && hasHalfStar) {
+      starsArray.push(<StarHalf key="half" className="h-4 w-4 text-yellow-500 fill-yellow-500" />);
+    } else {
+      // Render a full star but with no fill for an "empty" look, or use a specific empty star icon if available
+      starsArray.push(<Star key={`empty-${i}`} className="h-4 w-4 text-yellow-500" />);
+    }
+  }
+  return <div className="flex items-center">{starsArray}</div>;
+};
+
 const PitchCard: React.FC<PitchProps> = ({
   pitch,
   onViewDetails,
@@ -304,6 +331,8 @@ const PitchCard: React.FC<PitchProps> = ({
         return <Badge variant="outline">{feature}</Badge>;
     }
   };
+  
+  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
@@ -313,27 +342,33 @@ const PitchCard: React.FC<PitchProps> = ({
           alt={pitch.name}
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
         />
-        {pitch.isAdmin && (
-          <div className="absolute top-2 right-2">
-            <Badge className="bg-[#0F766E]">Admin</Badge>
-          </div>
-        )}
+        {/* Admin badge removed as per request */}
       </div>
 
       <CardContent className="pt-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-semibold">{pitch.name}</h3>
           <div className="flex items-center">
+             {/* Old rating display:
             <Star className="h-4 w-4 text-yellow-500 mr-1" />
-            <span className="text-sm font-medium">{pitch.rating}</span>
+            <span className="text-sm font-medium">{pitch.rating}</span> 
+            */}
+            <RenderStars rating={pitch.rating} />
+            <span className="text-sm font-medium ml-1">{pitch.rating.toFixed(1)}</span>
           </div>
         </div>
 
         <div className="flex items-start mb-3">
           <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-1 flex-shrink-0" />
-          <span className="text-sm text-gray-600 dark:text-gray-300">
+          <a 
+            href={googleMapsUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
+            title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+          >
             {pitch.location}
-          </span>
+          </a>
         </div>
 
         <div className="flex items-center mb-3">
@@ -365,6 +400,36 @@ const PitchCard: React.FC<PitchProps> = ({
   );
 };
 
+const getFacilityIcon = (facilityName: string): JSX.Element => {
+  const lowerFacilityName = facilityName.toLowerCase();
+  switch (lowerFacilityName) {
+    case "showers":
+      return <ShowerHead size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "parking":
+    case "free parking":
+      return <ParkingCircle size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "wifi":
+      return <Wifi size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "gym":
+      return <Dumbbell size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "changing rooms":
+    case "public restrooms":
+    case "professional locker rooms":
+      return <Users size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "water fountains":
+      return <Droplets size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "cafe":
+       return <Coffee size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "equipment rental":
+       return <Wrench size={18} className="text-[#0F766E]" title={facilityName} />;
+    case "picnic area":
+       return <Utensils size={18} className="text-[#0F766E]" title={facilityName} />;
+    // Add more specific cases as needed from allowed icons or common ones
+    default:
+      return <CheckCircle size={18} className="text-[#0F766E]" title={facilityName} />;
+  }
+};
+
 interface PitchDetailsDialogProps {
   pitch: PitchProps["pitch"];
   onClose: () => void;
@@ -376,6 +441,8 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   onClose,
   onBookPitch,
 }) => {
+  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
+
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
@@ -384,13 +451,19 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
           <DialogDescription>
             <div className="flex items-center mt-1 mb-4">
               <MapPin className="h-4 w-4 text-gray-500 mr-1" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">
+              <a 
+                href={googleMapsUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
+                title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+              >
                 {pitch.location}
-              </span>
+              </a>
 
               <div className="ml-4 flex items-center">
-                <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                <span className="text-sm font-medium">{pitch.rating}/5.0</span>
+                <RenderStars rating={pitch.rating} />
+                <span className="text-sm font-medium ml-1">{pitch.rating.toFixed(1)}/5.0</span>
               </div>
             </div>
           </DialogDescription>
@@ -415,16 +488,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <div className="flex items-start">
-                <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                <div>
-                  <h4 className="text-sm font-medium">Opening Hours</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {pitch.details?.openingHours}
-                  </p>
-                </div>
-              </div>
-
+              {/* Opening Hours removed */}
               <div className="flex items-start">
                 <Users className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
                 <div>
@@ -439,36 +503,24 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
                 <div>
                   <h4 className="text-sm font-medium">Address</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                  <a 
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
+                    title={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+                  >
                     {pitch.details?.address}
-                  </p>
+                  </a>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
+              {/* Surface Type removed */}
+              {/* Pitch Size removed */}
               <div className="flex items-start">
-                <User className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                <div>
-                  <h4 className="text-sm font-medium">Surface Type</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {pitch.details?.surfaceType}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start">
-                <CalendarIcon className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                <div>
-                  <h4 className="text-sm font-medium">Pitch Size</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {pitch.details?.pitchSize}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start">
-                <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+                <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" /> {/* Using Star as a generic icon for Price */}
                 <div>
                   <h4 className="text-sm font-medium">Price</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
@@ -479,37 +531,28 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
             </div>
           </div>
 
-          <div>
-            <h3 className="text-md font-semibold mb-1">Available Facilities</h3>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {pitch.details?.facilities.map((facility, idx) => (
-                <Badge
-                  key={idx}
-                  variant="outline"
-                  className="bg-gray-100 dark:bg-gray-700"
-                >
-                  {facility}
-                </Badge>
-              ))}
+          {pitch.details?.facilities && pitch.details.facilities.length > 0 && (
+            <div>
+              <h3 className="text-md font-semibold mb-2">Facilities</h3>
+              <div className="flex flex-wrap gap-3">
+                {pitch.details.facilities.map((facility, idx) => (
+                  <Badge
+                    key={idx}
+                    variant="outline"
+                    className="bg-gray-100 dark:bg-gray-700 p-2 flex items-center gap-2"
+                  >
+                    {getFacilityIcon(facility)}
+                    <span className="text-xs">{facility}</span>
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div>
-            <h3 className="text-md font-semibold mb-1">Pitch Rules</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              {pitch.details?.rules.map((rule, idx) => (
-                <li
-                  key={idx}
-                  className="text-xs text-gray-600 dark:text-gray-300"
-                >
-                  {rule}
-                </li>
-              ))}
-            </ul>
-          </div>
+          )}
+          
+          {/* Pitch Rules removed */}
         </div>
 
-        <div className="mt-4 flex justify-end space-x-2">
+        <div className="mt-6 flex justify-end space-x-2">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
@@ -525,14 +568,14 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   );
 };
 
-// Format date for display
-const formatDate = (dateString: string) => {
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  };
-  return new Date(dateString).toLocaleDateString("en-US", options);
-};
+// Format date for display (This function seems unused in Pitches.tsx, might be from a copy-paste or for other parts of the app)
+// const formatDate = (dateString: string) => {
+//   const options: Intl.DateTimeFormatOptions = {
+//     weekday: "short",
+//     month: "short",
+//     day: "numeric",
+//   };
+//   return new Date(dateString).toLocaleDateString("en-US", options);
+// };
 
 export default Pitches;
