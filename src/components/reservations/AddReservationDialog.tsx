@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, NewReservationData } from "@/context/ReservationContext";
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,7 +38,7 @@ const formSchema = z.object({
     required_error: "Please select a time slot",
   }),
   location: z.string().min(2, "Location must be at least 2 characters"),
-  price: z.string().min(1, "Price is required"),
+  price: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Price must be a non-negative number" }),
   maxPlayers: z.string({
     required_error: "Please select number of players",
   }),
@@ -60,20 +59,26 @@ const AddReservationDialog = () => {
       location: "",
       price: "",
       imageUrl: "",
+      // date: new Date(), // Optionally set a default date
+      // time: "17:00 - 18:30", // Optionally set a default time
+      // maxPlayers: "10", // Optionally set a default maxPlayers
     },
   });
 
   const onSubmit = (data: FormValues) => {
-    console.log(data);
+    console.log("Submitting reservation data:", data);
     
-    addReservation({
+    const newReservationData: NewReservationData = {
       pitchName: data.pitchName,
-      date: data.date.toISOString().split('T')[0],
+      date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
       time: data.time,
       location: data.location,
-      price: parseInt(data.price),
-      maxPlayers: parseInt(data.maxPlayers),
-    });
+      price: parseInt(data.price, 10), // Convert price to number
+      maxPlayers: parseInt(data.maxPlayers, 10), // Convert maxPlayers to number
+      imageUrl: data.imageUrl || undefined, // Use undefined if empty
+    };
+    
+    addReservation(newReservationData);
     
     toast({
       title: "Reservation Added",
@@ -143,6 +148,7 @@ const AddReservationDialog = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))} // Disable past dates
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -198,7 +204,7 @@ const AddReservationDialog = () => {
                   <FormItem>
                     <FormLabel>Price per Player</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="25" {...field} />
+                      <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(e.target.value)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -244,7 +250,7 @@ const AddReservationDialog = () => {
             />
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button variant="outline" type="button" onClick={() => { form.reset(); setOpen(false); }}>
                 Cancel
               </Button>
               <Button type="submit" className="bg-[#0F766E] hover:bg-[#0d6d66]">Create Reservation</Button>

@@ -1,56 +1,39 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "@/components/ui/use-toast"; // Ensure toast is imported
 
 type ReservationStatus = "open" | "full" | "completed" | "cancelled";
 
 interface Player {
-  id: number;
+  id: number; // Consider if this ID is unique across all players or per reservation
   status: 'empty' | 'joined';
   playerName?: string;
-  position?: string;
+  position?: string; // e.g., 'Goalkeeper', 'Forward 1'
+  userId?: string; // To identify the user
 }
 
-interface Highlight {
+export interface Highlight {
     id: number;
-    type: 'Goal' | 'Assist' | 'Save' | 'Other';
+    type: 'goal' | 'assist' | 'yellowCard' | 'redCard' | 'save' | 'other'; // Standardized to lowercase
     playerName: string;
     minute: number;
     description?: string;
-}
-
-export interface Pitch {
-  id: number;
-  name: string;
-  location: string;
-  image: string;
-  rating: number;
-  features: string[];
-  playersPerSide: number;
-  isAdmin: boolean;
-  details?: {
-    description: string;
-    openingHours: string;
-    address: string;
-    price: string;
-    facilities: string[];
-    surfaceType: string;
-    pitchSize: string;
-    rules: string[];
-  };
+    playerId: string; // Added playerId
 }
 
 export interface Reservation {
   id: number;
   pitchName: string;
-  date: string;
+  date: string; // YYYY-MM-DD
   time: string;
   location: string;
   price: number;
   playersJoined: number;
   maxPlayers: number;
   status: ReservationStatus;
-  waitingList: string[];
+  waitingList: string[]; // Array of userIds
   lineup: Player[];
   highlights: Highlight[];
+  // adminId?: string; // Optional: if you want to associate an admin with a reservation
 }
 
 export interface NewPitchData {
@@ -65,17 +48,28 @@ export interface NewPitchData {
   pitchSize: string;
 }
 
-import { toast } from "@/components/ui/use-toast"; // Ensure toast is imported
+// Type for data when creating a new reservation
+export interface NewReservationData {
+  pitchName: string;
+  date: string; // YYYY-MM-DD
+  time: string;
+  location: string;
+  price: number;
+  maxPlayers: number;
+  imageUrl?: string; // Optional, as in AddReservationDialog
+}
 
 interface ReservationContextType {
   reservations: Reservation[];
   pitches: Pitch[];
   addPitch: (pitchData: NewPitchData) => void;
-  deletePitch: (pitchId: number) => void; // Added deletePitch
-  joinGame: (id: number, position?: number) => void;
-  cancelReservation: (id: number) => void;
-  joinWaitingList: (id: number) => void;
-  leaveWaitingList: (id: number) => void;
+  deletePitch: (pitchId: number) => void;
+  addReservation: (reservationData: NewReservationData) => void; // Added
+  deleteReservation: (reservationId: number) => void; // Added
+  joinGame: (id: number, position?: number, userId?: string) => void;
+  cancelReservation: (id: number, userId?: string) => void;
+  joinWaitingList: (id: number, userId?: string) => void;
+  leaveWaitingList: (id: number, userId?: string) => void;
   editReservation: (id: number, updatedData: Partial<Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>>) => void;
   updateReservationStatus: (id: number, status: ReservationStatus) => void;
   navigateToReservation: (pitchName: string) => void;
@@ -85,25 +79,34 @@ interface ReservationContextType {
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   editHighlight: (reservationId: number, highlightId: number, updatedHighlight: Partial<Omit<Highlight, 'id'>>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
+  isUserJoined: (reservationId: number, userId?: string) => boolean; // Added
+  hasUserJoinedOnDate: (date: string, userId?: string) => boolean; // Added
+  getReservationsForDate: (targetDate: Date) => Reservation[]; // Added
+  getUserReservations: (userId: string) => Reservation[]; // Added
 }
 
-const ReservationContext = createContext<ReservationContextType | undefined>(
-  undefined
-);
+// ... keep existing code (Pitch interface, initialPitchesData)
+export interface Pitch {
+  id: number;
+  name: string;
+  location: string;
+  image: string;
+  rating: number;
+  features: string[];
+  playersPerSide: number;
+  isAdmin: boolean; // This might represent if the current user is admin for THIS pitch
+  details?: {
+    description: string;
+    openingHours: string;
+    address: string;
+    price: string;
+    facilities: string[];
+    surfaceType: string;
+    pitchSize: string;
+    rules: string[];
+  };
+}
 
-export const useReservation = () => {
-  const context = useContext(ReservationContext);
-  if (!context) {
-    throw new Error(
-      "useReservation must be used within a ReservationProvider"
-    );
-  }
-  return context;
-};
-
-// Define an empty array for initial reservations if not found in localStorage
-const initialReservationsData: Reservation[] = [];
-// Define initial pitches data (can be empty or from a default set)
 const initialPitchesData: Pitch[] = [
     {
     id: 1,
@@ -149,50 +152,73 @@ const initialPitchesData: Pitch[] = [
 ];
 
 
+const ReservationContext = createContext<ReservationContextType | undefined>(
+  undefined
+);
+
+export const useReservation = () => {
+  const context = useContext(ReservationContext);
+  if (!context) {
+    throw new Error(
+      "useReservation must be used within a ReservationProvider"
+    );
+  }
+  return context;
+};
+
+const initialReservationsData: Reservation[] = [];
+
+
 export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // State for reservations
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     const savedReservations = localStorage.getItem("reservations");
-    return savedReservations ? JSON.parse(savedReservations) : initialReservationsData;
+    if (savedReservations) {
+      try {
+        const parsed = JSON.parse(savedReservations);
+        // Basic validation to ensure it's an array
+        return Array.isArray(parsed) ? parsed : initialReservationsData;
+      } catch (error) {
+        console.error("Error parsing reservations from localStorage:", error);
+        return initialReservationsData;
+      }
+    }
+    return initialReservationsData;
   });
 
   useEffect(() => {
     localStorage.setItem("reservations", JSON.stringify(reservations));
   }, [reservations]);
 
-  // State for pitches
   const [pitches, setPitches] = useState<Pitch[]>(() => {
     const savedPitches = localStorage.getItem("pitches");
-    // If no pitches in local storage, use initialPitchesData. If that's also empty, use an empty array.
     return savedPitches ? JSON.parse(savedPitches) : (initialPitchesData.length > 0 ? initialPitchesData : []);
   });
 
-  // Effect to save pitches to local storage whenever they change
   useEffect(() => {
     localStorage.setItem("pitches", JSON.stringify(pitches));
   }, [pitches]);
 
-  const addPitch = (newPitchData: NewPitchData) => { // Use NewPitchData here
+  const addPitch = (newPitchData: NewPitchData) => {
     setPitches(prevPitches => {
       const newId = prevPitches.length > 0 ? Math.max(...prevPitches.map(p => p.id)) + 1 : 1;
       const newPitch: Pitch = {
         id: newId,
         name: newPitchData.name,
         location: newPitchData.location,
-        image: newPitchData.image,
-        playersPerSide: parseInt(newPitchData.playersPerSide, 10) || 5, // Convert string to number
-        rating: 0, // Default rating for new pitches
-        features: [], // Default empty features
-        isAdmin: true, // This property on Pitch might need re-evaluation for its purpose. User-level admin status is different.
+        image: newPitchData.image || `https://source.unsplash.com/random/400x300/?soccer,pitch&id=${newId}`,
+        playersPerSide: parseInt(newPitchData.playersPerSide, 10) || 5,
+        rating: 0,
+        features: [],
+        isAdmin: true, // Assuming newly added pitch by admin
         details: {
           description: newPitchData.description,
           openingHours: newPitchData.openingHours,
-          address: newPitchData.location, // Or a more detailed address if provided
-          price: newPitchData.price, // Price remains string as per Pitch interface
-          facilities: [], // Default empty facilities
+          address: newPitchData.location,
+          price: newPitchData.price,
+          facilities: [],
           surfaceType: newPitchData.surfaceType,
           pitchSize: newPitchData.pitchSize,
-          rules: [], // Default empty rules
+          rules: [],
         }
       };
       toast({
@@ -203,92 +229,130 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   };
 
-  // Function to delete a pitch
   const deletePitch = (pitchId: number) => {
     setPitches(prevPitches => {
+      const pitchToDelete = prevPitches.find(p => p.id === pitchId);
       const updatedPitches = prevPitches.filter(pitch => pitch.id !== pitchId);
-      const deletedPitch = prevPitches.find(pitch => pitch.id === pitchId);
-      if (deletedPitch) {
+      if(pitchToDelete){
         toast({
           title: "Pitch Deleted",
-          description: `${deletedPitch.name} has been successfully removed.`,
-          variant: "default", 
+          description: `${pitchToDelete.name} has been successfully removed.`,
         });
       }
       return updatedPitches;
     });
-    // Optional: Also remove reservations associated with this pitch
-    // setReservations(prevReservations => prevReservations.filter(res => res.pitchName !== deletedPitch?.name));
   };
 
-  const joinGame = (id: number, position?: number) => {
+  const addReservation = (reservationData: NewReservationData) => {
+    setReservations(prev => {
+      const newId = prev.length > 0 ? Math.max(...prev.map(r => r.id)) + 1 : 1;
+      const newReservation: Reservation = {
+        id: newId,
+        ...reservationData,
+        playersJoined: 0,
+        status: 'open',
+        waitingList: [],
+        lineup: Array.from({ length: reservationData.maxPlayers }, (_, i) => ({ id: i, status: 'empty' })),
+        highlights: [],
+      };
+      toast({ title: "Reservation Created", description: `Reservation for ${newReservation.pitchName} added.` });
+      return [...prev, newReservation];
+    });
+  };
+  
+  const deleteReservation = (reservationId: number) => {
+    setReservations(prev => {
+      const reservationToDelete = prev.find(r => r.id === reservationId);
+      if (reservationToDelete) {
+        toast({ title: "Reservation Deleted", description: `Reservation for ${reservationToDelete.pitchName} has been deleted.` });
+      }
+      return prev.filter(res => res.id !== reservationId);
+    });
+  };
+
+  const joinGame = (id: number, position?: number, userId: string = "user1") => {
     setReservations(prev => {
       return prev.map(res => {
-        if (res.id === id && res.playersJoined < res.maxPlayers && res.status !== 'cancelled' && res.status !== 'completed') {
+        if (res.id === id && res.playersJoined < res.maxPlayers && res.status === 'open') {
+          // Check if user already joined this game
+          if (res.lineup.some(p => p.userId === userId && p.status === 'joined')) {
+            toast({ title: "Already Joined", description: "You are already in this game.", variant: "default" });
+            return res;
+          }
+
           const updatedLineup = [...res.lineup];
+          let joined = false;
           if (position !== undefined && updatedLineup[position]?.status === 'empty') {
-            updatedLineup[position] = { ...updatedLineup[position], status: 'joined', playerName: 'You' }; // Or get actual player name
+            updatedLineup[position] = { ...updatedLineup[position], status: 'joined', userId, playerName: `Player ${userId}` };
+            joined = true;
           } else {
-            // Find first empty spot if position not specified or taken
             const emptySpotIndex = updatedLineup.findIndex(p => p.status === 'empty');
             if (emptySpotIndex !== -1) {
-              updatedLineup[emptySpotIndex] = { ...updatedLineup[emptySpotIndex], status: 'joined', playerName: 'You' };
-            } else {
-               toast({ title: "Error", description: "No empty spot available in lineup.", variant: "destructive" });
-               return res; // No change if no spot found
+              updatedLineup[emptySpotIndex] = { ...updatedLineup[emptySpotIndex], status: 'joined', userId, playerName: `Player ${userId}` };
+              joined = true;
             }
           }
           
-          const newPlayersJoined = res.playersJoined + 1;
-          const newStatus = newPlayersJoined >= res.maxPlayers ? 'full' : 'open';
-          toast({ title: "Joined Game!", description: `Successfully joined ${res.pitchName}.` });
-          return { ...res, playersJoined: newPlayersJoined, status: newStatus, lineup: updatedLineup };
+          if (joined) {
+            const newPlayersJoined = res.playersJoined + 1;
+            const newStatus = newPlayersJoined >= res.maxPlayers ? 'full' : 'open';
+            toast({ title: "Joined Game!", description: `Successfully joined ${res.pitchName}.` });
+            return { ...res, playersJoined: newPlayersJoined, status: newStatus, lineup: updatedLineup };
+          } else {
+             toast({ title: "Error", description: "No empty spot available or position taken.", variant: "destructive" });
+             return res;
+          }
         }
         return res;
       });
     });
   };
 
-  const cancelReservation = (id: number) => {
+  const cancelReservation = (id: number, userId: string = "user1") => {
     setReservations(prev => {
       return prev.map(res => {
         if (res.id === id) {
-          // Find player's spot in lineup and mark as empty
-          const playerSpotIndex = res.lineup.findIndex(p => p.playerName === 'You' && p.status === 'joined'); // Assuming 'You' is placeholder
-          const updatedLineup = [...res.lineup];
-          if(playerSpotIndex !== -1) {
-            updatedLineup[playerSpotIndex] = { id: updatedLineup[playerSpotIndex].id, status: 'empty', playerName: undefined, position: updatedLineup[playerSpotIndex].position };
+          const playerSpotIndex = res.lineup.findIndex(p => p.userId === userId && p.status === 'joined');
+          if (playerSpotIndex !== -1) {
+            const updatedLineup = [...res.lineup];
+            updatedLineup[playerSpotIndex] = { ...updatedLineup[playerSpotIndex], status: 'empty', playerName: undefined, userId: undefined };
+            
+            const newPlayersJoined = Math.max(0, res.playersJoined - 1);
+            const newStatus = res.status === 'full' && newPlayersJoined < res.maxPlayers ? 'open' : res.status; 
+            toast({ title: "Reservation Cancelled", description: `Your spot for ${res.pitchName} has been cancelled.` });
+            return { ...res, playersJoined: newPlayersJoined, status: newStatus, lineup: updatedLineup };
+          } else {
+            // User was not in the game, or trying to cancel for someone else without permission
+            toast({ title: "Not Joined", description: "You are not currently in this game's lineup.", variant: "default"});
+            return res;
           }
-          
-          const newPlayersJoined = Math.max(0, res.playersJoined - (playerSpotIndex !== -1 ? 1 : 0));
-          // If game was full, it's now open. Otherwise, status might not change unless it was 'full'.
-          const newStatus = res.status === 'full' ? 'open' : res.status; 
-          toast({ title: "Reservation Cancelled", description: `Your spot for ${res.pitchName} has been cancelled.` });
-          return { ...res, playersJoined: newPlayersJoined, status: newStatus, lineup: updatedLineup };
         }
         return res;
       });
     });
   };
 
-  const joinWaitingList = (id: number) => {
+  const joinWaitingList = (id: number, userId: string = "user1") => {
     setReservations(prev => {
       return prev.map(res => {
-        if (res.id === id && res.status === 'full' && !res.waitingList.includes("User")) { // Assuming "User" for now
+        if (res.id === id && res.status === 'full' && !res.waitingList.includes(userId)) {
           toast({ title: "Joined Waitlist", description: `You've been added to the waitlist for ${res.pitchName}.` });
-          return { ...res, waitingList: [...res.waitingList, "User"] };
+          return { ...res, waitingList: [...res.waitingList, userId] };
+        }
+        if (res.id === id && res.waitingList.includes(userId)) {
+            toast({ title: "Already on Waitlist", description: `You are already on the waitlist for ${res.pitchName}.`, variant: "default" });
         }
         return res;
       });
     });
   };
 
-  const leaveWaitingList = (id: number) => {
+  const leaveWaitingList = (id: number, userId: string = "user1") => {
     setReservations(prev => {
       return prev.map(res => {
-        if (res.id === id && res.waitingList.includes("User")) {
+        if (res.id === id && res.waitingList.includes(userId)) {
           toast({ title: "Left Waitlist", description: `You've been removed from the waitlist for ${res.pitchName}.` });
-          return { ...res, waitingList: res.waitingList.filter(user => user !== "User") };
+          return { ...res, waitingList: res.waitingList.filter(user => user !== userId) };
         }
         return res;
       });
@@ -297,9 +361,28 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   
   const editReservation = (id: number, updatedData: Partial<Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>>) => {
     setReservations(prev =>
-      prev.map(res =>
-        res.id === id ? { ...res, ...updatedData, date: updatedData.date ? new Date(updatedData.date).toISOString().split('T')[0] : res.date } : res
-      )
+      prev.map(res => {
+        if (res.id === id) {
+          const newMaxPlayers = updatedData.maxPlayers !== undefined ? updatedData.maxPlayers : res.maxPlayers;
+          // If maxPlayers changes, lineup might need adjustment.
+          // For simplicity, this example doesn't rebuild lineup if maxPlayers changes,
+          // but a real app might need to truncate or extend it.
+          const updatedRes = { 
+            ...res, 
+            ...updatedData, 
+            date: updatedData.date ? new Date(updatedData.date).toISOString().split('T')[0] : res.date,
+            maxPlayers: newMaxPlayers,
+          };
+          // Potentially update status based on new maxPlayers vs playersJoined
+          if (updatedRes.playersJoined >= newMaxPlayers && updatedRes.status === 'open') {
+            updatedRes.status = 'full';
+          } else if (updatedRes.playersJoined < newMaxPlayers && updatedRes.status === 'full') {
+            updatedRes.status = 'open';
+          }
+          return updatedRes;
+        }
+        return res;
+      })
     );
     toast({ title: "Reservation Updated", description: "Details have been saved." });
   };
@@ -308,6 +391,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setReservations(prev =>
       prev.map(res => (res.id === id ? { ...res, status } : res))
     );
+    // ... keep existing code (toast messages for status update)
     if (status === 'completed') {
        toast({ title: "Game Completed!", description: "The reservation has been marked as completed." });
     } else if (status === 'cancelled') {
@@ -315,12 +399,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
+  // ... keep existing code (navigateToReservation, getPitchByName, getReservationsByPitch, updateLineup)
   const navigateToReservation = (pitchName: string) => {
-    // This function would typically use react-router's navigate
-    // For now, it can log or be a placeholder
     console.log(`Navigating to reservations for pitch: ${pitchName}`);
-    // If you have a navigate function from useNavigate() available here, use it.
-    // Example: navigate(`/reservations?pitch=${encodeURIComponent(pitchName)}`);
     toast({title: "Loading Reservations", description: `Showing games for ${pitchName}.`});
   };
 
@@ -345,6 +426,13 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setReservations(prev => prev.map(res => {
       if (res.id === reservationId) {
         const newHighlightId = res.highlights.length > 0 ? Math.max(...res.highlights.map(h => h.id)) + 1 : 1;
+        // Ensure the type is one of the allowed values
+        const validTypes: Highlight['type'][] = ['goal', 'assist', 'yellowCard', 'redCard', 'save', 'other'];
+        if (!validTypes.includes(highlight.type)) {
+            console.error("Invalid highlight type:", highlight.type);
+            toast({title: "Error adding highlight", description: "Invalid event type.", variant: "destructive"});
+            return res; // Or handle error appropriately
+        }
         return { ...res, highlights: [...res.highlights, { ...highlight, id: newHighlightId }] };
       }
       return res;
@@ -375,13 +463,38 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast({title: "Highlight Deleted", description: "The highlight has been removed."});
   };
 
+  const isUserJoined = (reservationId: number, userId: string = "user1"): boolean => {
+    const reservation = reservations.find(r => r.id === reservationId);
+    return reservation ? reservation.lineup.some(p => p.userId === userId && p.status === 'joined') : false;
+  };
+
+  const hasUserJoinedOnDate = (date: string, userId: string = "user1"): boolean => {
+    return reservations.some(res => 
+      res.date === date && 
+      res.lineup.some(p => p.userId === userId && p.status === 'joined') &&
+      res.status !== 'completed' && res.status !== 'cancelled'
+    );
+  };
+  
+  const getReservationsForDate = (targetDate: Date): Reservation[] => {
+    const dateStr = targetDate.toISOString().split('T')[0];
+    return reservations.filter(res => res.date === dateStr && (res.status === 'open' || res.status === 'full'));
+  };
+
+  const getUserReservations = (userId: string): Reservation[] => {
+    return reservations.filter(res => 
+      res.lineup.some(p => p.userId === userId && p.status === 'joined')
+    );
+  };
 
   return (
     <ReservationContext.Provider value={{ 
       reservations, 
       pitches, 
       addPitch, 
-      deletePitch, // Provide deletePitch
+      deletePitch,
+      addReservation,
+      deleteReservation,
       joinGame, 
       cancelReservation,
       joinWaitingList,
@@ -394,10 +507,13 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       updateLineup,
       addHighlight,
       editHighlight,
-      deleteHighlight
+      deleteHighlight,
+      isUserJoined,
+      hasUserJoinedOnDate,
+      getReservationsForDate,
+      getUserReservations
     }}>
       {children}
     </ReservationContext.Provider>
   );
 };
-

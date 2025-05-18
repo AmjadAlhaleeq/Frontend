@@ -1,881 +1,218 @@
-// This is the Profile.tsx page. It handles UI and logic for Profile.
 
-import { useState } from "react";
-import {
-  X,
-  Edit,
-  Check,
-  Camera,
-  CalendarCheck,
-  CalendarClock,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Medal,
-  Star,
-  TrendingUp,
-  Trophy,
-  Users,
-  Zap,
-} from "lucide-react";
-import { useReservation } from "@/context/ReservationContext";
-import { useLanguage } from "@/context/LanguageContext";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-
-const userData = {
-  id: "user1",
-  name: "John Doe",
-  username: "johndoe10",
-  email: "john.doe@example.com",
-  avatar: "https://i.pravatar.cc/150?img=65",
-  joined: "January 2024",
-  bio: "Football enthusiast. Sunday league midfielder with a passion for the beautiful game.",
-  level: "Intermediate",
-  preferredPosition: "Midfielder",
-  achievements: [
-    {
-      name: "5-Game Streak",
-      description: "Played 5 games in a row",
-      icon: <TrendingUp className="h-5 w-5 text-orange-500" />,
-    },
-    {
-      name: "MVP",
-      description: "Voted Most Valuable Player twice",
-      icon: <Trophy className="h-5 w-5 text-yellow-500" />,
-    },
-    {
-      name: "Sharpshooter",
-      description: "Scored 10+ goals this season",
-      icon: <Zap className="h-5 w-5 text-bokit-500" />,
-    },
-  ],
-  stats: {
-    gamesPlayed: 28,
-    goalsScored: 15,
-    assists: 12,
-    rating: 4.7,
-    skillLevel: 78, // out of 100
-    stamina: 82, // out of 100
-    teamwork: 90, // out of 100
-  },
-};
-
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  username: z
-    .string()
-    .min(3, { message: "Username must be at least 3 characters." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  bio: z.string().optional(),
-  preferredPosition: z.string().optional(),
-});
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { useReservation, Reservation } from "@/context/ReservationContext"; // Import Reservation
+import { Edit3, Save, ShieldCheck, UserCog, LogOut, CalendarDays, Trophy } from "lucide-react";
+import { format } from 'date-fns';
 
 const Profile = () => {
-  const { getUserReservations, cancelReservation } = useReservation();
-  const { t, language } = useLanguage();
   const { toast } = useToast();
+  const { reservations, getUserReservations } = useReservation(); // Added getUserReservations
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedPastGame, setSelectedPastGame] = useState<number | null>(null);
-  const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
-  const [isChangingAvatar, setIsChangingAvatar] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState(userData.avatar);
-  const [userProfile, setUserProfile] = useState(userData);
-
-  const userReservations = getUserReservations();
-
-  const upcomingReservations = userReservations.filter(
-    (r) => r.status !== "completed"
-  );
-  const pastReservations = userReservations.filter(
-    (r) => r.status === "completed"
-  );
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: userProfile.name,
-      username: userProfile.username,
-      email: userProfile.email,
-      bio: userProfile.bio,
-      preferredPosition: userProfile.preferredPosition,
-    },
+  
+  // Placeholder for user data - in a real app, this would come from auth context or API
+  const [currentUser, setCurrentUser] = useState({
+    id: "user1", // Make sure this ID matches what's used in context (e.g., for isUserJoined)
+    name: "Alex Johnson",
+    email: "alex.johnson@example.com",
+    avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop",
+    bio: "Football enthusiast, midfield maestro. Love a good 7-a-side game.",
+    preferredPosition: "Midfielder",
+    skillLevel: "Intermediate",
   });
 
-  const handleEditProfile = () => {
-    form.reset({
-      name: userProfile.name,
-      username: userProfile.username,
-      email: userProfile.email,
-      bio: userProfile.bio,
-      preferredPosition: userProfile.preferredPosition,
-    });
-    setIsEditing(true);
+  const [formData, setFormData] = useState(currentUser);
+  const [userReservations, setUserReservations] = useState<Reservation[]>([]);
+
+  useEffect(() => {
+    // Fetch reservations specific to the current user
+    // Assuming currentUserId is "user1" for this example as used in ReservationContext
+    setUserReservations(getUserReservations(currentUser.id));
+  }, [currentUser.id, reservations, getUserReservations]);
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveProfile = (values: z.infer<typeof formSchema>) => {
-    setUserProfile({
-      ...userProfile,
-      ...values,
-    });
+  const handleSave = () => {
+    setCurrentUser(formData); // Update the main user state
     setIsEditing(false);
     toast({
-      title: "Profile updated",
-      description: "Your profile has been updated successfully.",
+      title: "Profile Updated",
+      description: "Your profile information has been saved.",
     });
+    // Here, you would typically also send this data to a backend API
   };
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-  };
+  const totalGamesPlayed = userReservations.filter(r => r.status === 'completed' || new Date(r.date) < new Date()).length;
+  // This is a simplified calculation. Real stats would be more complex.
+  const totalGoals = userReservations.reduce((acc, res) => {
+    return acc + res.highlights.filter(h => h.type === 'goal' && h.playerName === currentUser.name).length; // Or match by playerId
+  }, 0);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const preview = reader.result as string;
-        setAvatarPreview(preview);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const saveAvatarChange = () => {
-    setUserProfile((prev) => ({
-      ...prev,
-      avatar: avatarPreview,
-    }));
-    setIsChangingAvatar(false);
-    toast({
-      title: "Profile picture updated",
-      description: "Your profile picture has been updated successfully.",
-    });
-  };
-
-  const handleViewPastGameDetails = (id: number) => {
-    setSelectedPastGame(id);
-    setIsGameDetailsOpen(true);
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center">
-                  <div className="relative group mb-6">
-                    <div className="relative">
-                      <Avatar className="h-32 w-32 border-4 border-[#0F766E] shadow-xl group-hover:border-opacity-70 transition-all duration-300">
-                        <AvatarImage
-                          src={userProfile.avatar}
-                          alt={userProfile.name}
-                          className="object-cover"
-                        />
-                        <AvatarFallback>
-                          {userProfile.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <button
-                        onClick={() => setIsChangingAvatar(true)}
-                        className="absolute bottom-0 right-0 bg-[#0F766E] text-white p-2 rounded-full shadow-lg hover:bg-[#0F766E]/80 transition-colors"
-                      >
-                        <Camera className="h-5 w-5" />
-                      </button>
-                      <Badge className="absolute bottom-1 left-0 bg-[#0F766E]">
-                        {userProfile.level}
-                      </Badge>
+    <div className="container mx-auto px-4 py-8">
+      <Card className="max-w-4xl mx-auto shadow-xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-teal-600 to-cyan-500 p-8 text-white">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <Avatar className="h-24 w-24 sm:h-28 sm:w-28 border-4 border-white shadow-lg">
+              <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />
+              <AvatarFallback className="text-3xl bg-gray-300 text-gray-700">{currentUser.name?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="text-center sm:text-left">
+              <CardTitle className="text-3xl sm:text-4xl font-bold">{currentUser.name}</CardTitle>
+              <CardDescription className="text-cyan-100 text-lg mt-1">{currentUser.email}</CardDescription>
+            </div>
+            <Button 
+              onClick={() => isEditing ? handleSave() : setIsEditing(true)} 
+              variant="outline" 
+              className="mt-4 sm:mt-0 sm:ml-auto bg-white/20 hover:bg-white/30 text-white border-white"
+            >
+              {isEditing ? <Save className="mr-2 h-5 w-5" /> : <Edit3 className="mr-2 h-5 w-5" />}
+              {isEditing ? "Save Profile" : "Edit Profile"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 sm:p-8">
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md">Overview</TabsTrigger>
+              <TabsTrigger value="edit-profile" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md">Account Settings</TabsTrigger>
+              <TabsTrigger value="my-reservations" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md">My Games</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl text-teal-700">About Me</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-gray-600">{currentUser.bio || "No bio yet."}</p>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-500">Preferred Position</Label>
+                      <p className="text-gray-800">{currentUser.preferredPosition || "Not set"}</p>
                     </div>
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {userProfile.name}
-                  </h2>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    @{userProfile.username}
-                  </p>
-
-                  <div className="w-full mt-6">
-                    <Separator className="my-4" />
-
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div className="p-3 bg-[#0F766E]/10 dark:bg-[#0F766E]/20 rounded-lg">
-                        <Users className="h-5 w-5 text-[#0F766E] mx-auto mb-1" />
-                        <div className="text-xl font-bold text-gray-900 dark:text-white">
-                          {userProfile.stats.gamesPlayed}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {t("profile.gamesPlayed")}
-                        </div>
-                      </div>
-                      <div className="p-3 bg-[#0F766E]/10 dark:bg-[#0F766E]/20 rounded-lg">
-                        <Star className="h-5 w-5 text-[#0F766E] mx-auto mb-1" />
-                        <div className="text-xl font-bold text-gray-900 dark:text-white">
-                          {userProfile.stats.rating}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {t("profile.rating")}
-                        </div>
-                      </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-500">Skill Level</Label>
+                      <p className="text-gray-800">{currentUser.skillLevel || "Not set"}</p>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl text-teal-700">Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <CalendarDays className="h-5 w-5 mr-3 text-teal-500"/> Games Played
+                      </div>
+                      <span className="font-semibold text-lg text-teal-600">{totalGamesPlayed}</span>
+                    </div>
+                     <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Trophy className="h-5 w-5 mr-3 text-amber-500"/> Goals Scored
+                      </div>
+                      <span className="font-semibold text-lg text-amber-600">{totalGoals}</span>
+                    </div>
+                    {/* Add more stats like Assists, MVPs etc. */}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-                  <Button
-                    className="w-full mt-6 bg-[#0F766E] hover:bg-[#0F766E]/90"
-                    onClick={handleEditProfile}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    {t("profile.editProfile")}
-                  </Button>
+            <TabsContent value="edit-profile">
+              <form className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="name" className="font-medium">Full Name</Label>
+                    <Input id="name" name="name" value={formData.name} onChange={handleInputChange} disabled={!isEditing} className="mt-1"/>
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="font-medium">Email Address</Label>
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} disabled={!isEditing} className="mt-1"/>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <Label htmlFor="bio" className="font-medium">Bio / About Me</Label>
+                  <textarea 
+                    id="bio" 
+                    name="bio" 
+                    rows={3}
+                    value={formData.bio} 
+                    onChange={handleInputChange} 
+                    disabled={!isEditing} 
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm p-2" 
+                    placeholder="Tell us a bit about yourself as a player..."
+                  />
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="preferredPosition" className="font-medium">Preferred Position</Label>
+                    <Input id="preferredPosition" name="preferredPosition" value={formData.preferredPosition} onChange={handleInputChange} disabled={!isEditing} className="mt-1"/>
+                  </div>
+                  <div>
+                    <Label htmlFor="skillLevel" className="font-medium">Skill Level</Label>
+                    <Input id="skillLevel" name="skillLevel" value={formData.skillLevel} onChange={handleInputChange} disabled={!isEditing} className="mt-1"/>
+                  </div>
+                </div>
+                {isEditing && (
+                  <div className="flex justify-end">
+                    <Button type="button" onClick={handleSave} className="bg-teal-600 hover:bg-teal-700">
+                      <Save className="mr-2 h-5 w-5"/> Save Changes
+                    </Button>
+                  </div>
+                )}
+              </form>
+              <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center"><UserCog className="mr-2 h-5 w-5 text-red-500"/> Account Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <Button variant="outline" className="w-full justify-start text-red-600 border-red-300 hover:bg-red-50">
+                        <LogOut className="mr-2 h-4 w-4"/> Log Out
+                    </Button>
+                     <Button variant="outline" className="w-full justify-start text-gray-700 border-gray-300 hover:bg-gray-50">
+                        <ShieldCheck className="mr-2 h-4 w-4"/> Change Password
+                    </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {t("profile.achievements")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <TabsContent value="my-reservations">
+              {userReservations.length > 0 ? (
                 <div className="space-y-4">
-                  {userProfile.achievements.map((achievement, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start p-3 bg-[#0F766E]/5 dark:bg-[#0F766E]/20 rounded-lg hover:bg-[#0F766E]/10 transition-colors"
-                    >
-                      <div className="bg-white dark:bg-gray-800 p-2 rounded-full mr-3 shadow-sm">
-                        {achievement.icon}
-                      </div>
+                  {userReservations.map(res => (
+                    <Card key={res.id} className="p-4 flex justify-between items-center hover:shadow-md transition-shadow">
                       <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {achievement.name}
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {achievement.description}
-                        </p>
+                        <p className="font-semibold text-teal-700">{res.pitchName} - Game #{res.id}</p>
+                        <p className="text-sm text-gray-600">{format(new Date(res.date), "PPP")} at {res.time}</p>
+                        <p className="text-xs text-gray-500">Status: <span className={`font-medium ${res.status === 'completed' ? 'text-green-600' : res.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'}`}>{res.status}</span></p>
                       </div>
-                    </div>
+                      <Button variant="outline" size="sm" className="text-teal-600 border-teal-600/50 hover:bg-teal-50">View Details</Button>
+                    </Card>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t("profile.statistics")}
-                </CardTitle>
-                <CardDescription>{t("profile.gameHistory")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-8">
-                  <StatCard
-                    icon={<Users className="h-5 w-5 text-[#0F766E]" />}
-                    value={userProfile.stats.gamesPlayed}
-                    label={t("profile.gamesPlayed")}
-                  />
-                  <StatCard
-                    icon={<Zap className="h-5 w-5 text-[#0F766E]" />}
-                    value={userProfile.stats.goalsScored}
-                    label={t("profile.goals")}
-                  />
-                  <StatCard
-                    icon={<TrendingUp className="h-5 w-5 text-[#0F766E]" />}
-                    value={userProfile.stats.assists}
-                    label={t("profile.assists")}
-                  />
-                  <StatCard
-                    icon={<Star className="h-5 w-5 text-yellow-500" />}
-                    value={userProfile.stats.rating}
-                    label={t("profile.rating")}
-                  />
-                </div>
-
-                <div className="space-y-6">
-                  <ProgressStat
-                    label={t("profile.skillLevel")}
-                    value={userProfile.stats.skillLevel}
-                    color="green"
-                  />
-                  <ProgressStat
-                    label={t("profile.stamina")}
-                    value={userProfile.stats.stamina}
-                    color="amber"
-                  />
-                  <ProgressStat
-                    label={t("profile.teamwork")}
-                    value={userProfile.stats.teamwork}
-                    color="green"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t("reservations.title")}
-                </CardTitle>
-                <CardDescription>{t("profile.joinGame")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="upcoming" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="upcoming">
-                      <CalendarClock className="h-4 w-4 mr-2" />
-                      {t("reservations.upcoming")} (
-                      {upcomingReservations.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="past">
-                      <CalendarCheck className="h-4 w-4 mr-2" />
-                      {t("reservations.past")} ({pastReservations.length})
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="upcoming">
-                    {upcomingReservations.length > 0 ? (
-                      <div className="space-y-4">
-                        {upcomingReservations.map((reservation) => (
-                          <div
-                            key={reservation.id}
-                            className="bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex justify-between mb-2">
-                              <h3 className="font-medium">
-                                {reservation.pitchName}
-                              </h3>
-                              <Badge
-                                className={
-                                  reservation.status === "open"
-                                    ? "bg-green-500"
-                                    : "bg-orange-500"
-                                }
-                              >
-                                {t(`reservations.${reservation.status}`)}
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {formatDate(reservation.date, language)}
-                              </div>
-
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {reservation.time}
-                              </div>
-
-                              <div className="flex items-center text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {reservation.location}
-                              </div>
-
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Users className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {reservation.playersJoined}/
-                                {reservation.maxPlayers} {t("pitches.players")}
-                              </div>
-                            </div>
-
-                            <div className="flex justify-end">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                                onClick={() =>
-                                  cancelReservation(reservation.id)
-                                }
-                              >
-                                <X className="h-4 w-4 mr-1" />{" "}
-                                {t("reservations.cancel")}
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <CalendarClock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-muted-foreground">
-                          {t("profile.noUpcomingGames")}
-                        </p>
-                        <Button
-                          className="mt-4 bg-[#0F766E] hover:bg-[#0F766E]/90"
-                          onClick={() =>
-                            (window.location.href = "/reservations")
-                          }
-                        >
-                          {t("pitches.viewAllReservations")}
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="past">
-                    {pastReservations.length > 0 ? (
-                      <div className="space-y-4">
-                        {pastReservations.map((reservation) => (
-                          <div
-                            key={reservation.id}
-                            className="bg-white dark:bg-gray-800 border rounded-lg p-4"
-                          >
-                            <div className="flex justify-between mb-2">
-                              <h3 className="font-medium">
-                                {reservation.pitchName}
-                              </h3>
-                              <div className="flex items-center">
-                                <Medal className="h-4 w-4 text-yellow-500 mr-1" />
-                                <span className="text-sm">
-                                  {t("profile.greatGame")}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {formatDate(reservation.date, language)}
-                              </div>
-
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-1.5 text-[#0F766E]" />
-                                {reservation.time}
-                              </div>
-                            </div>
-
-                            <div className="flex justify-end">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleViewPastGameDetails(reservation.id)
-                                }
-                              >
-                                {t("reservations.details")}
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <CalendarCheck className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-muted-foreground">
-                          {t("profile.noPastGames")}
-                        </p>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("profile.editProfile")}</DialogTitle>
-            <DialogDescription>
-              {t("profile.editProfileDescription")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSaveProfile)}
-              className="space-y-4"
-            >
-              <div className="flex justify-center mb-6">
-                <Avatar className="h-24 w-24 border-4 border-[#0F766E]">
-                  <AvatarImage src={userProfile.avatar} />
-                  <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              </div>
-
-              <div className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("profile.name")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("profile.username")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("profile.email")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("profile.bio")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="preferredPosition"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("profile.preferredPosition")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelEdit}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-[#0F766E] hover:bg-[#0F766E]/90"
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  {t("common.save")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isChangingAvatar} onOpenChange={setIsChangingAvatar}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update Profile Picture</DialogTitle>
-            <DialogDescription>Choose a new profile picture</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-32 w-32 border-4 border-[#0F766E]">
-                <AvatarImage src={avatarPreview} />
-                <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-
-              <div className="flex gap-2">
-                <label className="flex items-center gap-2 bg-[#0F766E] text-white px-4 py-2 rounded-md cursor-pointer hover:bg-[#0F766E]/90 transition-colors">
-                  <Camera className="h-5 w-5" />
-                  <span>Upload Photo</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-3">
-              {[65, 66, 67, 68, 69, 70, 71, 72].map((idx) => (
-                <button
-                  key={idx}
-                  className={`rounded-md overflow-hidden border-2 ${
-                    avatarPreview === `https://i.pravatar.cc/150?img=${idx}`
-                      ? "border-[#0F766E]"
-                      : "border-transparent"
-                  }`}
-                  onClick={() =>
-                    setAvatarPreview(`https://i.pravatar.cc/150?img=${idx}`)
-                  }
-                >
-                  <img
-                    src={`https://i.pravatar.cc/150?img=${idx}`}
-                    alt={`Avatar option ${idx}`}
-                    className="w-full h-full object-cover aspect-square"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setAvatarPreview(userProfile.avatar);
-                setIsChangingAvatar(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-[#0F766E] hover:bg-[#0F766E]/90"
-              onClick={saveAvatarChange}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isGameDetailsOpen} onOpenChange={setIsGameDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Game Details</DialogTitle>
-            <DialogDescription>
-              {selectedPastGame &&
-                (() => {
-                  const game = pastReservations.find(
-                    (r) => r.id === selectedPastGame
-                  );
-                  return game ? formatDate(game.date, language) : "";
-                })()}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedPastGame &&
-            (() => {
-              const game = pastReservations.find(
-                (r) => r.id === selectedPastGame
-              );
-              if (!game) return null;
-
-              return (
-                <div className="space-y-4">
-                  <div className="bg-[#0F766E]/10 dark:bg-[#0F766E]/20 p-4 rounded-lg shadow-md">
-                    <h3 className="font-medium mb-2 text-[#0F766E] dark:text-[#0F766E]/90">
-                      {game.pitchName}
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-[#0F766E] mr-2" />
-                        <span>{game.time}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-[#0F766E] mr-2" />
-                        <span>{game.location}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 text-[#0F766E] mr-2" />
-                        <span>{game.playersJoined} players</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Trophy className="h-4 w-4 text-amber-500 mr-2" />
-                        <span>Final Score: 3-2</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">Game Highlights</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm">
-                        <div className="w-24 text-muted-foreground">14'</div>
-                        <div>Goal by John D.</div>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div className="w-24 text-muted-foreground">32'</div>
-                        <div>Yellow card for Michael S.</div>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div className="w-24 text-muted-foreground">47'</div>
-                        <div>Goal by Sarah L.</div>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div className="w-24 text-muted-foreground">63'</div>
-                        <div>Goal by Alex P.</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">MVP and Top Players</h4>
-                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 p-3 rounded-lg flex items-center mb-3">
-                      <div className="bg-amber-200 dark:bg-amber-700 rounded-full p-2 mr-3">
-                        <Star className="h-5 w-5 text-amber-600 dark:text-amber-300" />
-                      </div>
-                      <div>
-                        <div className="font-medium">Sarah L.</div>
-                        <div className="text-xs text-muted-foreground">
-                          MVP with 2 goals and 1 assist
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg flex items-center">
-                        <Users className="h-4 w-4 text-[#0F766E] mr-2" />
-                        <div className="text-sm">
-                          <div>John D.</div>
-                          <div className="text-xs text-muted-foreground">
-                            1 goal
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg flex items-center">
-                        <Users className="h-4 w-4 text-[#0F766E] mr-2" />
-                        <div className="text-sm">
-                          <div>Alex P.</div>
-                          <div className="text-xs text-muted-foreground">
-                            1 goal, 1 assist
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center text-sm text-muted-foreground pt-2 border-t">
-                    <p>
-                      Game completed on{" "}
-                      {new Date(game.date).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })()}
-        </DialogContent>
-      </Dialog>
+              ) : (
+                <p className="text-center text-gray-500 py-8">You have no reservations yet. Join some games!</p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
-  );
-};
-
-const StatCard = ({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  value: number | string;
-  label: string;
-}) => (
-  <div className="p-4 bg-[#0F766E]/10 dark:bg-[#0F766E]/20 rounded-lg">
-    <div className="flex justify-center mb-2">{icon}</div>
-    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-      {value}
-    </div>
-    <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-  </div>
-);
-
-const ProgressStat = ({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: "default" | "green" | "amber" | "red";
-}) => (
-  <div>
-    <div className="flex justify-between mb-1">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-        {label}
-      </span>
-      <span className="text-sm text-gray-600 dark:text-gray-400">
-        {value}/100
-      </span>
-    </div>
-    <Progress value={value} className="h-2" indicatorColor={color} />
-  </div>
-);
-
-const formatDate = (dateString: string, language: string) => {
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  };
-  return new Date(dateString).toLocaleDateString(
-    language === "ar" ? "ar-SA" : "en-US",
-    options
   );
 };
 
 export default Profile;
+

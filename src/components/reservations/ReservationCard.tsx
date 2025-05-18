@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Trash2, Edit, Users } from "lucide-react";
+import { Trash2, Edit, Users, UserPlus, UserMinus } from "lucide-react";
 import { Reservation, useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/components/ui/use-toast";
 import EditReservationDialog from "./EditReservationDialog";
@@ -13,11 +12,14 @@ import CancelConfirmationDialog from "./CancelConfirmationDialog";
 interface ReservationCardProps {
   reservation: Reservation;
   type: "upcoming" | "past";
-  onJoinGame?: () => void;
-  onCancelReservation?: (id: number) => void;
-  onJoinWaitingList?: (id: number) => void;
+  onJoinGame?: (reservationId: number) => void;
+  onCancelReservation?: (reservationId: number) => void;
+  onJoinWaitingList?: (reservationId: number) => void;
   isUserJoined?: boolean;
+  isUserOnWaitingList?: boolean;
+  onLeaveWaitingList?: (reservationId: number) => void;
   hasUserJoinedOnDate?: (date: string) => boolean;
+  currentUserId?: string;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -27,7 +29,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   onCancelReservation,
   onJoinWaitingList,
   isUserJoined,
+  isUserOnWaitingList,
+  onLeaveWaitingList,
   hasUserJoinedOnDate,
+  currentUserId = "user1"
 }) => {
   const { toast } = useToast();
   const { deleteReservation } = useReservation();
@@ -39,6 +44,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       ? hasUserJoinedOnDate(reservation.date)
       : false;
   const slotsLeft = reservation.maxPlayers - reservation.playersJoined;
+  const isFull = reservation.status === 'full';
 
   const handleCancelConfirm = () => {
     onCancelReservation?.(reservation.id);
@@ -51,27 +57,40 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     });
   };
   
-  // Generate a unique pitch-specific name
   const reservationName = `${reservation.pitchName} Game #${reservation.id}`;
 
+  const handleDeleteReservation = () => {
+     if (window.confirm(`Are you sure you want to delete the reservation "${reservationName}"? This action cannot be undone.`)) {
+        deleteReservation(reservation.id);
+        toast({
+          title: "Reservation Deleted",
+          description: "The reservation has been successfully deleted",
+          duration: 3000,
+          className: "bg-green-100 text-green-700",
+        });
+     }
+  };
+
   return (
-    <div className="hover:shadow-md transition-shadow duration-200 overflow-hidden bg-white border border-[#0F766E]/20 rounded-lg">
+    <div className="hover:shadow-lg transition-shadow duration-300 ease-in-out overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
       <div className="flex flex-col sm:flex-row">
-        <div className="w-full sm:w-48 h-48 relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0F766E]/20 to-[#0F766E]/40" />
+        <div className="w-full sm:w-48 h-48 sm:h-auto relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-teal-600/20 dark:from-teal-700/20 dark:to-teal-800/30 opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
           <img
-            src={`https://source.unsplash.com/random/400x400/?football,soccer,pitch&${reservation.id}`}
+            src={reservation.imageUrl || `https://source.unsplash.com/random/400x400/?soccer,pitch&sig=${reservation.id}`}
             alt={reservation.pitchName}
             className="w-full h-full object-cover"
           />
           <Badge
             className={cn(
-              "absolute top-4 right-4",
+              "absolute top-3 right-3 text-xs px-2 py-1 font-semibold",
               reservation.status === "open"
-                ? "bg-[#0F766E]"
+                ? "bg-green-500 text-white"
                 : reservation.status === "full"
-                ? "bg-orange-500"
-                : "bg-gray-500"
+                ? "bg-orange-500 text-white"
+                : reservation.status === "completed"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-500 text-white"
             )}
           >
             {reservation.status.charAt(0).toUpperCase() +
@@ -79,136 +98,155 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </Badge>
         </div>
 
-        <div className="flex-1 p-6">
-          <div className="flex justify-between items-start">
+        <div className="flex-1 p-5">
+          <div className="flex justify-between items-start mb-2">
             <div>
-              <h3 className="text-xl font-semibold text-[#0F766E] mb-1">
+              <h3 className="text-lg font-semibold text-teal-700 dark:text-teal-400 mb-0.5">
                 {reservationName}
               </h3>
-              <p className="text-sm text-gray-600">{reservation.date}, {reservation.time}</p>
-              <p className="text-sm text-gray-600">{reservation.location}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{reservation.date}, {reservation.time}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{reservation.location}</p>
             </div>
-            <div className="flex space-x-2">
+            {type === "upcoming" && (
+              <div className="flex space-x-1.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowEditDialog(true)}
+                  className="h-8 w-8 text-teal-600 border-teal-600/30 hover:bg-teal-500/10 dark:text-teal-400 dark:border-teal-400/30 dark:hover:bg-teal-400/10"
+                  title="Edit Reservation"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleDeleteReservation}
+                  className="h-8 w-8 text-red-500 border-red-500/30 hover:bg-red-500/10 dark:text-red-400 dark:border-red-400/30 dark:hover:bg-red-400/10"
+                  title="Delete Reservation"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+            {type === "past" && (
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowEditDialog(true)}
-                className="text-[#0F766E] border-[#0F766E]/20 hover:bg-[#0F766E]/10"
+                onClick={handleDeleteReservation}
+                className="h-8 w-8 text-red-500 border-red-500/30 hover:bg-red-500/10"
+                title="Delete Past Reservation Record"
               >
-                <Edit className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  if (type === "past") {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this past reservation?"
-                      )
-                    ) {
-                      deleteReservation(reservation.id);
-                    }
-                  } else {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this reservation?"
-                      )
-                    ) {
-                      deleteReservation(reservation.id);
-                    }
-                  }
-                }}
-                className="text-red-500 border-red-200 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            )}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-3 mb-4">
             <div className="flex items-center">
-              <Users className="h-4 w-4 text-[#0F766E] mr-2" />
+              <Users className="h-4 w-4 text-teal-600 dark:text-teal-400 mr-2" />
               <div className="flex-1">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium">
+                <div className="flex justify-between items-center text-sm">
+                  <p className="font-medium text-gray-700 dark:text-gray-300">
                     {reservation.playersJoined}/{reservation.maxPlayers}{" "}
                     players
                   </p>
-                  <span className="text-xs text-gray-500">
-                    {slotsLeft} spots left
-                  </span>
+                  {slotsLeft > 0 && reservation.status === 'open' && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {slotsLeft} spot{slotsLeft > 1 ? 's' : ''} left
+                    </span>
+                  )}
+                  {isFull && (
+                     <span className="text-xs text-orange-500 dark:text-orange-400">
+                      Game Full
+                    </span>
+                  )}
                 </div>
                 <Progress
                   value={
                     (reservation.playersJoined / reservation.maxPlayers) * 100
                   }
-                  className="h-1 mt-2 bg-[#0F766E]/20"
+                  className="h-1.5 mt-1 bg-teal-500/20 dark:bg-teal-400/20 [&>div]:bg-teal-500 dark:[&>div]:bg-teal-400"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#0F766E]/10">
-            <div className="text-xs text-gray-500">
-              {isUserJoined && (
-                <div className="flex items-center text-[#0F766E]">
-                  <Users className="h-3 w-3 mr-1" />
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 pt-3 border-t border-gray-200/70 dark:border-gray-700/70">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-0">
+              {isUserJoined && type === "upcoming" && (
+                <div className="flex items-center text-green-600 dark:text-green-400 font-medium">
+                  <Users className="h-3.5 w-3.5 mr-1" />
                   You're in this game
                 </div>
               )}
+              {isUserOnWaitingList && type === "upcoming" && !isUserJoined && (
+                 <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium">
+                    <Users className="h-3.5 w-3.5 mr-1" />
+                    You're on the waitlist
+                </div>
+              )}
             </div>
-            <div className="flex space-x-2">
-              {isUserJoined && type === "upcoming" && (
+            <div className="flex space-x-2 w-full sm:w-auto">
+              {type === "upcoming" && (
+                <>
+                  {isUserJoined ? (
+                    <Button
+                      onClick={() => setShowCancelDialog(true)}
+                      variant="outline"
+                      className="w-full sm:w-auto text-red-500 border-red-500/50 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:border-red-400/50 dark:hover:bg-red-400/10"
+                    >
+                      <UserMinus className="h-4 w-4 mr-1.5" />
+                      Leave Game
+                    </Button>
+                  ) : isFull ? (
+                    isUserOnWaitingList ? (
+                        <Button
+                            onClick={() => onLeaveWaitingList?.(reservation.id)}
+                            variant="outline"
+                            className="w-full sm:w-auto text-orange-600 border-orange-500/50 hover:bg-orange-500/10 dark:text-orange-400 dark:border-orange-400/50 dark:hover:bg-orange-400/10"
+                        >
+                            <UserMinus className="h-4 w-4 mr-1.5" />
+                            Leave Waitlist
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={() => onJoinWaitingList?.(reservation.id)}
+                            variant="outline"
+                            className="w-full sm:w-auto text-blue-600 border-blue-500/50 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-400/50 dark:hover:bg-blue-400/10"
+                            disabled={userAlreadyJoinedOnDate}
+                        >
+                           <UserPlus className="h-4 w-4 mr-1.5" />
+                           {userAlreadyJoinedOnDate ? "Booked Today" : "Join Waitlist"}
+                        </Button>
+                    )
+                  ) : (
+                    <Button
+                      onClick={() => onJoinGame?.(reservation.id)}
+                      className={cn(
+                        "w-full sm:w-auto bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white",
+                        userAlreadyJoinedOnDate && "bg-gray-400 dark:bg-gray-600 cursor-not-allowed hover:bg-gray-400 dark:hover:bg-gray-600"
+                      )}
+                      disabled={userAlreadyJoinedOnDate}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1.5" />
+                      {userAlreadyJoinedOnDate ? "Booked Today" : "Join Game"}
+                    </Button>
+                  )}
+                </>
+              )}
+              {type === "past" && (
                 <Button
-                  onClick={() => setShowCancelDialog(true)}
                   variant="outline"
-                  className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                  style={{
-                    margin: "0 auto",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: "180px",
-                    transition: "all 0.3s ease",
+                  className="w-full sm:w-auto text-teal-600 border-teal-500/50 hover:bg-teal-500/10 dark:text-teal-400 dark:border-teal-400/50 dark:hover:bg-teal-400/10"
+                  onClick={() => { 
+                     toast({ title: "Viewing Past Game", description: `Details for ${reservationName}`});
+                     // Logic to show past game details, e.g. via a dialog in Reservations.tsx
                   }}
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Cancel Reservation
+                  View Details
                 </Button>
               )}
-              <Button
-                onClick={
-                  type === "upcoming" &&
-                  !isUserJoined &&
-                  !userAlreadyJoinedOnDate
-                    ? onJoinGame
-                    : () => {}
-                }
-                variant={type === "past" ? "outline" : "default"}
-                className={cn(
-                  type === "past"
-                    ? ""
-                    : isUserJoined
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : userAlreadyJoinedOnDate
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-[#0F766E] hover:bg-[#0F766E]/90",
-                  "transition-colors duration-200"
-                )}
-                disabled={
-                  type === "upcoming" &&
-                  (isUserJoined || userAlreadyJoinedOnDate)
-                }
-              >
-                {type === "past"
-                  ? "View Details"
-                  : isUserJoined
-                  ? "Already Joined"
-                  : userAlreadyJoinedOnDate
-                  ? "Already Booked Today"
-                  : "Join Game"}
-              </Button>
             </div>
           </div>
         </div>
@@ -227,6 +265,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         onOpenChange={setShowCancelDialog}
         onConfirm={handleCancelConfirm}
         pitchName={reservation.pitchName}
+        reservationTime={reservation.time}
+        reservationDate={reservation.date}
       />
     </div>
   );

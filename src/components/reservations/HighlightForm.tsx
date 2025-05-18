@@ -11,19 +11,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, Highlight } from "@/context/ReservationContext"; // Import Highlight type
 
 interface HighlightFormProps {
   reservationId: number;
   onComplete?: () => void;
 }
 
+// Use the type from context for consistency, or a subset if needed
+type EventType = Extract<Highlight['type'], 'goal' | 'assist' | 'yellowCard' | 'redCard'>;
+
+
 const HighlightForm: React.FC<HighlightFormProps> = ({ 
   reservationId, 
   onComplete 
 }) => {
   const [minute, setMinute] = useState<string>('');
-  const [eventType, setEventType] = useState<string>('goal');
+  const [eventType, setEventType] = useState<EventType>('goal'); // Use EventType
   const [playerName, setPlayerName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   
@@ -36,30 +40,37 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
     if (!minute || !playerName) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields (minute, player name).",
         variant: "destructive",
       });
       return;
     }
 
     const minuteValue = parseInt(minute, 10);
-    if (isNaN(minuteValue) || minuteValue < 0 || minuteValue > 120) {
+    if (isNaN(minuteValue) || minuteValue < 0 || minuteValue > 120) { // Max game time, adjust if needed
       toast({
         title: "Invalid Minute",
-        description: "Please enter a valid minute between 0 and 120.",
+        description: "Please enter a valid minute (e.g., 0-120).",
         variant: "destructive",
       });
       return;
     }
     
-    addHighlight(reservationId, {
+    const highlightData: Omit<Highlight, 'id'> = {
       minute: minuteValue,
-      type: eventType as any,
-      playerId: `player-${Date.now()}`,
+      type: eventType, // No 'as any' needed
+      playerId: `player-${Date.now()}-${Math.random().toString(36).substring(7)}`, // More unique ID
       playerName,
-      description: description || undefined
-    });
+      description: description.trim() || undefined
+    };
+
+    addHighlight(reservationId, highlightData);
     
+    toast({
+        title: "Highlight Added",
+        description: `${eventType.charAt(0).toUpperCase() + eventType.slice(1)} by ${playerName} at ${minuteValue}' recorded.`,
+    });
+
     // Reset form
     setMinute('');
     setEventType('goal');
@@ -81,10 +92,11 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
             type="number" 
             placeholder="45" 
             min="0"
-            max="120"
+            max="120" // Assuming max 120 minutes for a match
             value={minute} 
             onChange={(e) => setMinute(e.target.value)}
             className="mt-1"
+            required
           />
         </div>
         
@@ -92,7 +104,7 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
           <Label htmlFor="event-type">Event Type</Label>
           <Select 
             value={eventType}
-            onValueChange={setEventType}
+            onValueChange={(value: EventType) => setEventType(value)}
           >
             <SelectTrigger id="event-type" className="mt-1">
               <SelectValue placeholder="Select event type" />
@@ -102,6 +114,7 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
               <SelectItem value="assist">Assist</SelectItem>
               <SelectItem value="yellowCard">Yellow Card</SelectItem>
               <SelectItem value="redCard">Red Card</SelectItem>
+              {/* Add 'save' or 'other' if they become relevant */}
             </SelectContent>
           </Select>
         </div>
@@ -114,6 +127,7 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
             value={playerName} 
             onChange={(e) => setPlayerName(e.target.value)}
             className="mt-1"
+            required
           />
         </div>
       </div>
