@@ -24,13 +24,13 @@ export interface Pitch {
   location: string;
   rating: number;
   features: string[];
-  playersPerSide: number;
-  isAdmin: boolean; // This can be used to control edit/delete privileges later
+  playersPerSide: number; // This is a number in the final Pitch object
+  isAdmin: boolean;
   details: {
     description: string;
     openingHours: string;
-    address: string; // Detailed address, can be same as location for new pitches
-    price: string; // e.g., "$25 per hour"
+    address: string;
+    price: string; // Price is a string (e.g., "$20 per hour")
     facilities: string[];
     surfaceType: string;
     pitchSize: string;
@@ -175,10 +175,23 @@ export interface Reservation {
   highlights: Highlight[];
 }
 
+// Define a type for the data coming from the AddPitch form
+export type NewPitchData = {
+  name: string;
+  location: string;
+  image: string;
+  playersPerSide: string; // Form sends this as string
+  description: string;
+  openingHours: string;
+  price: string; // Form sends this as string
+  surfaceType: string;
+  pitchSize: string;
+};
+
 interface ReservationContextType {
   reservations: Reservation[];
-  pitches: Pitch[]; // Add pitches state
-  addPitch: (pitchData: Omit<Pitch, 'id' | 'rating' | 'features' | 'isAdmin' | 'details'> & { playersPerSide: string; price: string; description: string; openingHours: string; surfaceType: string; pitchSize: string; }) => void; // Function to add a new pitch
+  pitches: Pitch[];
+  addPitch: (pitchData: NewPitchData) => void; // Use the new type here
   joinGame: (id: number, position?: number) => void;
   cancelReservation: (id: number) => void;
   joinWaitingList: (id: number) => void;
@@ -205,9 +218,13 @@ export const useReservation = () => {
   return context;
 };
 
+// Define an empty array for initial reservations if not found in localStorage
+const initialReservationsData: Reservation[] = [];
+
 export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     const savedReservations = localStorage.getItem("reservations");
+    // Use initialReservationsData if nothing is saved, or if parsing fails (though robust parsing isn't added here)
     return savedReservations ? JSON.parse(savedReservations) : initialReservationsData;
   });
 
@@ -496,7 +513,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   // Function to add a new pitch
-  const addPitch = (newPitchData: Omit<Pitch, 'id' | 'rating' | 'features' | 'isAdmin' | 'details'> & { playersPerSide: string; price: string; description: string; openingHours: string; surfaceType: string; pitchSize: string; }) => {
+  const addPitch = (newPitchData: NewPitchData) => { // Use NewPitchData here
     setPitches(prevPitches => {
       const newId = prevPitches.length > 0 ? Math.max(...prevPitches.map(p => p.id)) + 1 : 1;
       const newPitch: Pitch = {
@@ -504,19 +521,19 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         name: newPitchData.name,
         location: newPitchData.location,
         image: newPitchData.image,
-        playersPerSide: parseInt(newPitchData.playersPerSide, 10) || 5, // Convert to number, default to 5
-        rating: 0, // Default rating for new pitches
-        features: [], // Default empty features
-        isAdmin: true, // Assuming admin adds this pitch
+        playersPerSide: parseInt(newPitchData.playersPerSide, 10) || 5, // Convert string to number
+        rating: 0, 
+        features: [], 
+        isAdmin: true, 
         details: {
           description: newPitchData.description,
           openingHours: newPitchData.openingHours,
-          address: newPitchData.location, // Use location as address for simplicity
-          price: newPitchData.price, // Already a string
-          facilities: [], // Default empty facilities
+          address: newPitchData.location, 
+          price: newPitchData.price, // Price remains string as per Pitch interface
+          facilities: [], 
           surfaceType: newPitchData.surfaceType,
           pitchSize: newPitchData.pitchSize,
-          rules: [], // Default empty rules
+          rules: [], 
         }
       };
       toast({
