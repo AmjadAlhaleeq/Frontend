@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, XCircle, Calendar } from "lucide-react";
+import { Trash2, XCircle, Calendar as CalendarIcon, Clock } from "lucide-react"; // Renamed Calendar to CalendarIcon to avoid conflict
 import { motion } from "framer-motion";
 
 interface CancelConfirmationDialogProps {
@@ -18,6 +18,8 @@ interface CancelConfirmationDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   pitchName: string;
+  date: string;
+  time: string;
 }
 
 const CancelConfirmationDialog: React.FC<CancelConfirmationDialogProps> = ({
@@ -25,6 +27,8 @@ const CancelConfirmationDialog: React.FC<CancelConfirmationDialogProps> = ({
   onOpenChange,
   onConfirm,
   pitchName,
+  date,
+  time,
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -37,8 +41,12 @@ const CancelConfirmationDialog: React.FC<CancelConfirmationDialogProps> = ({
             <AlertDialogTitle className="text-xl font-bold text-red-600">Cancel Reservation</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-center px-4">
-            Are you sure you want to cancel your reservation at{" "}
-            <span className="font-semibold text-gray-800">{pitchName}</span>?
+            Are you sure you want to cancel your reservation for{" "}
+            <span className="font-semibold text-gray-800">{pitchName}</span>
+            {" on "}
+            <span className="font-semibold text-gray-800">{date}</span>
+            {" at "}
+            <span className="font-semibold text-gray-800">{time}</span>?
             <div className="mt-2 text-sm text-gray-500">
               This action cannot be undone and your spot will be made available to other players.
             </div>
@@ -46,7 +54,7 @@ const CancelConfirmationDialog: React.FC<CancelConfirmationDialogProps> = ({
         </AlertDialogHeader>
         <div className="bg-red-50 p-4 rounded-md my-2">
           <div className="flex items-start">
-            <Calendar className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+            <CalendarIcon className="h-5 w-5 text-red-500 mr-2 mt-0.5" /> {/* Changed to CalendarIcon */}
             <div className="text-sm text-red-700">
               <span className="font-medium">Important:</span> Cancelling less than 24 hours before the game may affect your booking reputation.
             </div>
