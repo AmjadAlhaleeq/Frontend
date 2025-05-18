@@ -17,6 +17,7 @@ import LoginDialog from "@/components/auth/LoginDialog";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null); // Added userRole state
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { toast } = useToast();
   const location = useLocation();
@@ -46,6 +47,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserRole(null); // Reset user role on logout
     toast({
       title: t('nav.logout'),
       description: "You have been successfully logged out.",
@@ -57,12 +59,17 @@ const Navbar = () => {
     setIsLoginDialogOpen(true);
   };
 
-  const handleLoginSuccess = () => {
+  /**
+   * Handles successful login.
+   * @param role - The role of the logged-in user ('admin' or 'player').
+   */
+  const handleLoginSuccess = (role: 'admin' | 'player') => {
     setIsLoggedIn(true);
+    setUserRole(role); // Set user role
     setIsLoginDialogOpen(false);
     toast({
       title: t('nav.login'),
-      description: "Welcome back!",
+      description: `Welcome back! You are logged in as ${role}.`, // Updated toast message
       duration: 3000,
     });
   };
@@ -115,7 +122,7 @@ const Navbar = () => {
                     <Button variant="ghost" className="relative p-1">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Profile" />
-                        <AvatarFallback>P</AvatarFallback>
+                        <AvatarFallback>{userRole === 'admin' ? 'A' : 'P'}</AvatarFallback> {/* Show A for admin, P for player */}
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
@@ -126,20 +133,29 @@ const Navbar = () => {
                         <span>{t('nav.profile')}</span>
                       </Link>
                     </DropdownMenuItem>
+                    {/* Example of admin-only link - to be properly implemented later */}
+                    {userRole === 'admin' && (
+                       <DropdownMenuItem asChild>
+                         <Link to="/admin/add-pitch" className="flex items-center text-bokit-600 dark:text-bokit-400">
+                           <MapPin className="mr-2 h-4 w-4" /> 
+                           <span>Add Pitch</span>
+                         </Link>
+                       </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild>
                       <Link to="/reservations" className="flex items-center">
                         <Calendar className="mr-2 h-4 w-4" />
                         <span>{t('nav.bookings')}</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
+                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600" onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>{t('nav.logout')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button onClick={handleLoginButtonClick} className="flex items-center bg-[#0F766E] hover:bg-[#0d6d66] text-white">
+                <Button onClick={handleLoginButtonClick} className="flex items-center bg-bokit-500 hover:bg-bokit-600 text-white">
                   <LogIn className="mr-2 h-4 w-4" />
                   <span>{t('nav.login')}</span>
                 </Button>
@@ -183,7 +199,7 @@ const Navbar = () => {
       </nav>
 
       {isOpen && (
-        <div className="md:hidden">
+        <div className="md:hidden border-t border-gray-200 dark:border-gray-700">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <MobileNavLink to="/" text={t('nav.home')} isActive={isActive("/")} />
             <MobileNavLink to="/pitches" text={t('nav.pitches')} isActive={isActive("/pitches")} />
@@ -192,18 +208,28 @@ const Navbar = () => {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
             <div className="px-5 space-y-2">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start"
-                onClick={toggleLanguage}
-                aria-label="Change language"
-              >
-                <Globe className="mr-2 h-5 w-5" />
-                <span>{language === 'en' ? 'العربية' : 'English'}</span>
-              </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={toggleLanguage}
+                  aria-label="Change language"
+                >
+                  <Globe className="mr-2 h-5 w-5" />
+                  <span>{language === 'en' ? 'العربية' : 'English'}</span>
+                </Button>
               
               {isLoggedIn ? (
                 <>
+                  <div className="flex items-center px-2 py-2">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3" alt="Profile" />
+                        <AvatarFallback>{userRole === 'admin' ? 'A' : 'P'}</AvatarFallback>
+                      </Avatar>
+                      <div className="ml-3">
+                        <p className="text-base font-medium text-gray-800 dark:text-white">User Name</p> {/* Placeholder */}
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{userRole === 'admin' ? 'Admin' : 'Player'}</p>
+                      </div>
+                    </div>
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start"
@@ -214,6 +240,19 @@ const Navbar = () => {
                       <span>{t('nav.profile')}</span>
                     </Link>
                   </Button>
+                  {/* Example of admin-only link for mobile */}
+                  {userRole === 'admin' && (
+                     <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-bokit-600 dark:text-bokit-400"
+                        asChild
+                      >
+                       <Link to="/admin/add-pitch">
+                         <MapPin className="mr-2 h-5 w-5" /> 
+                         <span>Add Pitch</span>
+                       </Link>
+                     </Button>
+                  )}
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start"
@@ -226,7 +265,7 @@ const Navbar = () => {
                   </Button>
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start text-red-500"
+                    className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600"
                     onClick={handleLogout}
                   >
                     <LogOut className="mr-2 h-5 w-5" />
@@ -236,7 +275,7 @@ const Navbar = () => {
               ) : (
                 <Button 
                   onClick={handleLoginButtonClick} 
-                  className="w-full justify-start bg-[#0F766E] hover:bg-[#0d6d66] text-white"
+                  className="w-full justify-start bg-bokit-500 hover:bg-bokit-600 text-white"
                 >
                   <LogIn className="mr-2 h-5 w-5" />
                   <span>{t('nav.login')}</span>
@@ -246,7 +285,11 @@ const Navbar = () => {
           </div>
         </div>
       )}
-      <LoginDialog isOpen={isLoginDialogOpen} onClose={() => setIsLoginDialogOpen(false)} onLoginSuccess={handleLoginSuccess} />
+      <LoginDialog 
+        isOpen={isLoginDialogOpen} 
+        onClose={() => setIsLoginDialogOpen(false)} 
+        onLoginSuccess={handleLoginSuccess} 
+      />
     </>
   );
 };
