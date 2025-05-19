@@ -1,10 +1,11 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/context/ReservationContext";
 import {
   Award,
   Flag,
-  Football,
+  SoccerBall,
   Footprints,
   Goal,
   ShieldAlert,
@@ -35,7 +36,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Football className="h-5 w-5 text-gray-500" />
+          <SoccerBall className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Goals Scored</p>
             <p className="text-lg font-bold">{stats.goalsScored}</p>
