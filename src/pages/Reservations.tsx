@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PlayerLineup from "./PlayerLineup";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Users, Calendar as CalendarIcon, ArrowRight, ListFilter, Search, MapPinIcon } from "lucide-react";
+import { CheckCircle, Clock, Users, Calendar as CalendarIcon, ArrowRight, ListFilter, Search, MapPinIcon, XCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import PitchLineup from "@/components/PitchLineup";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isSameDay } from "date-fns";
 import AddReservationDialog from "@/components/reservations/AddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import { cn } from "@/lib/utils";
@@ -57,18 +57,17 @@ const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
  * Admins have additional capabilities like adding new reservations.
  */
 const Reservations = () => {
-  const [currentDate, setCurrentDate] = useState<Date | undefined>(new Date());
+  // Initialize currentDate to undefined to show all upcoming games initially
+  const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
-  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null); // 'admin', 'player', or null
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Current logged-in user's ID
+  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState("upcoming"); // 'upcoming' or 'past'
+  const [activeTab, setActiveTab] = useState("upcoming");
   
-  // State for "View Game Details" dialog (for past games, typically non-admin view)
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
   
-  // Effect to load user role and ID from localStorage on component mount
   useEffect(() => {
     // TODO: Replace localStorage with a proper auth context/service for user role and ID
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
@@ -85,50 +84,54 @@ const Reservations = () => {
     }
   }, []);
 
-  // Destructure methods from ReservationContext
   const {
-    reservations, // All reservations (source of truth, ideally fetched from API)
+    reservations,
     joinGame,
     cancelReservation,
     joinWaitingList,
     leaveWaitingList,
-    isUserJoined, // Checks if a specific user has joined a specific reservation
-    hasUserJoinedOnDate, // Checks if user has any game on a date
-    getReservationsForDate, // Filters reservations for a specific date
+    isUserJoined,
+    hasUserJoinedOnDate,
+    getReservationsForDate,
   } = useReservation();
 
-  // Memoized list of upcoming reservations
-  const upcomingReservations = useMemo(() => 
-    // TODO: API Call: Fetch upcoming reservations from backend, already filtered and sorted
-    reservations.filter(
-      (res) => (res.status === "open" || res.status === "full") && new Date(res.date) >= new Date(new Date().setHours(0,0,0,0))
-    ).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)),
-    [reservations]
-  );
+  // Memoized list of upcoming reservations, now filtered by currentDate if set
+  const upcomingReservations = useMemo(() => {
+    let gamesToShow: Reservation[];
+    const today = new Date(new Date().setHours(0, 0, 0, 0)); // Start of today
 
-  // Memoized list of past reservations
+    if (currentDate) {
+      // Ensure selected date is not in the past for "upcoming" view
+      if (currentDate < today && !isSameDay(currentDate, today)) {
+        gamesToShow = [];
+      } else {
+        gamesToShow = getReservationsForDate(currentDate)
+          .filter(res => res.status === "open" || res.status === "full");
+      }
+    } else {
+      // No specific date selected, show all upcoming games (today or future)
+      gamesToShow = reservations.filter(
+        (res) => (res.status === "open" || res.status === "full") && 
+                 new Date(res.date) >= today
+      );
+    }
+
+    return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
+  }, [reservations, currentDate, getReservationsForDate]);
+
+  // Memoized list of past reservations (remains unchanged)
   const pastReservations = useMemo(() =>
-    // TODO: API Call: Fetch past reservations from backend, already filtered and sorted
     reservations.filter(
       (res) => res.status === "completed" || (res.status !== 'cancelled' && new Date(res.date) < new Date(new Date().setHours(0,0,0,0)))
     ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.time.localeCompare(a.time)), 
     [reservations]
   );
   
-  // Memoized list of reservations for the currently selected date in the calendar
-  const reservationsForSelectedDate = useMemo(() => 
-    currentDate ? getReservationsForDate(currentDate) : [],
-    [currentDate, getReservationsForDate]
-  );
-  const hasReservationsForDate = reservationsForSelectedDate.length > 0;
-
-  // Opens the "Game Details" dialog for a selected past reservation
   const handleViewGameDetails = (reservation: Reservation) => {
     setSelectedGameForDetails(reservation);
     setIsGameDetailsDialogOpen(true);
   };
   
-  // Checks if there are any reservations on a given date (for calendar highlights)
   const checkHasReservationsOnDate = (date: Date): boolean => {
     // This relies on getReservationsForDate which uses local data.
     // For API, this might involve a separate lightweight API call or pre-fetched summary data.
@@ -172,6 +175,19 @@ const Reservations = () => {
     leaveWaitingList(reservationId, currentUserId);
   };
 
+  // Dynamic header message for the upcoming games list
+  const upcomingGamesHeader = useMemo(() => {
+    if (currentDate) {
+      const formattedDate = format(currentDate, "MMM d, yyyy");
+      if (upcomingReservations.length > 0) {
+        return `Showing ${upcomingReservations.length} game${upcomingReservations.length === 1 ? '' : 's'} on ${formattedDate}`;
+      }
+      return `No upcoming games found for ${formattedDate}`;
+    }
+    return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
+  }, [currentDate, upcomingReservations.length]);
+
+
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
       {/* Page Header and Admin's Add Reservation Button */}
@@ -182,69 +198,19 @@ const Reservations = () => {
             Book and manage your football pitch reservations.
           </p>
         </div>
-        {/* Admin-only button to add new reservations */}
         {userRole === 'admin' && <AddReservationDialog />}
       </div>
 
-      {/* Main layout: Calendar and Date-specific games on left, Tabs for Upcoming/Past games on right */}
+      {/* Main layout: Calendar on left, Tabs for Upcoming/Past games on right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        {/* Left Column: Calendar and Games for Selected Date */}
+        {/* Left Column: Calendar */}
         <div className="lg:sticky lg:top-20 h-fit">
           <EnhancedDatePicker
             date={currentDate}
             onDateChange={setCurrentDate}
-            hasReservations={checkHasReservationsOnDate} // Function to check if a date has reservations (for highlighting)
+            hasReservations={checkHasReservationsOnDate}
           />
-
-          {/* Display games for the selected date if any */}
-          {hasReservationsForDate && currentDate && (
-            <Card className="mt-4 bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 shadow-sm">
-              {/* ... keep existing code (CardHeader for games on selected date) */}
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm sm:text-base font-semibold text-teal-700 dark:text-teal-400">
-                  Games on {format(currentDate, "MMMM d, yyyy")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-3 px-4">
-                {reservationsForSelectedDate.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {reservationsForSelectedDate.map((res) => (
-                      // ... keep existing code (rendering individual game summary for selected date)
-                      <div
-                        key={res.id}
-                        className="flex items-center justify-between py-2.5 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 text-xs sm:text-sm"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-700 dark:text-gray-200">{res.pitchName}</p>
-                          <p className="text-xs text-muted-foreground dark:text-gray-500">
-                            {res.time}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            res.status === "open" ? "default" : 
-                            res.status === "full" ? "destructive" :
-                            "secondary"
-                          }
-                          className={cn(
-                            "text-xs",
-                            res.status === "open" && "bg-green-500 hover:bg-green-600 text-white",
-                            res.status === "full" && "bg-orange-500 hover:bg-orange-600 text-white",
-                            res.status === "completed" && "bg-blue-500 hover:bg-blue-600 text-white",
-                            res.status === "cancelled" && "bg-gray-400 hover:bg-gray-500 text-white"
-                          )}
-                        >
-                          {res.playersJoined}/{res.maxPlayers}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground dark:text-gray-500 py-2">No games scheduled for this date.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* The card displaying games for selected date below calendar is REMOVED */}
         </div>
 
         {/* Right Column: Tabs for Upcoming and Past Games */}
@@ -255,7 +221,6 @@ const Reservations = () => {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            {/* ... keep existing code (TabsList for Upcoming/Past) */}
             <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
               <TabsTrigger value="upcoming" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm data-[state=active]:text-teal-600 dark:data-[state=active]:text-teal-400 text-gray-600 dark:text-gray-300">
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -270,23 +235,43 @@ const Reservations = () => {
             {/* Upcoming Games Tab Content */}
             <TabsContent value="upcoming" className="space-y-4">
               {upcomingReservations.length === 0 ? (
-                // ... keep existing code (EmptyState for no upcoming games)
                 <EmptyState
-                  title="No upcoming games"
-                  description="No games scheduled yet. Why not book one?"
-                  actionText={userRole === 'admin' ? "Add New Reservation" : "Check Back Soon"}
-                  onActionClick={userRole === 'admin' ? () => { /* This should ideally open the AddReservationDialog. Consider a ref or state for dialog control. */ } : undefined}
+                  icon={currentDate ? <ListFilter className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" /> : <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
+                  title={
+                    currentDate 
+                    ? `No upcoming games on ${format(currentDate, "MMMM d, yyyy")}` 
+                    : "No upcoming games"
+                  }
+                  description={
+                    currentDate 
+                    ? "Try selecting a different date or clear the filter to see all upcoming games."
+                    : "No games scheduled yet. Why not book one if you're an admin?"
+                  }
+                  actionText={
+                    currentDate 
+                    ? "Clear Date Filter" 
+                    : (userRole === 'admin' ? "Add New Reservation" : undefined)
+                  }
+                  onActionClick={
+                    currentDate 
+                    ? () => setCurrentDate(undefined) 
+                    : (userRole === 'admin' ? () => { /* This should ideally open the AddReservationDialog */ } : undefined)
+                  }
+                  actionIcon={currentDate ? <XCircle className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
                 />
               ) : (
                 <>
-                  {/* ... keep existing code (Upcoming games count) */}
                   <div className="flex justify-between items-center mb-3 px-1">
                     <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
-                      Showing {upcomingReservations.length} upcoming game{upcomingReservations.length === 1 ? '' : 's'}
+                      {upcomingGamesHeader}
                     </div>
+                    {currentDate && (
+                       <Button variant="ghost" size="sm" onClick={() => setCurrentDate(undefined)} className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
+                         <XCircle className="h-3.5 w-3.5 mr-1" /> Clear Filter
+                       </Button>
+                    )}
                   </div>
 
-                  {/* Render list of upcoming ReservationCards */}
                   {upcomingReservations.map((reservation) => (
                     <ReservationCard
                       key={reservation.id}
@@ -300,7 +285,7 @@ const Reservations = () => {
                       isUserOnWaitingList={currentUserId ? reservation.waitingList.includes(currentUserId) : false}
                       hasUserJoinedOnDate={(date) => currentUserId ? hasUserJoinedOnDate(date, currentUserId) : false}
                       currentUserId={currentUserId || ""} 
-                      isAdmin={userRole === 'admin'} // Pass admin status to the card
+                      isAdmin={userRole === 'admin'}
                     />
                   ))}
                 </>
@@ -310,7 +295,6 @@ const Reservations = () => {
             {/* Past Games Tab Content */}
             <TabsContent value="past" className="space-y-4">
               {pastReservations.length === 0 ? (
-                // ... keep existing code (EmptyState for no past games)
                 <EmptyState
                   title="No past games yet"
                   description="Your game history will appear here once you've played."
@@ -319,7 +303,6 @@ const Reservations = () => {
                 />
               ) : (
                 <>
-                  {/* ... keep existing code (Past games summary card and table) */}
                   <Card className="bg-white dark:bg-gray-850 shadow-sm border border-gray-200 dark:border-gray-700">
                     <CardHeader>
                         <CardTitle className="text-base sm:text-lg text-teal-700 dark:text-teal-400">Game Stats Summary</CardTitle>
@@ -382,7 +365,7 @@ const Reservations = () => {
                             </TableCell>
                             <TableCell className="text-right">
                                 { userRole === 'admin' ? (
-                                     <ReservationCard // For admins, a mini-card or just relevant buttons for past games
+                                     <ReservationCard
                                         key={`${reservation.id}-admin-past`}
                                         reservation={reservation}
                                         type="past"
@@ -393,7 +376,7 @@ const Reservations = () => {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleViewGameDetails(reservation)} // Opens the details dialog
+                                        onClick={() => handleViewGameDetails(reservation)}
                                         className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
                                     >
                                         View Details
@@ -412,9 +395,8 @@ const Reservations = () => {
         </div>
       </div>
 
-      {/* Dialog for Viewing Past Game Details (non-admin focused) */}
+      {/* Dialog for Viewing Past Game Details */}
       <Dialog open={isGameDetailsDialogOpen} onOpenChange={setIsGameDetailsDialogOpen}>
-        {/* ... keep existing code (DialogContent for game details) */}
         <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[80vh] flex flex-col bg-white dark:bg-gray-800 border dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="text-xl text-teal-700 dark:text-teal-400">
@@ -465,7 +447,6 @@ const Reservations = () => {
                 {selectedGameForDetails.highlights && selectedGameForDetails.highlights.length > 0 ? (
                     <HighlightsList 
                     reservationId={selectedGameForDetails.id}
-                    // Highlights list might need its own admin check if editing/deleting highlights is possible from here
                     isAdmin={userRole === 'admin'} 
                     />
                 ) : (
@@ -484,29 +465,39 @@ const Reservations = () => {
 };
 
 /**
- * EmptyState component to display when there's no data (e.g., no upcoming games).
+ * EmptyState component to display when there's no data.
  */
 const EmptyState = ({
   title,
   description,
   actionText,
   onActionClick,
+  icon, // Added icon prop
+  actionIcon // Added actionIcon prop
 }: {
   title: string;
   description: string;
   actionText?: string; 
   onActionClick?: () => void;
+  icon?: React.ReactNode; // Optional custom icon for the empty state
+  actionIcon?: React.ReactNode; // Optional icon for the action button
 }) => (
   <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">
     <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4">
-      <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />
+      {icon || <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
     </div>
     <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">{title}</h3>
     <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md">{description}</p>
     {actionText && onActionClick && (
-      <Button onClick={onActionClick} className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm">
+      <Button 
+        onClick={onActionClick} 
+        className={cn(
+            "bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm",
+            actionText === "Clear Date Filter" && "bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
+        )}
+      >
         {actionText}
-        <ArrowRight className="ml-2 h-4 w-4" />
+        {actionIcon || <ArrowRight className="ml-2 h-4 w-4" />}
       </Button>
     )}
   </div>
