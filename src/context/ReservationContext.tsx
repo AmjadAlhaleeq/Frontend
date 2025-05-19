@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // Define the types
@@ -9,6 +8,13 @@ export interface Highlight {
   playerName: string;
   description: string;
   minute: number;
+}
+
+export interface LineupPlayer {
+  userId: string;
+  name?: string;
+  position?: string;
+  status: 'joined' | 'waiting' | 'left' | 'suspended';
 }
 
 export interface Pitch {
@@ -59,6 +65,10 @@ export interface Reservation {
   waitingList: string[];
   highlights: Highlight[];
   title?: string;
+  location?: string;
+  price?: number;
+  lineup: LineupPlayer[];
+  finalScore?: string;
 }
 
 export interface NewReservationData {
@@ -69,6 +79,7 @@ export interface NewReservationData {
   maxPlayers: number;
   playersPerSide: number;
   title?: string;
+  location?: string;
 }
 
 export interface NewPitchData {
@@ -105,6 +116,8 @@ interface ReservationContextType {
   getUserStats: (userId: string) => UserStats;
   isUserJoined: (reservationId: number, userId: string) => boolean;
   hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
+  deleteHighlight: (reservationId: number, highlightId: number) => void;
+  editReservation: (reservationId: number, updates: Partial<Omit<Reservation, 'id'>>) => void;
 }
 
 // Create the context
@@ -187,7 +200,18 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
       playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7"],
       waitingList: [],
       highlights: [],
-      title: "Evening 5-a-side"
+      title: "Evening 5-a-side",
+      location: "123 Main St, City Center",
+      price: 25,
+      lineup: [
+        { userId: "user1", name: "John Player", position: "forward", status: "joined" },
+        { userId: "user2", name: "Mike Johnson", position: "midfielder", status: "joined" },
+        { userId: "user3", name: "Sarah Smith", position: "defender", status: "joined" },
+        { userId: "user4", name: "David Brown", position: "goalkeeper", status: "joined" },
+        { userId: "user5", name: "Alex Wilson", position: "forward", status: "joined" },
+        { userId: "user6", name: "Emma Davis", position: "midfielder", status: "joined" },
+        { userId: "user7", name: "Tom Harris", position: "defender", status: "joined" }
+      ]
     },
     {
       id: 2,
@@ -202,7 +226,25 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
       playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8", "user9", "user10", "user11", "user12", "user13", "user14"],
       waitingList: ["user15", "user16"],
       highlights: [],
-      title: "Downtown League Match"
+      title: "Downtown League Match",
+      location: "456 Park Ave, Downtown",
+      price: 35,
+      lineup: [
+        { userId: "user1", name: "John Player", position: "forward", status: "joined" },
+        { userId: "user2", name: "Mike Johnson", position: "midfielder", status: "joined" },
+        { userId: "user3", name: "Sarah Smith", position: "defender", status: "joined" },
+        { userId: "user4", name: "David Brown", position: "goalkeeper", status: "joined" },
+        { userId: "user5", name: "Alex Wilson", position: "forward", status: "joined" },
+        { userId: "user6", name: "Emma Davis", position: "midfielder", status: "joined" },
+        { userId: "user7", name: "Tom Harris", position: "defender", status: "joined" },
+        { userId: "user8", name: "Lisa Jones", position: "midfielder", status: "joined" },
+        { userId: "user9", name: "Kevin Clark", position: "forward", status: "joined" },
+        { userId: "user10", name: "Anna White", position: "defender", status: "joined" },
+        { userId: "user11", name: "James Miller", position: "midfielder", status: "joined" },
+        { userId: "user12", name: "Olivia Martin", position: "forward", status: "joined" },
+        { userId: "user13", name: "Ryan Taylor", position: "defender", status: "joined" },
+        { userId: "user14", name: "Sophia Moore", position: "goalkeeper", status: "joined" }
+      ]
     },
     {
       id: 3,
@@ -217,7 +259,29 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
       playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8", "user9", "user10", "user11", "user12", "user13", "user14", "user15", "user16", "user17", "user18"],
       waitingList: [],
       highlights: [],
-      title: "Full Field Friendly"
+      title: "Full Field Friendly",
+      location: "789 River Rd, Riverside",
+      price: 50,
+      lineup: [
+        { userId: "user1", name: "John Player", position: "forward", status: "joined" },
+        { userId: "user2", name: "Mike Johnson", position: "midfielder", status: "joined" },
+        { userId: "user3", name: "Sarah Smith", position: "defender", status: "joined" },
+        { userId: "user4", name: "David Brown", position: "goalkeeper", status: "joined" },
+        { userId: "user5", name: "Alex Wilson", position: "forward", status: "joined" },
+        { userId: "user6", name: "Emma Davis", position: "midfielder", status: "joined" },
+        { userId: "user7", name: "Tom Harris", position: "defender", status: "joined" },
+        { userId: "user8", name: "Lisa Jones", position: "midfielder", status: "joined" },
+        { userId: "user9", name: "Kevin Clark", position: "forward", status: "joined" },
+        { userId: "user10", name: "Anna White", position: "defender", status: "joined" },
+        { userId: "user11", name: "James Miller", position: "midfielder", status: "joined" },
+        { userId: "user12", name: "Olivia Martin", position: "forward", status: "joined" },
+        { userId: "user13", name: "Ryan Taylor", position: "defender", status: "joined" },
+        { userId: "user14", name: "Sophia Moore", position: "goalkeeper", status: "joined" },
+        { userId: "user15", name: "William Johnson", position: "midfielder", status: "joined" },
+        { userId: "user16", name: "Ava Brown", position: "forward", status: "joined" },
+        { userId: "user17", name: "Noah Wilson", position: "defender", status: "joined" },
+        { userId: "user18", name: "Emma Davis", position: "midfielder", status: "joined" }
+      ]
     },
     {
       id: 4,
@@ -249,7 +313,22 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
           minute: 35
         }
       ],
-      title: "Past Arena Game"
+      title: "Past Arena Game",
+      location: "123 Main St, City Center",
+      price: 25,
+      finalScore: "3-2",
+      lineup: [
+        { userId: "user1", name: "John Player", position: "forward", status: "joined" },
+        { userId: "user2", name: "Mike Johnson", position: "midfielder", status: "joined" },
+        { userId: "user3", name: "Sarah Smith", position: "defender", status: "joined" },
+        { userId: "user4", name: "David Brown", position: "goalkeeper", status: "joined" },
+        { userId: "user5", name: "Alex Wilson", position: "forward", status: "joined" },
+        { userId: "user6", name: "Emma Davis", position: "midfielder", status: "joined" },
+        { userId: "user7", name: "Tom Harris", position: "defender", status: "joined" },
+        { userId: "user8", name: "Lisa Jones", position: "midfielder", status: "joined" },
+        { userId: "user9", name: "Kevin Clark", position: "forward", status: "joined" },
+        { userId: "user10", name: "Anna White", position: "defender", status: "joined" }
+      ]
     }
   ]);
 
@@ -270,45 +349,12 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
       playersIds: [],
       waitingList: [],
       highlights: [],
-      title: data.title
+      title: data.title,
+      location: data.location,
+      lineup: [],
     };
     
     setReservations([...reservations, newReservation]);
-  };
-
-  // Add a new pitch
-  const addPitch = (pitch: NewPitchData) => {
-    const newId = pitches.length > 0 ? Math.max(...pitches.map(p => p.id)) + 1 : 1;
-    
-    const newPitch: Pitch = {
-      id: newId,
-      name: pitch.name,
-      location: pitch.location,
-      image: pitch.image || "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?ixlib=rb-4.0.3&auto=format&fit=crop&w=687&q=80",
-      playersPerSide: pitch.playersPerSide,
-      description: pitch.description,
-      openingHours: pitch.openingHours,
-      price: pitch.price,
-      surfaceType: pitch.surfaceType,
-      pitchSize: pitch.pitchSize,
-      features: ["Indoor"],
-      details: {
-        address: pitch.location,
-        description: pitch.description,
-        price: `$${pitch.price} per hour`,
-        facilities: ["Changing Rooms", "Parking"]
-      }
-    };
-    
-    setPitches([...pitches, newPitch]);
-  };
-
-  // Delete a pitch
-  const deletePitch = (pitchId: number) => {
-    setPitches(pitches.filter(pitch => pitch.id !== pitchId));
-    
-    // Also delete any reservations associated with this pitch
-    setReservations(reservations.filter(res => res.pitchId !== pitchId));
   };
 
   // Cancel reservation
@@ -466,8 +512,43 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
     );
   };
 
+  // Edit reservation
+  const editReservation = (reservationId: number, updates: Partial<Omit<Reservation, 'id'>>) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          return {
+            ...res,
+            ...updates,
+          };
+        }
+        return res;
+      })
+    );
+  };
+
+  // Delete a highlight
+  const deleteHighlight = (reservationId: number, highlightId: number) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          return {
+            ...res,
+            highlights: res.highlights.filter(h => h.id !== highlightId)
+          };
+        }
+        return res;
+      })
+    );
+  };
+
   // Get reservations for a specific date
   const getReservationsForDate = (date: Date) => {
+    if (!date || !(date instanceof Date)) {
+      console.error("Invalid date provided to getReservationsForDate:", date);
+      return [];
+    }
+    
     const dateString = date.toISOString().split('T')[0];
     return reservations.filter(res => res.date === dateString);
   };
@@ -475,14 +556,22 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
   // Check if a user is joined in a specific game
   const isUserJoined = (reservationId: number, userId: string): boolean => {
     const reservation = reservations.find(res => res.id === reservationId);
-    return reservation ? reservation.playersIds.includes(userId) : false;
+    if (!reservation) return false;
+    
+    return reservation.lineup.some(player => player.userId === userId && player.status === 'joined');
   };
 
   // Check if a user has joined any game on a specific date
   const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
+    if (!date || !(date instanceof Date)) {
+      console.error("Invalid date provided to hasUserJoinedOnDate:", date);
+      return false;
+    }
+    
     const dateString = date.toISOString().split('T')[0];
     return reservations.some(
-      res => res.date === dateString && res.playersIds.includes(userId)
+      res => res.date === dateString && 
+      res.lineup.some(player => player.userId === userId && player.status === 'joined')
     );
   };
 
@@ -502,6 +591,41 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
   const suspendPlayer = (playerId: string, reason: string, duration: number) => {
     console.log(`Player ${playerId} suspended for ${duration} days. Reason: ${reason}`);
     // In a real app, you would update a player's status in the database
+  };
+
+  // Add a new pitch
+  const addPitch = (pitch: NewPitchData) => {
+    const newId = pitches.length > 0 ? Math.max(...pitches.map(p => p.id)) + 1 : 1;
+    
+    const newPitch: Pitch = {
+      id: newId,
+      name: pitch.name,
+      location: pitch.location,
+      image: pitch.image || "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?ixlib=rb-4.0.3&auto=format&fit=crop&w=687&q=80",
+      playersPerSide: pitch.playersPerSide,
+      description: pitch.description,
+      openingHours: pitch.openingHours,
+      price: pitch.price,
+      surfaceType: pitch.surfaceType,
+      pitchSize: pitch.pitchSize,
+      features: ["Indoor"],
+      details: {
+        address: pitch.location,
+        description: pitch.description,
+        price: `$${pitch.price} per hour`,
+        facilities: ["Changing Rooms", "Parking"]
+      }
+    };
+    
+    setPitches([...pitches, newPitch]);
+  };
+
+  // Delete a pitch
+  const deletePitch = (pitchId: number) => {
+    setPitches(pitches.filter(pitch => pitch.id !== pitchId));
+    
+    // Also delete any reservations associated with this pitch
+    setReservations(reservations.filter(res => res.pitchId !== pitchId));
   };
 
   // Navigate to reservation (mock implementation)
@@ -563,7 +687,9 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
     navigateToReservation,
     getUserStats,
     isUserJoined,
-    hasUserJoinedOnDate
+    hasUserJoinedOnDate,
+    deleteHighlight,
+    editReservation,
   };
 
   return (

@@ -19,7 +19,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
 
   // Get user's reservations
   const userReservations = reservations.filter(res => 
-    res.lineup.some(player => player.userId === userId && player.status === 'joined')
+    res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined')
   );
 
   // Split into upcoming and past
@@ -86,7 +86,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         </div>
         <div className="flex items-center text-gray-600 dark:text-gray-400">
           <MapPin className="h-4 w-4 mr-2" />
-          {reservation.location}
+          {reservation.location || "Location not specified"}
         </div>
         <div className="flex items-center text-gray-600 dark:text-gray-400">
           <Users className="h-4 w-4 mr-2" />

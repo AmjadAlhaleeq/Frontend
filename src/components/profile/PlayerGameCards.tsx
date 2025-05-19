@@ -26,14 +26,14 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
   // Filter and sort reservations
   const upcomingGames = reservations
     .filter(res => 
-      res.lineup.some(player => player.userId === userId && player.status === 'joined') && 
+      res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined') && 
       isAfter(parseISO(res.date), today)
     )
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
     
   const pastGames = reservations
     .filter(res => 
-      res.lineup.some(player => player.userId === userId && player.status === 'joined') && 
+      res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined') && 
       !isAfter(parseISO(res.date), today)
     )
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
@@ -42,7 +42,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
   const gamesPlayed = pastGames.length;
   const goals = pastGames.reduce(
     (count, game) => count + game.highlights.filter(
-      h => h.playerId === `player-${userId}` && h.type === 'goal'
+      h => h.playerId === userId || h.playerId === `player-${userId}` && h.type === 'goal'
     ).length, 
     0
   );
@@ -90,7 +90,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <MapPin className="h-3.5 w-3.5 mr-1.5" />
-                      {game.location}
+                      {game.location || "Location not specified"}
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Users className="h-3.5 w-3.5 mr-1.5" />
@@ -167,11 +167,11 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                       {game.playersJoined} players
                     </div>
                     
-                    {game.highlights.some(h => h.playerId === `player-${userId}` && h.type === 'goal') && (
+                    {game.highlights.some(h => (h.playerId === userId || h.playerId === `player-${userId}`) && h.type === 'goal') && (
                       <div className="flex items-center text-xs text-amber-500">
                         <Trophy className="h-3 w-3 mr-1" />
                         {game.highlights.filter(
-                          h => h.playerId === `player-${userId}` && h.type === 'goal'
+                          h => (h.playerId === userId || h.playerId === `player-${userId}`) && h.type === 'goal'
                         ).length} goals
                       </div>
                     )}
