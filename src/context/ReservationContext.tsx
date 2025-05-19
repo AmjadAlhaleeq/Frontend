@@ -1,517 +1,380 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
-// Interface for data required when creating a new reservation
-export interface NewReservationData {
-  pitchName: string;
-  date: string; 
-  time: string;
-  location: string;
-  price: number;
-  maxPlayers: number;
-  imageUrl?: string;
-  title?: string;
-}
-
-// Player status in a reservation
-export type PlayerStatus = 'joined' | 'invited' | 'pending' | 'declined';
-
-// Lineup player interface
-export interface LineupPlayer {
-  userId: string;
-  playerName?: string;
-  status: PlayerStatus;
-  joinedAt?: string;
-}
-
-// Highlight types
-export type HighlightType = 'goal' | 'assist' | 'yellowCard' | 'redCard' | 'save' | 'other';
-
-// Highlight interface
+// Define the types
 export interface Highlight {
   id: number;
-  type: HighlightType;
+  type: "goal" | "assist" | "save" | "tackle" | "yellow" | "red" | "other";
   playerId: string;
   playerName: string;
+  description: string;
   minute: number;
-  description?: string;
 }
 
-// Reservation status types
-export type ReservationStatus = 'open' | 'full' | 'completed' | 'cancelled';
-
-// Reservation interface
-export interface Reservation {
-  id: number;
-  pitchName: string;
-  date: string;
-  time: string;
-  location: string;
-  price: number;
-  maxPlayers: number;
-  playersJoined: number;
-  status: ReservationStatus;
-  lineup: LineupPlayer[];
-  waitingList: string[];
-  highlights: Highlight[];
-  finalScore?: string;
-  mvpPlayerId?: string;
-  imageUrl?: string;
-  title?: string;
-  createdBy?: string;
-  createdAt: string;
-}
-
-// Define player suspension
-export interface PlayerSuspension {
-  playerId: string;
-  playerName: string;
-  reason: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-}
-
-// Pitch interface
 export interface Pitch {
   id: number;
   name: string;
   location: string;
-  imageUrl: string;
+  image: string;
+  playersPerSide: number;
+  description: string;
+  openingHours: string;
   price: number;
-  amenities: string[];
-  availability?: string;
-  rating: number;
-  playersPerSide?: number;
-  details?: string;
-  features?: string[];
+  surfaceType: string;
+  pitchSize: string;
+  features: string[];
+  details?: {
+    address: string;
+    description: string;
+    price: string;
+    facilities: string[];
+  };
 }
 
-// Extended UserStats interface
 export interface UserStats {
-  gamesPlayed: number;
-  goalsScored: number;
-  assists: number;
-  yellowCards: number;
-  redCards: number;
-  mvps: number;
   matches: number;
   wins: number;
   goals: number;
+  assists: number;
   cleansheets: number;
   tackles: number;
+  yellowCards: number;
+  redCards: number;
+  mvps: number;
+  gamesPlayed: number;
+  goalsScored: number;
 }
 
-// Context interface
+export interface Reservation {
+  id: number;
+  date: string;
+  time: string;
+  pitchId: number;
+  pitchName: string;
+  maxPlayers: number;
+  playersJoined: number;
+  status: "open" | "full" | "cancelled" | "completed";
+  playersPerSide: number;
+  playersIds: string[];
+  waitingList: string[];
+  highlights: Highlight[];
+  title?: string;
+}
+
+export interface NewReservationData {
+  date: string;
+  time: string;
+  pitchId: number;
+  pitchName: string;
+  maxPlayers: number;
+  playersPerSide: number;
+  title?: string;
+}
+
+export interface NewPitchData {
+  name: string;
+  location: string;
+  image: string;
+  playersPerSide: number;
+  description: string;
+  openingHours: string;
+  price: number;
+  surfaceType: string;
+  pitchSize: string;
+}
+
+// Define the context type
 interface ReservationContextType {
   reservations: Reservation[];
   pitches: Pitch[];
   addReservation: (data: NewReservationData) => void;
-  editReservation: (id: number, data: Partial<Reservation>) => void;
-  deleteReservation: (id: number) => void;
-  joinReservation: (id: number, userId: string, playerName?: string) => void;
-  cancelReservation: (id: number, userId: string) => void;
-  joinWaitingList: (id: number, userId: string) => void;
-  leaveWaitingList: (id: number, userId: string) => void;
-  updateReservationStatus: (id: number, status: ReservationStatus) => void;
+  cancelReservation: (reservationId: number, userId: string) => void;
+  transferReservation: (reservationId: number, newPitchId: number) => void;
+  updateReservationTime: (reservationId: number, newTime: string) => void;
   addHighlight: (reservationId: number, highlight: Omit<Highlight, "id">) => void;
   removeHighlight: (reservationId: number, highlightId: number) => void;
+  joinGame: (reservationId: number, position?: string, userId?: string) => void;
+  joinWaitingList: (reservationId: number, userId: string) => void;
+  leaveWaitingList: (reservationId: number, userId: string) => void;
+  getReservationsForDate: (date: Date) => Reservation[];
+  suspendPlayer: (playerId: string, reason: string, duration: number) => void;
+  updateReservationStatus: (reservationId: number, status: Reservation["status"]) => void;
+  addPitch: (pitch: NewPitchData) => void;
+  deletePitch: (pitchId: number) => void;
+  navigateToReservation: (pitchName: string) => void;
   getUserStats: (userId: string) => UserStats;
-  navigateToReservation: (id: number) => void;
   isUserJoined: (reservationId: number, userId: string) => boolean;
   hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
-  getReservationsForDate: (date: Date) => Reservation[];
-  joinGame: (reservationId: number, playerName: string | undefined, userId: string) => void;
-  deleteHighlight: (reservationId: number, highlightId: number) => void;
-  suspendPlayer: (suspension: PlayerSuspension) => void;
-  addPitch: (pitch: Omit<Pitch, "id">) => void;
-  deletePitch: (pitchId: number) => void;
 }
 
 // Create the context
 const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
 
-// Sample data to seed the app
-const initialReservations: Reservation[] = [
-  {
-    id: 1,
-    pitchName: "Central Park Fields",
-    title: "Sunday Morning Match",
-    date: "2025-05-25",
-    time: "10:00 - 11:30",
-    location: "Downtown Sports Complex",
-    price: 15,
-    maxPlayers: 10,
-    playersJoined: 8,
-    status: "open",
-    lineup: [
-      { userId: "user-1", playerName: "Alex Johnson", status: "joined", joinedAt: "2025-05-10T14:22:00Z" },
-      { userId: "user-2", playerName: "Jamie Smith", status: "joined", joinedAt: "2025-05-10T15:30:00Z" },
-      { userId: "user-3", playerName: "Taylor Brown", status: "joined", joinedAt: "2025-05-10T16:15:00Z" },
-      { userId: "user-4", playerName: "Jordan Lee", status: "joined", joinedAt: "2025-05-11T09:10:00Z" },
-      { userId: "user-5", playerName: "Casey Wilson", status: "joined", joinedAt: "2025-05-11T10:05:00Z" },
-      { userId: "user-6", playerName: "Riley Martin", status: "joined", joinedAt: "2025-05-12T11:30:00Z" },
-      { userId: "user-7", playerName: "Morgan Davis", status: "joined", joinedAt: "2025-05-12T14:45:00Z" },
-      { userId: "user-8", playerName: "Avery Thomas", status: "joined", joinedAt: "2025-05-13T16:20:00Z" },
-    ],
-    waitingList: [],
-    highlights: [],
-    imageUrl: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    createdAt: "2025-05-10T12:00:00Z"
-  },
-  {
-    id: 2,
-    pitchName: "Riverside Stadium",
-    title: "Evening League Match",
-    date: "2025-05-28",
-    time: "18:30 - 20:00",
-    location: "Riverside Sports Center",
-    price: 20,
-    maxPlayers: 10,
-    playersJoined: 12,
-    status: "full",
-    lineup: [
-      { userId: "user-2", playerName: "Jamie Smith", status: "joined", joinedAt: "2025-05-15T09:10:00Z" },
-      { userId: "user-4", playerName: "Jordan Lee", status: "joined", joinedAt: "2025-05-15T10:25:00Z" },
-      { userId: "user-5", playerName: "Casey Wilson", status: "joined", joinedAt: "2025-05-15T11:30:00Z" },
-      { userId: "user-8", playerName: "Avery Thomas", status: "joined", joinedAt: "2025-05-15T13:40:00Z" },
-      { userId: "user-9", playerName: "Quinn Miller", status: "joined", joinedAt: "2025-05-16T14:20:00Z" },
-      { userId: "user-10", playerName: "Sam Roberts", status: "joined", joinedAt: "2025-05-16T15:00:00Z" },
-      { userId: "user-11", playerName: "Blake Turner", status: "joined", joinedAt: "2025-05-16T16:45:00Z" },
-      { userId: "user-12", playerName: "Drew Phillips", status: "joined", joinedAt: "2025-05-17T10:15:00Z" },
-      { userId: "user-13", playerName: "Charlie Baker", status: "joined", joinedAt: "2025-05-17T11:50:00Z" },
-      { userId: "user-14", playerName: "Reese Campbell", status: "joined", joinedAt: "2025-05-17T13:30:00Z" },
-      { userId: "user-15", playerName: "Skyler Adams", status: "joined", joinedAt: "2025-05-18T14:10:00Z" },
-      { userId: "user-16", playerName: "Alex Wright", status: "joined", joinedAt: "2025-05-18T16:30:00Z" },
-    ],
-    waitingList: ["user-17", "user-18"],
-    highlights: [],
-    imageUrl: "https://images.unsplash.com/photo-1518604666860-9cd681bb7b24?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    createdAt: "2025-05-15T08:00:00Z"
-  },
-  {
-    id: 3,
-    pitchName: "Green Valley FC",
-    title: "Weekend Tournament Game",
-    date: "2025-04-10",
-    time: "15:00 - 16:30",
-    location: "Green Valley Sports Complex",
-    price: 18,
-    maxPlayers: 10,
-    playersJoined: 10,
-    status: "completed",
-    lineup: [
-      { userId: "user-1", playerName: "Alex Johnson", status: "joined", joinedAt: "2025-04-01T09:15:00Z" },
-      { userId: "user-3", playerName: "Taylor Brown", status: "joined", joinedAt: "2025-04-01T10:20:00Z" },
-      { userId: "user-5", playerName: "Casey Wilson", status: "joined", joinedAt: "2025-04-01T11:40:00Z" },
-      { userId: "user-7", playerName: "Morgan Davis", status: "joined", joinedAt: "2025-04-02T13:00:00Z" },
-      { userId: "user-9", playerName: "Quinn Miller", status: "joined", joinedAt: "2025-04-02T14:30:00Z" },
-      { userId: "user-11", playerName: "Blake Turner", status: "joined", joinedAt: "2025-04-02T15:45:00Z" },
-      { userId: "user-12", playerName: "Drew Phillips", status: "joined", joinedAt: "2025-04-03T09:20:00Z" },
-      { userId: "user-14", playerName: "Reese Campbell", status: "joined", joinedAt: "2025-04-03T10:35:00Z" },
-      { userId: "user-16", playerName: "Alex Wright", status: "joined", joinedAt: "2025-04-03T11:50:00Z" },
-      { userId: "user-18", playerName: "Robin Parker", status: "joined", joinedAt: "2025-04-03T13:10:00Z" },
-    ],
-    waitingList: [],
-    highlights: [
-      { id: 1, type: "goal", playerId: "user-1", playerName: "Alex Johnson", minute: 15, description: "Great long-range shot" },
-      { id: 2, type: "assist", playerId: "user-3", playerName: "Taylor Brown", minute: 15, description: "Perfect through ball" },
-      { id: 3, type: "goal", playerId: "user-5", playerName: "Casey Wilson", minute: 32, description: "Header from corner" },
-      { id: 4, type: "yellowCard", playerId: "user-7", playerName: "Morgan Davis", minute: 40, description: "Late tackle" },
-      { id: 5, type: "save", playerId: "user-9", playerName: "Quinn Miller", minute: 55, description: "Diving save" },
-      { id: 6, type: "goal", playerId: "user-1", playerName: "Alex Johnson", minute: 67, description: "Penalty kick" },
-      { id: 7, type: "redCard", playerId: "user-11", playerName: "Blake Turner", minute: 75, description: "Second yellow card" },
-    ],
-    finalScore: "3-2",
-    mvpPlayerId: "user-1",
-    imageUrl: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1171&q=80",
-    createdAt: "2025-04-01T08:00:00Z"
-  }
-];
-
-const initialPitches: Pitch[] = [
-  {
-    id: 1,
-    name: "Central Park Fields",
-    location: "Downtown Sports Complex",
-    imageUrl: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    price: 15,
-    amenities: ["Floodlights", "Changing Rooms", "Parking", "Café"],
-    rating: 4.7,
-    playersPerSide: 5,
-    details: "Our flagship pitch in the heart of downtown, perfect for small-sided games.",
-    features: ["Artificial turf", "Lighting", "Changing facilities"]
-  },
-  {
-    id: 2,
-    name: "Riverside Stadium",
-    location: "Riverside Sports Center",
-    imageUrl: "https://images.unsplash.com/photo-1518604666860-9cd681bb7b24?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    price: 20,
-    amenities: ["Synthetic Turf", "Floodlights", "Changing Rooms", "Showers", "Parking"],
-    rating: 4.9,
-    playersPerSide: 5,
-    details: "Premium riverside location with state-of-the-art facilities.",
-    features: ["Premium synthetic turf", "Floodlights", "Changing rooms with showers"]
-  },
-  {
-    id: 3,
-    name: "Green Valley FC",
-    location: "Green Valley Sports Complex",
-    imageUrl: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1171&q=80",
-    price: 18,
-    amenities: ["Natural Grass", "Changing Rooms", "Parking", "Spectator Seating"],
-    rating: 4.5,
-    playersPerSide: 5,
-    details: "Natural grass pitch with excellent drainage for year-round play.",
-    features: ["Natural grass", "Spectator seating", "Post-game bar area"]
-  }
-];
-
 // Provider component
-export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
-  
-  // State for reservations and pitches
-  const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
-  const [pitches, setPitches] = useState<Pitch[]>(initialPitches);
-  const [suspensions, setSuspensions] = useState<PlayerSuspension[]>([]);
+export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Sample data for development
+  const [pitches, setPitches] = useState<Pitch[]>([
+    {
+      id: 1,
+      name: "Community Sports Arena",
+      location: "123 Main St, City Center",
+      image: "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80",
+      playersPerSide: 5,
+      description: "A modern indoor football pitch with excellent facilities.",
+      openingHours: "Mon-Fri: 9 AM - 10 PM, Sat-Sun: 8 AM - 11 PM",
+      price: 25,
+      surfaceType: "Artificial Turf",
+      pitchSize: "40m x 20m",
+      features: ["Indoor", "Floodlights", "Changing Rooms"],
+      details: {
+        address: "123 Main Street, City Center, NY 10001",
+        description: "A modern indoor football pitch with excellent facilities including changing rooms, showers, and parking. Perfect for 5-a-side games with professional-grade artificial turf.",
+        price: "$25 per hour",
+        facilities: ["Showers", "Changing Rooms", "Free Parking", "WiFi"]
+      }
+    },
+    {
+      id: 2,
+      name: "Downtown Football Center",
+      location: "456 Park Ave, Downtown",
+      image: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+      playersPerSide: 7,
+      description: "Large outdoor pitch, perfect for 7-a-side games.",
+      openingHours: "Daily: 8 AM - 9 PM",
+      price: 35,
+      surfaceType: "Natural Grass",
+      pitchSize: "60m x 40m",
+      features: ["Outdoor", "Natural Grass", "Floodlights"],
+      details: {
+        address: "456 Park Avenue, Downtown, NY 10002",
+        description: "A spacious outdoor pitch with natural grass and floodlights for evening games. Ideal for larger teams with plenty of space for spectators.",
+        price: "$35 per hour",
+        facilities: ["Public Restrooms", "Water Fountains", "Picnic Area"]
+      }
+    },
+    {
+      id: 3,
+      name: "Riverside Pitch Complex",
+      location: "789 River Rd, Riverside",
+      image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1936&q=80",
+      playersPerSide: 11,
+      description: "Professional-grade football field for 11-a-side matches.",
+      openingHours: "Mon-Sun: 7 AM - 11 PM",
+      price: 50,
+      surfaceType: "Hybrid Turf",
+      pitchSize: "105m x 68m",
+      features: ["Outdoor", "Professional", "Stadium Seating"],
+      details: {
+        address: "789 River Road, Riverside, NY 10003",
+        description: "A professional-grade football field suitable for official matches. Features stadium seating, professional locker rooms, and high-quality hybrid turf for all-weather play.",
+        price: "$50 per hour",
+        facilities: ["Professional Locker Rooms", "Showers", "Parking", "Cafe"]
+      }
+    }
+  ]);
+
+  const [reservations, setReservations] = useState<Reservation[]>([
+    {
+      id: 1,
+      date: "2025-05-25",
+      time: "18:00 - 19:00",
+      pitchId: 1,
+      pitchName: "Community Sports Arena",
+      maxPlayers: 10,
+      playersJoined: 7,
+      status: "open",
+      playersPerSide: 5,
+      playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7"],
+      waitingList: [],
+      highlights: [],
+      title: "Evening 5-a-side"
+    },
+    {
+      id: 2,
+      date: "2025-05-22",
+      time: "20:00 - 21:00",
+      pitchId: 2,
+      pitchName: "Downtown Football Center",
+      maxPlayers: 14,
+      playersJoined: 14,
+      status: "full",
+      playersPerSide: 7,
+      playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8", "user9", "user10", "user11", "user12", "user13", "user14"],
+      waitingList: ["user15", "user16"],
+      highlights: [],
+      title: "Downtown League Match"
+    },
+    {
+      id: 3,
+      date: "2025-05-20",
+      time: "15:00 - 17:00",
+      pitchId: 3,
+      pitchName: "Riverside Pitch Complex",
+      maxPlayers: 22,
+      playersJoined: 18,
+      status: "open",
+      playersPerSide: 11,
+      playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8", "user9", "user10", "user11", "user12", "user13", "user14", "user15", "user16", "user17", "user18"],
+      waitingList: [],
+      highlights: [],
+      title: "Full Field Friendly"
+    },
+    {
+      id: 4,
+      date: "2025-05-15",
+      time: "19:00 - 20:00",
+      pitchId: 1,
+      pitchName: "Community Sports Arena",
+      maxPlayers: 10,
+      playersJoined: 10,
+      status: "completed",
+      playersPerSide: 5,
+      playersIds: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8", "user9", "user10"],
+      waitingList: [],
+      highlights: [
+        {
+          id: 1,
+          type: "goal",
+          playerId: "user1",
+          playerName: "John Player",
+          description: "Amazing free kick goal from outside the box",
+          minute: 15
+        },
+        {
+          id: 2,
+          type: "assist",
+          playerId: "user2",
+          playerName: "Mike Johnson",
+          description: "Perfect through ball for the second goal",
+          minute: 35
+        }
+      ],
+      title: "Past Arena Game"
+    }
+  ]);
 
   // Add a new reservation
   const addReservation = (data: NewReservationData) => {
+    const newId = reservations.length > 0 ? Math.max(...reservations.map(r => r.id)) + 1 : 1;
+    
     const newReservation: Reservation = {
-      id: Date.now(),
-      ...data,
+      id: newId,
+      date: data.date,
+      time: data.time,
+      pitchId: data.pitchId,
+      pitchName: data.pitchName,
+      maxPlayers: data.maxPlayers,
       playersJoined: 0,
-      status: 'open',
-      lineup: [],
+      status: "open",
+      playersPerSide: data.playersPerSide,
+      playersIds: [],
       waitingList: [],
       highlights: [],
-      createdAt: new Date().toISOString()
+      title: data.title
     };
     
-    setReservations(prev => [...prev, newReservation]);
-    toast({
-      title: "Reservation Created",
-      description: `A new reservation at ${data.pitchName} has been created.`,
-    });
+    setReservations([...reservations, newReservation]);
   };
 
-  // Edit existing reservation
-  const editReservation = (id: number, data: Partial<Reservation>) => {
-    setReservations(prev => 
-      prev.map(res => 
-        res.id === id ? { ...res, ...data } : res
-      )
-    );
+  // Add a new pitch
+  const addPitch = (pitch: NewPitchData) => {
+    const newId = pitches.length > 0 ? Math.max(...pitches.map(p => p.id)) + 1 : 1;
     
-    toast({
-      title: "Reservation Updated",
-      description: "The reservation details have been updated.",
-    });
-  };
-
-  // Delete a reservation
-  const deleteReservation = (id: number) => {
-    setReservations(prev => prev.filter(res => res.id !== id));
+    const newPitch: Pitch = {
+      id: newId,
+      name: pitch.name,
+      location: pitch.location,
+      image: pitch.image || "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?ixlib=rb-4.0.3&auto=format&fit=crop&w=687&q=80",
+      playersPerSide: pitch.playersPerSide,
+      description: pitch.description,
+      openingHours: pitch.openingHours,
+      price: pitch.price,
+      surfaceType: pitch.surfaceType,
+      pitchSize: pitch.pitchSize,
+      features: ["Indoor"],
+      details: {
+        address: pitch.location,
+        description: pitch.description,
+        price: `$${pitch.price} per hour`,
+        facilities: ["Changing Rooms", "Parking"]
+      }
+    };
     
-    toast({
-      title: "Reservation Deleted",
-      description: "The reservation has been deleted.",
-    });
+    setPitches([...pitches, newPitch]);
   };
 
-  // Join a reservation
-  const joinReservation = (id: number, userId: string, playerName?: string) => {
-    setReservations(prev => 
-      prev.map(res => {
-        if (res.id === id) {
-          // Check if user is already in lineup
-          const isInLineup = res.lineup.some(player => player.userId === userId);
-          
-          if (isInLineup) {
-            return res;
-          }
-          
-          // Add user to lineup
-          const newLineup = [
-            ...res.lineup,
-            {
-              userId,
-              playerName,
-              status: 'joined' as PlayerStatus,
-              joinedAt: new Date().toISOString()
-            }
-          ];
-          
-          const newPlayersJoined = newLineup.filter(player => player.status === 'joined').length;
-          
-          // Check if reservation is now full (with 2 subs for 5v5, 7v7 and 11v11)
-          let newStatus = res.status;
-          const actualMaxPlayers = res.maxPlayers === 10 ? 12 : res.maxPlayers + 2;
-          
-          if (newPlayersJoined >= actualMaxPlayers && newStatus === 'open') {
-            newStatus = 'full';
-          }
-          
+  // Delete a pitch
+  const deletePitch = (pitchId: number) => {
+    setPitches(pitches.filter(pitch => pitch.id !== pitchId));
+    
+    // Also delete any reservations associated with this pitch
+    setReservations(reservations.filter(res => res.pitchId !== pitchId));
+  };
+
+  // Cancel reservation
+  const cancelReservation = (reservationId: number, userId: string) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        // If the user is part of the game, remove them
+        if (res.playersIds.includes(userId)) {
           return {
             ...res,
-            lineup: newLineup,
-            playersJoined: newPlayersJoined,
-            status: newStatus
+            playersIds: res.playersIds.filter(id => id !== userId),
+            playersJoined: res.playersJoined - 1
           };
         }
         return res;
       })
     );
+  };
+
+  // Transfer reservation to new pitch
+  const transferReservation = (reservationId: number, newPitchId: number) => {
+    const newPitch = pitches.find(p => p.id === newPitchId);
+    if (!newPitch) return;
     
-    toast({
-      title: "Game Joined",
-      description: "You've successfully joined this game. See you on the pitch!",
-    });
-  };
-
-  // Alias for joinReservation for the Reservations component
-  const joinGame = (reservationId: number, playerName: string | undefined, userId: string) => {
-    joinReservation(reservationId, userId, playerName);
-  };
-
-  // Cancel/leave a reservation
-  const cancelReservation = (id: number, userId: string) => {
-    setReservations(prev => 
-      prev.map(res => {
-        if (res.id === id) {
-          // Remove user from lineup
-          const newLineup = res.lineup.filter(player => player.userId !== userId);
-          const newPlayersJoined = newLineup.filter(player => player.status === 'joined').length;
-          
-          // Check if there's someone on the waiting list
-          let newWaitingList = [...res.waitingList];
-          
-          // If there was space created and someone is on the waiting list, move them to the lineup
-          const actualMaxPlayers = res.maxPlayers === 10 ? 12 : res.maxPlayers + 2;
-          if (res.status === 'full' && newPlayersJoined < actualMaxPlayers && newWaitingList.length > 0) {
-            const nextPlayer = newWaitingList[0];
-            newLineup.push({
-              userId: nextPlayer,
-              status: 'joined',
-              joinedAt: new Date().toISOString()
-            });
-            newWaitingList = newWaitingList.slice(1);
-          }
-          
-          // Update status if needed
-          let newStatus = res.status;
-          if (newPlayersJoined < actualMaxPlayers && newStatus === 'full') {
-            newStatus = 'open';
-          }
-          
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
           return {
             ...res,
-            lineup: newLineup,
-            playersJoined: newLineup.filter(player => player.status === 'joined').length,
-            waitingList: newWaitingList,
-            status: newStatus
+            pitchId: newPitchId,
+            pitchName: newPitch.name
           };
         }
         return res;
       })
     );
-    
-    toast({
-      title: "Reservation Cancelled",
-      description: "You've left this game.",
-    });
   };
 
-  // Join waiting list
-  const joinWaitingList = (id: number, userId: string) => {
-    setReservations(prev => 
-      prev.map(res => {
-        if (res.id === id) {
-          // Check if user is already in waiting list
-          if (res.waitingList.includes(userId)) {
-            return res;
-          }
-          
-          // Check if waiting list is full (maximum 3 players)
-          if (res.waitingList.length >= 3) {
-            toast({
-              title: "Waiting List Full",
-              description: "The waiting list for this game is full.",
-              variant: "destructive"
-            });
-            return res;
-          }
-          
-          // Add user to waiting list
-          const newWaitingList = [...res.waitingList, userId];
-          
+  // Update reservation time
+  const updateReservationTime = (reservationId: number, newTime: string) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
           return {
             ...res,
-            waitingList: newWaitingList
+            time: newTime
           };
         }
         return res;
       })
-    );
-    
-    toast({
-      title: "Added to Waiting List",
-      description: "You've been added to the waiting list for this game.",
-    });
-  };
-
-  // Leave waiting list
-  const leaveWaitingList = (id: number, userId: string) => {
-    setReservations(prev => 
-      prev.map(res => {
-        if (res.id === id) {
-          // Remove user from waiting list
-          const newWaitingList = res.waitingList.filter(id => id !== userId);
-          
-          return {
-            ...res,
-            waitingList: newWaitingList
-          };
-        }
-        return res;
-      })
-    );
-    
-    toast({
-      title: "Removed from Waiting List",
-      description: "You've been removed from the waiting list for this game.",
-    });
-  };
-
-  // Update reservation status
-  const updateReservationStatus = (id: number, status: ReservationStatus) => {
-    setReservations(prev => 
-      prev.map(res => 
-        res.id === id ? { ...res, status } : res
-      )
     );
   };
 
   // Add highlight
   const addHighlight = (reservationId: number, highlight: Omit<Highlight, "id">) => {
-    setReservations(prev => 
-      prev.map(res => {
+    setReservations(
+      reservations.map(res => {
         if (res.id === reservationId) {
-          const newId = res.highlights.length > 0 
-            ? Math.max(...res.highlights.map(h => h.id)) + 1 
-            : 1;
+          const newHighlightId = res.highlights.length > 0 ? Math.max(...res.highlights.map(h => h.id)) + 1 : 1;
           
-          const newHighlight = {
-            ...highlight,
-            id: newId
+          return {
+            ...res,
+            highlights: [...res.highlights, { id: newHighlightId, ...highlight }]
           };
-          
-          const newHighlights = [...res.highlights, newHighlight];
-          return { ...res, highlights: newHighlights };
         }
         return res;
       })
@@ -520,171 +383,201 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Remove highlight
   const removeHighlight = (reservationId: number, highlightId: number) => {
-    setReservations(prev => 
-      prev.map(res => {
+    setReservations(
+      reservations.map(res => {
         if (res.id === reservationId) {
-          const newHighlights = res.highlights.filter(h => h.id !== highlightId);
-          return { ...res, highlights: newHighlights };
+          return {
+            ...res,
+            highlights: res.highlights.filter(h => h.id !== highlightId)
+          };
         }
         return res;
       })
     );
   };
 
-  // Alias for removeHighlight
-  const deleteHighlight = (reservationId: number, highlightId: number) => {
-    removeHighlight(reservationId, highlightId);
+  // Join game
+  const joinGame = (reservationId: number, position?: string, userId?: string) => {
+    if (!userId) return;
+    
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          // Check if user is already in the game
+          if (res.playersIds.includes(userId)) {
+            return res;
+          }
+          
+          // Add user to the game
+          const updatedPlayers = [...res.playersIds, userId];
+          const updatedCount = updatedPlayers.length;
+          
+          // Update status if the game is now full
+          const updatedStatus = updatedCount >= res.maxPlayers ? "full" : res.status;
+          
+          // Remove from waiting list if they were on it
+          const updatedWaitingList = res.waitingList.filter(id => id !== userId);
+          
+          return {
+            ...res,
+            playersIds: updatedPlayers,
+            playersJoined: updatedCount,
+            status: updatedStatus,
+            waitingList: updatedWaitingList
+          };
+        }
+        return res;
+      })
+    );
   };
 
-  // Check if user is joined to a reservation
-  const isUserJoined = (reservationId: number, userId: string): boolean => {
-    const reservation = reservations.find(res => res.id === reservationId);
-    if (!reservation) return false;
-    
-    return reservation.lineup.some(player => player.userId === userId && player.status === 'joined');
+  // Join waiting list
+  const joinWaitingList = (reservationId: number, userId: string) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          // Check if user is already in the waiting list
+          if (res.waitingList.includes(userId)) {
+            return res;
+          }
+          
+          return {
+            ...res,
+            waitingList: [...res.waitingList, userId]
+          };
+        }
+        return res;
+      })
+    );
   };
-  
-  // Check if user has joined any reservation on a specific date
-  const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
-    const dateString = date.toISOString().split('T')[0];
-    
-    return reservations.some(res => {
-      // Match the date
-      const resDate = res.date;
-      // User is in the lineup with status 'joined'
-      const userJoined = res.lineup.some(player => 
-        player.userId === userId && player.status === 'joined'
-      );
-      
-      return resDate === dateString && userJoined;
-    });
+
+  // Leave waiting list
+  const leaveWaitingList = (reservationId: number, userId: string) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          return {
+            ...res,
+            waitingList: res.waitingList.filter(id => id !== userId)
+          };
+        }
+        return res;
+      })
+    );
   };
-  
+
   // Get reservations for a specific date
-  const getReservationsForDate = (date: Date): Reservation[] => {
+  const getReservationsForDate = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
     return reservations.filter(res => res.date === dateString);
   };
 
-  // Get user statistics
+  // Check if a user is joined in a specific game
+  const isUserJoined = (reservationId: number, userId: string): boolean => {
+    const reservation = reservations.find(res => res.id === reservationId);
+    return reservation ? reservation.playersIds.includes(userId) : false;
+  };
+
+  // Check if a user has joined any game on a specific date
+  const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
+    const dateString = date.toISOString().split('T')[0];
+    return reservations.some(
+      res => res.date === dateString && res.playersIds.includes(userId)
+    );
+  };
+
+  // Update reservation status
+  const updateReservationStatus = (reservationId: number, status: Reservation["status"]) => {
+    setReservations(
+      reservations.map(res => {
+        if (res.id === reservationId) {
+          return { ...res, status };
+        }
+        return res;
+      })
+    );
+  };
+
+  // Suspend a player (mock implementation)
+  const suspendPlayer = (playerId: string, reason: string, duration: number) => {
+    console.log(`Player ${playerId} suspended for ${duration} days. Reason: ${reason}`);
+    // In a real app, you would update a player's status in the database
+  };
+
+  // Navigate to reservation (mock implementation)
+  const navigateToReservation = (pitchName: string) => {
+    console.log(`Navigating to reservations for pitch: ${pitchName}`);
+    // In a real app with routing, this would use navigate("/reservations?pitch=" + pitchName)
+    window.location.href = "/reservations";
+  };
+
+  // Get user stats
   const getUserStats = (userId: string): UserStats => {
-    const userGames = reservations.filter(res => 
-      res.lineup.some(player => player.userId === userId && player.status === 'joined') &&
-      res.status === 'completed'
+    // Calculate user stats from reservations and highlights
+    // Just a mock implementation
+    const userMatches = reservations.filter(res => 
+      res.status === "completed" && res.playersIds.includes(userId)
     );
     
-    const gamesPlayed = userGames.length;
-    const goalsScored = userGames.reduce(
-      (total, game) => total + game.highlights.filter(h => h.playerId === userId && h.type === 'goal').length,
-      0
-    );
-    const assists = userGames.reduce(
-      (total, game) => total + game.highlights.filter(h => h.playerId === userId && h.type === 'assist').length,
-      0
-    );
-    const yellowCards = userGames.reduce(
-      (total, game) => total + game.highlights.filter(h => h.playerId === userId && h.type === 'yellowCard').length,
-      0
-    );
-    const redCards = userGames.reduce(
-      (total, game) => total + game.highlights.filter(h => h.playerId === userId && h.type === 'redCard').length,
-      0
-    );
-    const mvps = userGames.filter(game => game.mvpPlayerId === userId).length;
+    const userGoals = reservations.reduce((total, res) => {
+      return total + res.highlights.filter(h => h.playerId === userId && h.type === "goal").length;
+    }, 0);
     
-    // Extended stats for the Profile page
+    const userAssists = reservations.reduce((total, res) => {
+      return total + res.highlights.filter(h => h.playerId === userId && h.type === "assist").length;
+    }, 0);
+    
     return {
-      gamesPlayed,
-      goalsScored,
-      assists,
-      yellowCards,
-      redCards,
-      mvps,
-      // Aliases for profile page
-      matches: gamesPlayed,
-      wins: Math.floor(gamesPlayed * 0.6), // Just an example calculation
-      goals: goalsScored,
-      cleansheets: Math.floor(gamesPlayed * 0.3), // Just an example calculation
-      tackles: Math.floor(gamesPlayed * 2.5) // Just an example calculation
+      matches: userMatches.length,
+      wins: Math.floor(userMatches.length * 0.6), // Mock win rate
+      goals: userGoals,
+      assists: userAssists,
+      cleansheets: 0,
+      tackles: 0,
+      yellowCards: 0,
+      redCards: 0,
+      mvps: 0,
+      gamesPlayed: userMatches.length,
+      goalsScored: userGoals
     };
   };
 
-  // Navigate to reservation details
-  const navigateToReservation = (id: number) => {
-    navigate('/reservations', { state: { selectedReservationId: id } });
-  };
-
-  // Suspend a player
-  const suspendPlayer = (suspension: PlayerSuspension) => {
-    setSuspensions(prev => [...prev, suspension]);
-    toast({
-      title: "Player Suspended",
-      description: `${suspension.playerName} has been suspended until ${suspension.endDate}`,
-    });
-  };
-
-  // Add a new pitch
-  const addPitch = (pitchData: Omit<Pitch, "id">) => {
-    const newPitch: Pitch = {
-      ...pitchData,
-      id: Date.now()
-    };
-
-    setPitches(prev => [...prev, newPitch]);
-    
-    toast({
-      title: "Pitch Added",
-      description: `New pitch ${pitchData.name} has been added.`,
-    });
-  };
-
-  // Delete a pitch
-  const deletePitch = (pitchId: number) => {
-    setPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
-    
-    toast({
-      title: "Pitch Deleted",
-      description: "The pitch has been removed.",
-    });
+  // Provide the context value
+  const contextValue: ReservationContextType = {
+    reservations,
+    pitches,
+    addReservation,
+    cancelReservation,
+    transferReservation,
+    updateReservationTime,
+    addHighlight,
+    removeHighlight,
+    joinGame,
+    joinWaitingList,
+    leaveWaitingList,
+    getReservationsForDate,
+    suspendPlayer,
+    updateReservationStatus,
+    addPitch,
+    deletePitch,
+    navigateToReservation,
+    getUserStats,
+    isUserJoined,
+    hasUserJoinedOnDate
   };
 
   return (
-    <ReservationContext.Provider
-      value={{
-        reservations,
-        pitches,
-        addReservation,
-        editReservation,
-        deleteReservation,
-        joinReservation,
-        cancelReservation,
-        joinWaitingList,
-        leaveWaitingList,
-        updateReservationStatus,
-        addHighlight,
-        removeHighlight,
-        getUserStats,
-        navigateToReservation,
-        isUserJoined,
-        hasUserJoinedOnDate,
-        getReservationsForDate,
-        joinGame,
-        deleteHighlight,
-        suspendPlayer,
-        addPitch,
-        deletePitch
-      }}
-    >
+    <ReservationContext.Provider value={contextValue}>
       {children}
     </ReservationContext.Provider>
   );
 };
 
-// Custom hook for using the context
+// Custom hook to use the reservation context
 export const useReservation = () => {
   const context = useContext(ReservationContext);
   if (context === undefined) {
-    throw new Error('useReservation must be used within a ReservationProvider');
+    throw new Error("useReservation must be used within a ReservationProvider");
   }
   return context;
 };

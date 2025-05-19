@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,10 +35,10 @@ const AddPitch = () => {
         name: pitchData.name,
         location: pitchData.location,
         image: pitchData.image,
-        playersPerSide: pitchData.playersPerSide,
+        playersPerSide: Number(pitchData.playersPerSide),
         description: pitchData.description,
         openingHours: pitchData.openingHours,
-        price: pitchData.price,
+        price: Number(pitchData.price),
         surfaceType: pitchData.surfaceType,
         pitchSize: pitchData.pitchSize,
     });

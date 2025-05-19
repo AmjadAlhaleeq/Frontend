@@ -1,4 +1,3 @@
-
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
 import React, { useState, useEffect } from "react";
@@ -29,7 +28,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useReservation, Pitch as PitchType } from "@/context/ReservationContext";
+import { useReservation, Pitch } from "@/context/ReservationContext";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +49,7 @@ const Pitches = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
-  const [selectedPitchForDetails, setSelectedPitchForDetails] = useState<PitchType | null>(null);
+  const [selectedPitchForDetails, setSelectedPitchForDetails] = useState<Pitch | null>(null);
   const {
     pitches,
     navigateToReservation,
@@ -59,7 +58,7 @@ const Pitches = () => {
   const navigate = useNavigate();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [pitchToDelete, setPitchToDelete] = useState<PitchType | null>(null);
+  const [pitchToDelete, setPitchToDelete] = useState<Pitch | null>(null);
 
   // Get user role from localStorage on component mount
   useEffect(() => {
@@ -86,7 +85,7 @@ const Pitches = () => {
     navigate("/admin/add-pitch");
   };
 
-  const handleOpenDeleteDialog = (pitch: PitchType) => {
+  const handleOpenDeleteDialog = (pitch: Pitch) => {
     setPitchToDelete(pitch);
     setShowDeleteDialog(true);
   };
@@ -202,7 +201,7 @@ const Pitches = () => {
 };
 
 interface PitchCardProps {
-  pitch: PitchType;
+  pitch: Pitch;
   isAdmin: boolean;
   onViewDetails: () => void;
   onBookPitch: () => void;
@@ -264,7 +263,9 @@ const PitchCard: React.FC<PitchCardProps> = ({
     }
   };
   
-  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
+  // Make sure to handle potential undefined details
+  const address = pitch.details?.address || pitch.location;
+  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
@@ -288,7 +289,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
             target="_blank" 
             rel="noopener noreferrer"
             className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-            aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+            aria-label={`View ${address} on Google Maps`}
           >
             {pitch.location}
           </a>
@@ -302,7 +303,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 mt-3">
-          {pitch.features.map((feature, index) => (
+          {pitch.features && pitch.features.map((feature, index) => (
             <div key={index}>{getFeatureIcon(feature)}</div>
           ))}
         </div>
@@ -365,7 +366,7 @@ const getFacilityIcon = (facilityName: string): JSX.Element => {
 };
 
 interface PitchDetailsDialogProps {
-  pitch: PitchType;
+  pitch: Pitch;
   onClose: () => void;
   onBookPitch: () => void;
   userRole: 'admin' | 'player' | null;
@@ -382,7 +383,13 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   onBookPitch,
   userRole
 }) => {
-  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
+  // Make sure to handle potential undefined details
+  const address = pitch.details?.address || pitch.location;
+  const description = pitch.details?.description || pitch.description;
+  const priceDisplay = pitch.details?.price || `$${pitch.price} per hour`;
+  const facilities = pitch.details?.facilities || [];
+  
+  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
@@ -397,7 +404,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+                aria-label={`View ${address} on Google Maps`}
               >
                 {pitch.location}
               </a>
@@ -418,7 +425,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               About this Pitch
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              {pitch.details?.description}
+              {description}
             </p>
           </div>
 
@@ -443,9 +450,9 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
-                    aria-label={`View ${pitch.details?.address || pitch.location} on Google Maps`}
+                    aria-label={`View ${address} on Google Maps`}
                   >
-                    {pitch.details?.address}
+                    {address}
                   </a>
                 </div>
               </div>
@@ -457,18 +464,18 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 <div>
                   <h4 className="text-sm font-medium">Price</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {pitch.details?.price}
+                    {priceDisplay}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {pitch.details?.facilities && pitch.details.facilities.length > 0 && (
+          {facilities && facilities.length > 0 && (
             <div>
               <h3 className="text-md font-semibold mb-2">Facilities</h3>
               <div className="flex flex-wrap gap-3">
-                {pitch.details.facilities.map((facility, idx) => (
+                {facilities.map((facility, idx) => (
                   <Badge
                     key={idx}
                     variant="outline"

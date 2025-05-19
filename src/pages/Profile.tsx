@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,11 +185,23 @@ const Profile = () => {
     navigate('/reservations');
   };
 
-  // Get user stats if logged in
-  const userStats: UserStats = userProfile 
+  // Get user stats if logged in - Fix type issues
+  const userStats = userProfile 
     ? getUserStats(userProfile.id)
-    : { matches: 0, wins: 0, goals: 0, assists: 0, cleansheets: 0, tackles: 0, yellowCards: 0, redCards: 0, mvps: 0 };
-
+    : {
+        matches: 0,
+        wins: 0,
+        goals: 0,
+        assists: 0,
+        cleansheets: 0,
+        tackles: 0,
+        yellowCards: 0,
+        redCards: 0,
+        mvps: 0,
+        gamesPlayed: 0,
+        goalsScored: 0
+      };
+      
   // Display username formatted nicely
   const displayName = userProfile?.firstName 
     ? `${userProfile.firstName} ${userProfile.lastName}`

@@ -223,6 +223,19 @@ const Reservations = () => {
     return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
   }, [currentDate, upcomingReservations.length]);
 
+  const hasUserJoinedOnDateFixed = (dateString: string, userId: string): boolean => {
+    if (!userId) return false;
+    
+    try {
+      // Convert string to Date object
+      const date = new Date(dateString);
+      return hasUserJoinedOnDate(date, userId);
+    } catch (error) {
+      console.error("Error converting date:", error);
+      return false;
+    }
+  };
+
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
       {/* Page Header and Admin's Add Reservation Button */}
@@ -317,7 +330,7 @@ const Reservations = () => {
                       onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
                       isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
                       isUserOnWaitingList={currentUserId ? reservation.waitingList.includes(currentUserId) : false}
-                      hasUserJoinedOnDate={(date) => currentUserId ? hasUserJoinedOnDate(date, currentUserId) : false}
+                      hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
                       currentUserId={currentUserId || ""} 
                       isAdmin={userRole === 'admin'}
                     />
