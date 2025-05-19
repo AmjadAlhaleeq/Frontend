@@ -6,9 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import { Edit3, Save, ShieldCheck, UserCog, LogOut, CalendarDays, Trophy, UserCircle, Mail, Phone, MapPinIcon, Star, Users, UploadCloud } from "lucide-react";
+import { Edit3, Save, ShieldCheck, UserCog, LogOut, CalendarDays, Trophy, UserCircle, Mail, Phone, MapPinIcon, Star, Users, UploadCloud, Loader } from "lucide-react";
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import LogoutConfirmationDialog from '@/components/shared/LogoutConfirmationDialog';
@@ -36,7 +36,8 @@ const Profile = () => {
   const [currentUser, setCurrentUser] = useState<UserProfileData | null>(null);
   const [formData, setFormData] = useState<UserProfileData | null>(null);
   const [userReservations, setUserReservations] = useState<Reservation[]>([]);
-  const [isLogoutConfirmatioOpen, setIsLogoutConfirmationOpen] = useState(false);
+  const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const avatarFileRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -52,8 +53,9 @@ const Profile = () => {
       }
     } else {
       toast({ title: "Not Logged In", description: "Please log in to view your profile.", variant: "destructive" });
+      // navigate('/');
     }
-  }, [toast]);
+  }, [toast, navigate]);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -80,14 +82,29 @@ const Profile = () => {
 
   const handleSave = () => {
     if (formData) {
-      setCurrentUser(formData);
-      localStorage.setItem('currentUser', JSON.stringify(formData));
-      setIsEditing(false);
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been saved.",
-      });
-      window.dispatchEvent(new CustomEvent('userProfileUpdated'));
+      setIsSaving(true);
+      setTimeout(() => {
+        const success = Math.random() > 0.5; 
+        if (success) {
+          setCurrentUser(formData);
+          localStorage.setItem('currentUser', JSON.stringify(formData));
+          setIsEditing(false);
+          toast({
+            title: "Profile Updated",
+            description: "Your profile information has been saved.",
+          });
+          window.dispatchEvent(new CustomEvent('userProfileUpdated'));
+        } else {
+          toast({
+            title: "Update Failed",
+            description: "Could not save profile. Please try again later.",
+            variant: "destructive",
+          });
+          setFormData(currentUser);
+          setAvatarPreview(currentUser?.avatarUrl || null);
+        }
+        setIsSaving(false);
+      }, 2000);
     }
   };
 
@@ -111,7 +128,7 @@ const Profile = () => {
   }, 0);
 
   if (!currentUser || !formData) {
-    return <div className="container mx-auto px-4 py-8 text-center">Loading profile...</div>;
+    return <div className="container mx-auto px-4 py-8 text-center flex justify-center items-center h-screen"><Loader className="h-8 w-8 animate-spin text-teal-600 dark:text-teal-400" /> <span className="ml-2">Loading profile...</span></div>;
   }
 
   const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number | undefined }) => (
@@ -141,6 +158,7 @@ const Profile = () => {
                   className="absolute bottom-0 right-0 bg-white/80 hover:bg-white text-teal-600 border-teal-500 rounded-full h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => avatarFileRef.current?.click()}
                   title="Change avatar"
+                  disabled={isSaving}
                 >
                   <UploadCloud size={18} />
                 </Button>
@@ -154,9 +172,10 @@ const Profile = () => {
               onClick={() => isEditing ? handleSave() : setIsEditing(true)} 
               variant="outline" 
               className="mt-4 sm:mt-0 sm:ml-auto bg-white/20 hover:bg-white/30 text-white border-white dark:bg-gray-700/30 dark:hover:bg-gray-600/40 dark:border-gray-500"
+              disabled={isSaving}
             >
-              {isEditing ? <Save className="mr-2 h-5 w-5" /> : <Edit3 className="mr-2 h-5 w-5" />}
-              {isEditing ? "Save Profile" : "Edit Profile"}
+              {isSaving && isEditing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : (isEditing ? <Save className="mr-2 h-5 w-5" /> : <Edit3 className="mr-2 h-5 w-5" />)}
+              {isSaving && isEditing ? "Saving..." : (isEditing ? "Save Profile" : "Edit Profile")}
             </Button>
           </div>
         </CardHeader>
@@ -215,21 +234,21 @@ const Profile = () => {
                   onChange={handleAvatarChange} 
                   accept="image/*" 
                   className="hidden" 
-                  disabled={!isEditing}
+                  disabled={!isEditing || isSaving}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="firstName" className="font-medium dark:text-gray-300">First Name</Label>
-                    <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                   <div>
                     <Label htmlFor="lastName" className="font-medium dark:text-gray-300">Last Name</Label>
-                    <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="email" className="font-medium dark:text-gray-300">Email Address</Label>
-                  <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                  <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                 </div>
                 <div>
                   <Label htmlFor="bio" className="font-medium dark:text-gray-300">Bio / About Me</Label>
@@ -239,7 +258,7 @@ const Profile = () => {
                     rows={3}
                     value={formData.bio || ""} 
                     onChange={handleInputChange} 
-                    disabled={!isEditing} 
+                    disabled={!isEditing || isSaving} 
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400" 
                     placeholder="Tell us a bit about yourself as a player..."
                   />
@@ -247,30 +266,31 @@ const Profile = () => {
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                    <div>
                     <Label htmlFor="phoneNumber" className="font-medium dark:text-gray-300">Phone Number</Label>
-                    <Input id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                   <div>
                     <Label htmlFor="city" className="font-medium dark:text-gray-300">City</Label>
-                    <Input id="city" name="city" value={formData.city} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="city" name="city" value={formData.city} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                   <div>
                     <Label htmlFor="age" className="font-medium dark:text-gray-300">Age</Label>
-                    <Input id="age" name="age" type="number" value={formData.age} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="age" name="age" type="number" value={formData.age} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                   <div>
                     <Label htmlFor="gender" className="font-medium dark:text-gray-300">Gender</Label>
-                    <Input id="gender" name="gender" value={formData.gender} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="gender" name="gender" value={formData.gender} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                   <div>
                     <Label htmlFor="favoritePosition" className="font-medium dark:text-gray-300">Favorite Position</Label>
-                    <Input id="favoritePosition" name="favoritePosition" value={formData.favoritePosition} onChange={handleInputChange} disabled={!isEditing} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+                    <Input id="favoritePosition" name="favoritePosition" value={formData.favoritePosition} onChange={handleInputChange} disabled={!isEditing || isSaving} className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
                   </div>
                 </div>
                 {isEditing && (
                   <div className="flex justify-end pt-4 border-t dark:border-gray-700">
-                    <Button type="button" onClick={() => { setIsEditing(false); setAvatarPreview(currentUser.avatarUrl || null); }} variant="outline" className="mr-2 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</Button>
-                    <Button type="button" onClick={handleSave} className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white">
-                      <Save className="mr-2 h-5 w-5"/> Save Changes
+                    <Button type="button" onClick={() => { setIsEditing(false); setFormData(currentUser); setAvatarPreview(currentUser?.avatarUrl || null); }} variant="outline" className="mr-2 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700" disabled={isSaving}>Cancel</Button>
+                    <Button type="button" onClick={handleSave} className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white" disabled={isSaving}>
+                      {isSaving ? <Loader className="mr-2 h-5 w-5 animate-spin"/> : <Save className="mr-2 h-5 w-5"/>}
+                      {isSaving ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>
                 )}
@@ -313,7 +333,7 @@ const Profile = () => {
         </CardContent>
       </Card>
       <LogoutConfirmationDialog
-        isOpen={isLogoutConfirmatioOpen}
+        isOpen={isLogoutConfirmationOpen}
         onClose={() => setIsLogoutConfirmationOpen(false)}
         onConfirm={confirmProfileLogout}
       />

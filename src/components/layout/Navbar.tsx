@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -8,14 +8,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin, Edit3, Users, Star, UserCircle, Mail, Phone } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin, Loader } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "../shared/Logo";
 import LoginDialog from "@/components/auth/LoginDialog";
-import LogoutConfirmationDialog from "@/components/shared/LogoutConfirmationDialog"; // Import confirmation dialog
+import LogoutConfirmationDialog from "@/components/shared/LogoutConfirmationDialog";
 
-// Define UserProfileData interface (can be moved to a shared types file)
 interface UserProfileData {
   id: string;
   firstName: string;
@@ -26,7 +25,7 @@ interface UserProfileData {
   favoritePosition: string;
   phoneNumber: string;
   email: string;
-  avatarUrl?: string; // Optional avatar URL
+  avatarUrl?: string;
 }
 
 const Navbar = () => {
@@ -37,14 +36,12 @@ const Navbar = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { toast } = useToast();
   const location = useLocation();
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
-  const [isLogoutConfirmatioOpen, setIsLogoutConfirmationOpen] = useState(false); // State for logout dialog
+  const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
 
-  // Effect to initialize auth state and theme from localStorage
   useEffect(() => {
-    // Initialize authentication state
     const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
     const storedUserRole = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     const storedUserDetails = localStorage.getItem('currentUser');
@@ -55,32 +52,38 @@ const Navbar = () => {
       if (storedUserDetails) {
         setCurrentUserDetails(JSON.parse(storedUserDetails));
       }
+    } else {
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setCurrentUserDetails(null);
     }
 
-    // Initialize theme based on localStorage or default to light mode
     const localTheme = localStorage.getItem('theme');
     if (localTheme === 'dark') {
       setIsDarkMode(true);
       document.documentElement.classList.add('dark');
     } else { 
-      // Defaults to light if localTheme is 'light' or null
       setIsDarkMode(false);
       document.documentElement.classList.remove('dark');
-      // If no theme was set, explicitly set it to light in localStorage
       if (!localTheme) {
         localStorage.setItem('theme', 'light');
       }
     }
   }, []);
 
-  // Effect to listen for profile updates (e.g., avatar change)
   useEffect(() => {
     const handleProfileUpdate = () => {
       const storedUserDetails = localStorage.getItem('currentUser');
       if (storedUserDetails) {
         setCurrentUserDetails(JSON.parse(storedUserDetails));
-        // Optional: toast to indicate avatar updated in navbar if desired
-        // toast({ title: "Navbar Updated", description: "User details refreshed." });
+        const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
+        const storedUserRole = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+        if (storedIsLoggedIn === 'true') setIsLoggedIn(true);
+        if (storedUserRole) setUserRole(storedUserRole);
+      } else {
+        setCurrentUserDetails(null);
+        setIsLoggedIn(false);
+        setUserRole(null);
       }
     };
 
@@ -88,8 +91,7 @@ const Navbar = () => {
     return () => {
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
     };
-  }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
-
+  }, []);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   
@@ -98,10 +100,10 @@ const Navbar = () => {
     setIsDarkMode(newIsDarkMode);
     if (newIsDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark'); // Persist theme choice
+      localStorage.setItem('theme', 'dark'); 
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light'); // Persist theme choice
+      localStorage.setItem('theme', 'light'); 
     }
     toast({
       title: newIsDarkMode ? t('nav.darkMode') : t('nav.lightMode'),
@@ -118,22 +120,15 @@ const Navbar = () => {
     });
   };
 
-  /**
-   * Initiates the logout process by opening the confirmation dialog.
-   */
   const initiateLogout = () => {
     setIsLogoutConfirmationOpen(true);
   };
 
-  /**
-   * Handles confirmed user logout.
-   * Clears user state, localStorage, shows toast, and navigates to home.
-   */
   const confirmLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
     setCurrentUserDetails(null);
-    // Clear from localStorage
+    
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userRole');
     localStorage.removeItem('currentUser');
@@ -144,36 +139,24 @@ const Navbar = () => {
       duration: 3000,
     });
     
-    setIsLogoutConfirmationOpen(false); // Close the dialog
+    setIsLogoutConfirmationOpen(false); 
     if (isOpen) setIsOpen(false); // Close mobile menu if open
-    navigate('/'); // Redirect to home page
+    navigate('/'); // Redirect to home page, this should cause a full re-evaluation
   };
-
 
   const handleLoginButtonClick = () => {
     setIsLoginDialogOpen(true);
   };
 
-  /**
-   * Handles successful login (or sign-up).
-   * @param role - The role of the logged-in user ('admin' | 'player').
-   * @param userDetails - Optional details of the logged-in user.
-   */
   const handleLoginSuccess = (role: 'admin' | 'player', userDetails?: UserProfileData) => {
     setIsLoggedIn(true);
     setUserRole(role);
     if (userDetails) {
       setCurrentUserDetails(userDetails);
-      // localStorage is already set by LoginDialog, but good to be consistent
-      // If LoginDialog didn't set it, we would set it here:
-      // localStorage.setItem('currentUser', JSON.stringify(userDetails));
     } else {
-        // Attempt to load from localStorage if not directly passed (e.g. refresh scenario)
         const storedUserDetails = localStorage.getItem('currentUser');
         if (storedUserDetails) setCurrentUserDetails(JSON.parse(storedUserDetails));
     }
-    // localStorage.setItem('isLoggedIn', 'true'); // Set by LoginDialog
-    // localStorage.setItem('userRole', role); // Set by LoginDialog
     setIsLoginDialogOpen(false);
     toast({
       title: t('nav.login'),
@@ -186,7 +169,6 @@ const Navbar = () => {
     return location.pathname === path;
   };
 
-  // Determine user's display name and avatar fallback
   const displayName = currentUserDetails?.firstName ? `${currentUserDetails.firstName} ${currentUserDetails.lastName?.[0] || ''}.` : (userRole ? (userRole.charAt(0).toUpperCase() + userRole.slice(1)) : "User");
   const avatarFallback = currentUserDetails?.firstName ? currentUserDetails.firstName.charAt(0).toUpperCase() : (userRole ? userRole.charAt(0).toUpperCase() : "U");
 
@@ -229,7 +211,7 @@ const Navbar = () => {
                 <span className="ms-1">{language === 'en' ? 'العربية' : 'English'}</span>
               </Button>
 
-              {isLoggedIn ? (
+              {isLoggedIn && currentUserDetails ? (
                 <DropdownMenu>
                    <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative p-1">
@@ -260,7 +242,7 @@ const Navbar = () => {
                         <span>{t('nav.bookings')}</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}> {/* Changed to initiateLogout */}
+                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>{t('nav.logout')}</span>
                     </DropdownMenuItem>
@@ -322,7 +304,7 @@ const Navbar = () => {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
             <div className="px-5 space-y-2">
-              {isLoggedIn ? (
+              {isLoggedIn && currentUserDetails ? (
                 <>
                    <div className="flex items-center px-2 py-2">
                       <Avatar className="h-10 w-10">
@@ -372,7 +354,7 @@ const Navbar = () => {
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20"
-                    onClick={() => { initiateLogout(); setIsOpen(false); }} // Changed to initiateLogout
+                    onClick={() => { initiateLogout(); setIsOpen(false); }} 
                   >
                     <LogOut className="mr-2 h-5 w-5" />
                     <span>{t('nav.logout')}</span>
@@ -396,9 +378,8 @@ const Navbar = () => {
         onClose={() => setIsLoginDialogOpen(false)} 
         onLoginSuccess={handleLoginSuccess} 
       />
-      {/* Add Logout Confirmation Dialog instance */}
       <LogoutConfirmationDialog
-        isOpen={isLogoutConfirmatioOpen}
+        isOpen={isLogoutConfirmationOpen}
         onClose={() => setIsLogoutConfirmationOpen(false)}
         onConfirm={confirmLogout}
       />
@@ -406,7 +387,6 @@ const Navbar = () => {
   );
 };
 
-// NavLink component with dark mode compatibility
 const NavLink = ({ to, icon, text, isActive }: { to: string; icon: React.ReactNode; text: string; isActive: boolean }) => (
   <Link
     to={to}
@@ -422,7 +402,6 @@ const NavLink = ({ to, icon, text, isActive }: { to: string; icon: React.ReactNo
   </Link>
 );
 
-// MobileNavLink component with dark mode compatibility and onClick to close menu
 const MobileNavLink = ({ to, text, isActive, onClick }: { to: string; text: string; isActive: boolean; onClick: () => void }) => (
   <Link
     to={to}
