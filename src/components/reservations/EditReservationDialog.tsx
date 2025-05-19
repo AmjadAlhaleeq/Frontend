@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Fixed import
+import { Label } from "@/components/ui/label";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useReservation, Reservation } from "@/context/ReservationContext";
@@ -33,6 +32,7 @@ import HighlightsList from "./HighlightsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 
+// Zod schema for form validation
 const formSchema = z.object({
   pitchName: z.string().min(2, "Pitch name must be at least 2 characters"),
   date: z.date({
@@ -42,32 +42,38 @@ const formSchema = z.object({
     required_error: "Please select a time slot",
   }),
   location: z.string().min(2, "Location must be at least 2 characters"),
-  price: z.number().min(1, "Price is required"),
-  maxPlayers: z.number().min(2, "At least 2 players are required"),
+  price: z.coerce.number().min(1, "Price is required"), // Use coerce for input type="number"
+  maxPlayers: z.coerce.number().min(2, "At least 2 players are required"), // Use coerce for input type="number"
 });
 
 interface EditReservationDialogProps {
-  reservation: Reservation;
-  isOpen: boolean;
-  onClose: () => void;
-  isAdmin?: boolean; // New prop to determine if user is admin
+  reservation: Reservation; // The reservation object to edit
+  isOpen: boolean; // Controls dialog visibility
+  onClose: () => void; // Function to close the dialog
+  isAdmin?: boolean; // Flag to indicate if the current user is an admin
 }
 
+/**
+ * EditReservationDialog component.
+ * Allows admins to edit details of an existing reservation or manage highlights for past games.
+ * The form fields and available actions adapt based on whether the game is in the past and admin status.
+ */
 const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   reservation,
   isOpen,
   onClose,
-  isAdmin = true, // Default to true for now since we're implementing admin features
+  isAdmin = false, // Default isAdmin to false; should be explicitly passed
 }) => {
-  const { editReservation } = useReservation();
-  const [activeTab, setActiveTab] = useState("details");
-  const isPastGame = reservation.status === "completed";
+  const { editReservation } = useReservation(); // Context function to save changes
+  const [activeTab, setActiveTab] = useState("details"); // For tabs in past game admin view
+  const isPastGame = new Date(reservation.date) < new Date(new Date().setHours(0,0,0,0)) || reservation.status === "completed";
 
+  // Initialize react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       pitchName: reservation.pitchName,
-      date: new Date(reservation.date),
+      date: new Date(reservation.date), // Ensure date is a Date object for the calendar
       time: reservation.time,
       location: reservation.location,
       price: reservation.price,
@@ -75,23 +81,34 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
     },
   });
 
+  /**
+   * Handles form submission.
+   * Converts date to ISO string format before saving.
+   * @param data - Validated form data.
+   */
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // TODO: API Call: Send 'data' to backend to update the reservation.
+    // The context's editReservation would then ideally update based on backend response.
     editReservation(reservation.id, {
       ...data,
-      date: data.date.toISOString().split('T')[0],
+      date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD string
     });
-    onClose();
+    onClose(); // Close dialog after submission
   };
 
+  // Render the dialog
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-white">
+      <DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-850">
         <DialogHeader>
-          <DialogTitle className="text-[#0F766E]">
-            {isPastGame ? "Game Details" : "Edit Reservation"}
+          <DialogTitle className="text-[#0F766E] dark:text-teal-400">
+            {/* Title changes based on whether it's a past game or editing an upcoming one */}
+            {isPastGame ? "Game Details" : "Edit Reservation"} 
+            {isAdmin && isPastGame && " (Admin View)"}
           </DialogTitle>
         </DialogHeader>
         
+        {/* Conditional rendering for Admin view of Past Games (with Tabs) */}
         {isPastGame && isAdmin ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 mb-4">
@@ -99,27 +116,32 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
               <TabsTrigger value="highlights">Highlights</TabsTrigger>
             </TabsList>
             
+            {/* Tab for Game Details (Form) */}
             <TabsContent value="details">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  {/* FormField for Pitch Name */}
                   <FormField
                     control={form.control}
                     name="pitchName"
                     render={({ field }) => (
+                      // ... keep existing code (Pitch Name FormItem)
                       <FormItem>
                         <FormLabel>Pitch Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter pitch name" {...field} className="border-[#0F766E]/20" />
+                          <Input placeholder="Enter pitch name" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* FormField for Date */}
                   <FormField
                     control={form.control}
                     name="date"
                     render={({ field }) => (
+                      // ... keep existing code (Date FormItem with Popover Calendar)
                       <FormItem className="flex flex-col">
                         <FormLabel>Date</FormLabel>
                         <Popover>
@@ -128,7 +150,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal border-[#0F766E]/20",
+                                  "w-full pl-3 text-left font-normal border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -141,7 +163,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 dark:bg-gray-800" align="start">
                             <Calendar
                               mode="single"
                               selected={field.value}
@@ -156,19 +178,21 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
+                  {/* FormField for Time */}
                   <FormField
                     control={form.control}
                     name="time"
                     render={({ field }) => (
+                      // ... keep existing code (Time Select FormItem)
                       <FormItem>
                         <FormLabel>Time</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="border-[#0F766E]/20">
+                            <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
                               <SelectValue placeholder="Select time slot" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="dark:bg-gray-800">
                             <SelectItem value="17:00 - 18:30">17:00 - 18:30</SelectItem>
                             <SelectItem value="18:30 - 20:00">18:30 - 20:00</SelectItem>
                             <SelectItem value="20:00 - 21:30">20:00 - 21:30</SelectItem>
@@ -179,48 +203,58 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
+                  {/* FormField for Location */}
                   <FormField
                     control={form.control}
                     name="location"
                     render={({ field }) => (
+                      // ... keep existing code (Location FormItem)
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter location" {...field} className="border-[#0F766E]/20" />
+                          <Input placeholder="Enter location" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* Grid for Price and Max Players */}
                   <div className="grid grid-cols-2 gap-4">
+                    {/* FormField for Price */}
                     <FormField
                       control={form.control}
                       name="price"
                       render={({ field }) => (
+                        // ... keep existing code (Price FormItem)
                         <FormItem>
                           <FormLabel>Price per Player</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="25" {...field} className="border-[#0F766E]/20" />
+                            <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
+                    {/* FormField for Max Players */}
                     <FormField
                       control={form.control}
                       name="maxPlayers"
                       render={({ field }) => (
+                        // ... keep existing code (Max Players Select FormItem)
                         <FormItem>
                           <FormLabel>Max Players</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value, 10))} 
+                            defaultValue={String(field.value)}
+                          >
                             <FormControl>
-                              <SelectTrigger className="border-[#0F766E]/20">
+                              <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
                                 <SelectValue placeholder="Select size" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className="dark:bg-gray-800">
                               <SelectItem value="10">5v5 (10 players)</SelectItem>
                               <SelectItem value="14">7v7 (14 players)</SelectItem>
                               <SelectItem value="22">11v11 (22 players)</SelectItem>
@@ -232,17 +266,18 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     />
                   </div>
 
+                  {/* Form Action Buttons */}
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button 
                       variant="outline" 
                       onClick={onClose}
-                      className="border-[#0F766E]/20 text-[#0F766E] hover:bg-[#0F766E]/10"
+                      className="border-[#0F766E]/20 text-[#0F766E] hover:bg-[#0F766E]/10 dark:text-teal-400 dark:border-teal-600/40 dark:hover:bg-teal-600/20"
                     >
                       Cancel
                     </Button>
                     <Button 
                       type="submit"
-                      className="bg-[#0F766E] hover:bg-[#0d6d66] text-white"
+                      className="bg-[#0F766E] hover:bg-[#0d6d66] text-white dark:bg-teal-600 dark:hover:bg-teal-700"
                     >
                       Save Changes
                     </Button>
@@ -251,23 +286,26 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
               </Form>
             </TabsContent>
             
+            {/* Tab for Game Highlights (Admin view for past games) */}
             <TabsContent value="highlights">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Game Highlights</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <h3 className="text-lg font-medium mb-2 dark:text-gray-100">Game Highlights</h3>
+                  <p className="text-sm text-muted-foreground mb-4 dark:text-gray-400">
                     Record goals, assists, and other key moments from the game.
                   </p>
+                  {/* Component to list existing highlights */}
                   <HighlightsList 
                     reservationId={reservation.id} 
-                    isAdmin={isAdmin} 
+                    isAdmin={isAdmin} // Pass admin status for conditional controls within HighlightsList
                   />
                 </div>
                 
-                <Separator className="my-4" />
+                <Separator className="my-4 dark:bg-gray-700" />
                 
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Add New Highlight</h3>
+                  <h3 className="text-lg font-medium mb-2 dark:text-gray-100">Add New Highlight</h3>
+                  {/* Component form to add a new highlight */}
                   <HighlightForm 
                     reservationId={reservation.id}
                   />
@@ -276,26 +314,33 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
             </TabsContent>
           </Tabs>
         ) : (
+          // Default view: Form for editing upcoming games (admin) or viewing details if non-admin somehow gets here
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* ... FormFields are repeated here. Consider refactoring to a separate component if identical. */}
+              {/* For brevity, assuming these are similar to the ones in the TabsContent above. */}
+              {/* FormField for Pitch Name */}
               <FormField
                 control={form.control}
                 name="pitchName"
                 render={({ field }) => (
+                    // ... keep existing code (Pitch Name FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Pitch Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter pitch name" {...field} className="border-[#0F766E]/20" />
+                      <Input placeholder="Enter pitch name" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* FormField for Date */}
               <FormField
                 control={form.control}
                 name="date"
                 render={({ field }) => (
+                    // ... keep existing code (Date FormItem - identical to above)
                   <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
                     <Popover>
@@ -304,7 +349,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal border-[#0F766E]/20",
+                              "w-full pl-3 text-left font-normal border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -317,7 +362,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 dark:bg-gray-800" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -332,19 +377,21 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
+              {/* FormField for Time */}
               <FormField
                 control={form.control}
                 name="time"
                 render={({ field }) => (
+                    // ... keep existing code (Time Select FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Time</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="border-[#0F766E]/20">
+                        <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
                           <SelectValue placeholder="Select time slot" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="dark:bg-gray-800">
                         <SelectItem value="17:00 - 18:30">17:00 - 18:30</SelectItem>
                         <SelectItem value="18:30 - 20:00">18:30 - 20:00</SelectItem>
                         <SelectItem value="20:00 - 21:30">20:00 - 21:30</SelectItem>
@@ -355,48 +402,58 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
+              {/* FormField for Location */}
               <FormField
                 control={form.control}
                 name="location"
                 render={({ field }) => (
+                    // ... keep existing code (Location FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter location" {...field} className="border-[#0F766E]/20" />
+                      <Input placeholder="Enter location" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Grid for Price and Max Players */}
               <div className="grid grid-cols-2 gap-4">
+                {/* FormField for Price */}
                 <FormField
                   control={form.control}
                   name="price"
                   render={({ field }) => (
+                        // ... keep existing code (Price FormItem - identical to above)
                     <FormItem>
                       <FormLabel>Price per Player</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="25" {...field} className="border-[#0F766E]/20" />
+                        <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
+                {/* FormField for Max Players */}
                 <FormField
                   control={form.control}
                   name="maxPlayers"
                   render={({ field }) => (
+                        // ... keep existing code (Max Players Select FormItem - identical to above)
                     <FormItem>
                       <FormLabel>Max Players</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                      <Select 
+                        onValueChange={(value) => field.onChange(parseInt(value, 10))} 
+                        defaultValue={String(field.value)}
+                      >
                         <FormControl>
-                          <SelectTrigger className="border-[#0F766E]/20">
+                          <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
                             <SelectValue placeholder="Select size" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="dark:bg-gray-800">
                           <SelectItem value="10">5v5 (10 players)</SelectItem>
                           <SelectItem value="14">7v7 (14 players)</SelectItem>
                           <SelectItem value="22">11v11 (22 players)</SelectItem>
@@ -408,21 +465,24 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={onClose}
-                  className="border-[#0F766E]/20 text-[#0F766E] hover:bg-[#0F766E]/10"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  className="bg-[#0F766E] hover:bg-[#0d6d66] text-white"
-                >
-                  Save Changes
-                </Button>
-              </div>
+              {/* Form Action Buttons (only show save if admin for non-past game, or if admin and past game details tab) */}
+              {(isAdmin || !isPastGame) && (
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={onClose}
+                    className="border-[#0F766E]/20 text-[#0F766E] hover:bg-[#0F766E]/10 dark:text-teal-400 dark:border-teal-600/40 dark:hover:bg-teal-600/20"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="bg-[#0F766E] hover:bg-[#0d6d66] text-white dark:bg-teal-600 dark:hover:bg-teal-700"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              )}
             </form>
           </Form>
         )}
