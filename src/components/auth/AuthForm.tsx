@@ -99,7 +99,11 @@ const AuthForm: React.FC<AuthFormProps> = ({
   const handleLoginSubmit = (data: LoginFormData) => {
     try {
       console.info("Attempting login with:", data);
-      onLogin(data);
+      // Fix: Ensure we're passing the required email and password properties
+      onLogin({
+        email: data.email,
+        password: data.password,
+      });
     } catch (error) {
       console.error("Login error:", error);
       toast({
