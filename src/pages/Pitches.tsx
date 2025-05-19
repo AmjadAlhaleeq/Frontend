@@ -1,6 +1,6 @@
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   CalendarIcon,
   Clock,
-  User,
   CheckCircle,
   StarHalf,
   ShowerHead,
@@ -26,7 +25,8 @@ import {
   Wrench,
   Utensils,
   Edit3,
-  Trash2
+  Trash2,
+  LogOut
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useReservation, Pitch as PitchType } from "@/context/ReservationContext";
@@ -40,10 +40,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 
+/**
+ * Pitches page component
+ * Displays all available pitches with search functionality
+ * Admin users can add, edit, and delete pitches
+ * Regular users can only view pitch details
+ */
 const Pitches = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  const [isAdmin] = useState(true);
+  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [selectedPitchForDetails, setSelectedPitchForDetails] = useState<PitchType | null>(null);
   const {
     pitches,
@@ -55,6 +61,13 @@ const Pitches = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pitchToDelete, setPitchToDelete] = useState<PitchType | null>(null);
 
+  // Get user role from localStorage on component mount
+  useEffect(() => {
+    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+    setUserRole(role);
+  }, []);
+
+  // Filter pitches based on search term
   const filteredPitches = pitches.filter(
     (pitch) =>
       pitch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +75,7 @@ const Pitches = () => {
   );
 
   const handleAddPitch = () => {
-    if (!isAdmin) {
+    if (userRole !== 'admin') {
       toast({
         title: "Access Denied",
         description: "Only administrators can add new pitches.",
@@ -81,24 +94,28 @@ const Pitches = () => {
   const handleConfirmDelete = () => {
     if (pitchToDelete) {
       deletePitch(pitchToDelete.id);
+      toast({
+        title: "Pitch Deleted",
+        description: `The pitch "${pitchToDelete.name}" has been successfully deleted.`,
+      });
       setPitchToDelete(null);
       setShowDeleteDialog(false);
     }
   };
 
   const handleEditPitch = (pitchId: number) => {
-    if (!isAdmin) {
+    if (userRole !== 'admin') {
       toast({ title: "Access Denied", description: "Only admins can edit pitches.", variant: "destructive" });
       return;
     }
     navigate(`/admin/edit-pitch/${pitchId}`);
-    toast({ title: "Edit Pitch", description: `Navigating to edit page for pitch ID: ${pitchId}. (Page not yet implemented)`});
+    toast({ title: "Edit Pitch", description: `Navigating to edit page for pitch ID: ${pitchId}.`});
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold">Available Pitches</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Available Pitches</h1>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
@@ -115,7 +132,7 @@ const Pitches = () => {
             />
           </div>
 
-          {isAdmin && (
+          {userRole === 'admin' && (
             <Button
               onClick={handleAddPitch}
               className="bg-[#0F766E] hover:bg-[#0d6d66]"
@@ -128,10 +145,23 @@ const Pitches = () => {
       </div>
 
       {filteredPitches.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
-            No pitches found. Try adjusting your search or add a new one!
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">
+          <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4 mx-auto w-fit">
+            <Search className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">No pitches found</h3>
+          <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md mx-auto">
+            Try adjusting your search or add a new pitch if you have admin privileges.
           </p>
+          {userRole === 'admin' && (
+            <Button 
+              onClick={handleAddPitch} 
+              className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm"
+            >
+              Add New Pitch
+              <Plus className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,7 +169,7 @@ const Pitches = () => {
             <PitchCard
               key={pitch.id}
               pitch={pitch}
-              isAdmin={isAdmin}
+              isAdmin={userRole === 'admin'}
               onViewDetails={() => setSelectedPitchForDetails(pitch)}
               onBookPitch={() => navigateToReservation(pitch.name)}
               onEditClick={() => handleEditPitch(pitch.id)}
@@ -198,6 +228,11 @@ const RenderStars = ({ rating }: { rating: number }) => {
   return <div className="flex items-center">{starsArray}</div>;
 };
 
+/**
+ * PitchCard component to display individual pitch information
+ * Admin users can see edit and delete buttons
+ * Regular users can only see view details and book now buttons
+ */
 const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
   isAdmin,
@@ -287,10 +322,10 @@ const PitchCard: React.FC<PitchCardProps> = ({
         </div>
         {isAdmin && (
           <div className="flex gap-2 w-full mt-2">
-            <Button variant="outline" onClick={onEditClick} className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600">
+            <Button variant="outline" onClick={onEditClick} className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20">
               <Edit3 size={16} className="mr-2" /> Edit
             </Button>
-            <Button variant="outline" onClick={onDeleteClick} className="flex-1 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600">
+            <Button variant="outline" onClick={onDeleteClick} className="flex-1 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20">
               <Trash2 size={16} className="mr-2" /> Delete
             </Button>
           </div>
@@ -335,6 +370,10 @@ interface PitchDetailsDialogProps {
   onBookPitch: () => void;
 }
 
+/**
+ * PitchDetailsDialog component to display detailed information about a pitch
+ * Shows a modal with comprehensive pitch details, including facilities and location
+ */
 const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   pitch,
   onClose,
