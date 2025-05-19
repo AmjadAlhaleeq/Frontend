@@ -8,7 +8,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin } from "lucide-react";
+import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin, Edit3, Users, Star, UserCircle, Mail, Phone } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "../shared/Logo";
@@ -33,7 +33,7 @@ const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserDetails, setCurrentUserDetails] = useState<UserProfileData | null>(null); // State for user details
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false); // Default to false (light mode)
   const { toast } = useToast();
   const location = useLocation();
   const { language, setLanguage, t } = useLanguage();
@@ -41,6 +41,7 @@ const Navbar = () => {
 
   // Effect to initialize auth state from localStorage on component mount
   useEffect(() => {
+    // Initialize authentication state
     const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
     const storedUserRole = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     const storedUserDetails = localStorage.getItem('currentUser');
@@ -52,15 +53,20 @@ const Navbar = () => {
         setCurrentUserDetails(JSON.parse(storedUserDetails));
       }
     }
-    // Initialize theme based on preference or localStorage
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Initialize theme based on localStorage or default to light mode
     const localTheme = localStorage.getItem('theme');
-    if (localTheme === 'dark' || (!localTheme && prefersDark)) {
-        setIsDarkMode(true);
-        document.documentElement.classList.add('dark');
-    } else {
-        setIsDarkMode(false);
-        document.documentElement.classList.remove('dark');
+    if (localTheme === 'dark') {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else { 
+      // Defaults to light if localTheme is 'light' or null
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+      // If no theme was set, explicitly set it to light in localStorage
+      if (!localTheme) {
+        localStorage.setItem('theme', 'light');
+      }
     }
   }, []);
 
