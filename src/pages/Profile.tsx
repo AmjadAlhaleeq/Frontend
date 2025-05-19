@@ -185,24 +185,24 @@ const Profile = () => {
             <Card className="lg:col-span-1">
               <CardHeader className="flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
+                  <AvatarImage src={userProfile?.avatarUrl} alt={userProfile?.name || 'User'} />
                   <AvatarFallback className="text-2xl">
-                    {userProfile.name.slice(0, 2).toUpperCase()}
+                    {userProfile?.name ? userProfile.name.slice(0, 2).toUpperCase() : 'US'}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-2xl text-teal-700 dark:text-teal-400">
-                  {userProfile.name}
+                  {userProfile?.name || 'User'}
                 </CardTitle>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {userProfile.email}
+                  {userProfile?.email || ''}
                 </div>
                 <div className="mt-2">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    userProfile.role === "admin"
+                    userProfile?.role === "admin"
                       ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
                       : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                   }`}>
-                    {userProfile.role === "admin" ? "Admin" : "Player"}
+                    {userProfile?.role === "admin" ? "Admin" : "Player"}
                   </span>
                 </div>
               </CardHeader>
@@ -287,10 +287,10 @@ const Profile = () => {
             {/* Main content area */}
             <div className="lg:col-span-2 space-y-6">
               {/* User Stats */}
-              <PlayerStats stats={userStats} />
+              {userProfile && <PlayerStats stats={userStats} />}
 
               {/* My Reservations */}
-              <PlayerReservations userId={userProfile.id} />
+              {userProfile && <PlayerReservations userId={userProfile.id} />}
             </div>
           </div>
         </>
