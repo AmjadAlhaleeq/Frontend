@@ -54,10 +54,11 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     // Create highlight object
     const highlight: Highlight = {
       id: Date.now(),
-      type: highlightType as "goal" | "assist" | "save" | "yellowCard" | "redCard" | "other",
+      type: highlightType as "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other",
       playerName: playerName,
       minute: minuteNum,
-      description: description
+      description: description,
+      playerId: `player-${Date.now()}` // Generate a temporary playerId if not available
     };
     
     onSave(highlight);
