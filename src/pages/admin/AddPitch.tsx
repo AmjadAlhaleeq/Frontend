@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, Pitch } from "@/context/ReservationContext";
 
 const AddPitch = () => {
   const [pitchData, setPitchData] = useState({

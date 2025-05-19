@@ -1,13 +1,13 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 // Types for player in lineup
 export interface LineupPlayer {
   userId: string;
   status: 'joined' | 'left' | 'invited';
   joinedAt?: string;
-  playerName?: string; // Adding playerName property that's being used
+  playerName?: string;
 }
 
 // Types for highlight events
@@ -43,7 +43,7 @@ export interface Reservation {
   imageUrl?: string;
   finalScore?: string;
   title?: string;
-  mvpPlayerId?: string; // Adding mvpPlayerId property
+  mvpPlayerId?: string;
 }
 
 // Type for new reservation data
@@ -53,8 +53,44 @@ export interface NewReservationData {
   time: string;
   location?: string;
   maxPlayers: number;
-  price?: number; // Adding price property
+  price?: number;
   imageUrl?: string;
+}
+
+// Pitch interface
+export interface Pitch {
+  id: number;
+  name: string;
+  location: string;
+  image: string;
+  playersPerSide: number;
+  description?: string;
+  openingHours?: string;
+  price: number;
+  surfaceType?: string;
+  pitchSize?: string;
+  features?: string[];
+  details?: {
+    address?: string;
+    description?: string;
+    price?: string;
+    facilities?: string[];
+  };
+}
+
+// User stats interface
+export interface UserStats {
+  gamesPlayed: number;
+  goalsScored: number;
+  matches: number;
+  wins: number;
+  goals: number;
+  assists: number;
+  cleansheets: number;
+  tackles: number;
+  yellowCards: number;
+  redCards: number;
+  mvps: number;
 }
 
 // Context type definition
@@ -72,6 +108,12 @@ interface ReservationContextType {
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
   editReservation: (reservationId: number, data: Partial<Omit<Reservation, 'id'>>) => void;
+  // Add missing functions
+  navigateToReservation: (pitchName: string) => void;
+  pitches: Pitch[];
+  deletePitch: (pitchId: number) => void;
+  addPitch: (pitch: Omit<Pitch, 'id'>) => Pitch;
+  getUserStats: (userId: string) => UserStats;
 }
 
 // Create the context
@@ -164,10 +206,60 @@ const initialReservations: Reservation[] = [
   }
 ];
 
+// Sample data for pitches
+const initialPitches: Pitch[] = [
+  {
+    id: 1,
+    name: "Downtown Turf",
+    location: "Downtown Sports Complex",
+    image: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
+    playersPerSide: 5,
+    price: 15,
+    features: ["Indoor", "Floodlights", "Artificial Grass"],
+    details: {
+      address: "123 Downtown Avenue, City Center",
+      description: "A modern indoor football facility with high-quality artificial turf, perfect for 5-a-side games.",
+      facilities: ["Changing Rooms", "Showers", "Free Parking"]
+    }
+  },
+  {
+    id: 2,
+    name: "Riverside Field",
+    location: "Riverside Sports Center",
+    image: "https://images.unsplash.com/photo-1518604666860-9ed391f76460?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
+    playersPerSide: 5,
+    price: 20,
+    features: ["Outdoor", "Floodlights", "Natural Grass"],
+    details: {
+      address: "45 Riverside Road",
+      description: "A beautiful outdoor pitch located next to the river with natural grass and professional facilities.",
+      facilities: ["Professional Locker Rooms", "Wifi", "Cafe"]
+    }
+  },
+  {
+    id: 3,
+    name: "Central Park",
+    location: "Central Park Fields",
+    image: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=876&q=80",
+    playersPerSide: 5,
+    price: 12,
+    features: ["Outdoor", "Daytime", "Artificial Grass"],
+    details: {
+      address: "Central Park, Main Entrance",
+      description: "A community pitch in the heart of the city, perfect for casual games and meetups.",
+      facilities: ["Public Restrooms", "Water Fountains", "Picnic Area"]
+    }
+  }
+];
+
 // Provider component
 export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // State to store all reservations
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
+  // State to store all pitches
+  const [pitches, setPitches] = useState<Pitch[]>(initialPitches);
+  
+  const navigate = useNavigate();
 
   // Add a new reservation
   const addReservation = (data: NewReservationData) => {
@@ -207,16 +299,15 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Remove from waiting list if present
       const newWaitingList = res.waitingList.filter(id => id !== userId);
       
-      // Add to lineup
-      const newLineup = [
-        ...res.lineup,
-        {
-          userId,
-          status: 'joined',
-          joinedAt: new Date().toISOString(),
-          playerName: playerName || `Player ${userId.substring(0, 4)}`,
-        }
-      ];
+      // Add to lineup - fixed the type issue
+      const newLineupPlayer: LineupPlayer = {
+        userId,
+        status: 'joined',
+        joinedAt: new Date().toISOString(),
+        playerName: playerName || `Player ${userId.substring(0, 4)}`,
+      };
+      
+      const newLineup = [...res.lineup, newLineupPlayer];
       
       return {
         ...res,
@@ -363,6 +454,76 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }));
   };
 
+  // Navigate to reservation page with pitch filter
+  const navigateToReservation = (pitchName: string) => {
+    navigate('/reservations', { 
+      state: { 
+        pitchFilter: pitchName 
+      } 
+    });
+  };
+  
+  // Add a new pitch
+  const addPitch = (pitchData: Omit<Pitch, 'id'>): Pitch => {
+    const newPitch: Pitch = {
+      ...pitchData,
+      id: Date.now(),
+    };
+    
+    setPitches(prev => [...prev, newPitch]);
+    return newPitch;
+  };
+  
+  // Delete a pitch
+  const deletePitch = (pitchId: number) => {
+    setPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+  };
+  
+  // Get user statistics
+  const getUserStats = (userId: string): UserStats => {
+    // Calculate user statistics from reservation data
+    const userGames = reservations.filter(res => 
+      res.lineup.some(p => p.userId === userId && p.status === 'joined')
+    );
+    
+    // Calculate goals scored by user
+    const goalsScored = userGames.reduce((total, game) => {
+      return total + game.highlights.filter(h => h.type === 'goal' && h.playerId === userId).length;
+    }, 0);
+    
+    // Calculate assists by user
+    const assists = userGames.reduce((total, game) => {
+      return total + game.highlights.filter(h => h.type === 'assist' && h.playerId === userId).length;
+    }, 0);
+    
+    // Calculate yellow cards
+    const yellowCards = userGames.reduce((total, game) => {
+      return total + game.highlights.filter(h => h.type === 'yellowCard' && h.playerId === userId).length;
+    }, 0);
+    
+    // Calculate red cards
+    const redCards = userGames.reduce((total, game) => {
+      return total + game.highlights.filter(h => h.type === 'redCard' && h.playerId === userId).length;
+    }, 0);
+    
+    // Calculate MVP awards
+    const mvps = userGames.filter(game => game.mvpPlayerId === userId).length;
+    
+    return {
+      gamesPlayed: userGames.length,
+      goalsScored,
+      matches: userGames.length,
+      wins: 0, // These would need more advanced logic to determine
+      goals: goalsScored,
+      assists,
+      cleansheets: 0, // Would need position data
+      tackles: 0,     // Would need more detailed stats
+      yellowCards,
+      redCards,
+      mvps
+    };
+  };
+
   // Return provider with context value
   return (
     <ReservationContext.Provider value={{ 
@@ -378,7 +539,13 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       getReservationsForDate,
       addHighlight,
       deleteHighlight,
-      editReservation
+      editReservation,
+      // Add missing functions to context value
+      navigateToReservation,
+      pitches,
+      deletePitch,
+      addPitch,
+      getUserStats
     }}>
       {children}
     </ReservationContext.Provider>
