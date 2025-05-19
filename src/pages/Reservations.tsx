@@ -116,6 +116,16 @@ const Reservations = () => {
     getReservationsForDate,
   } = useReservation();
 
+  // Calculate the actual maximum players based on the game format
+  const calculateActualMaxPlayers = (maxPlayers: number) => {
+    // For 5v5 format (10 players), we add 2 for substitutes
+    if (maxPlayers === 10) {
+      return 12;
+    }
+    // For all other formats, add 2 as requested
+    return maxPlayers + 2;
+  };
+
   // Memoized list of upcoming reservations, filtered by currentDate if set
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
@@ -375,7 +385,7 @@ const Reservations = () => {
                             <TableCell>
                                 <div className="font-medium text-gray-800 dark:text-gray-100">{formatDate(reservation.date, "MMM d, yyyy")}</div>
                                 <div className="text-xs text-muted-foreground dark:text-gray-500">
-                                {reservation.pitchName}
+                                {reservation.title || reservation.pitchName}
                                 </div>
                             </TableCell>
                             <TableCell className="text-gray-700 dark:text-gray-300">{reservation.time}</TableCell>
@@ -383,7 +393,7 @@ const Reservations = () => {
                                 <div className="flex items-center text-gray-600 dark:text-gray-400">
                                 <Users className="h-3.5 w-3.5 mr-1.5 text-muted-foreground dark:text-gray-500" />
                                 <span>
-                                    {reservation.playersJoined}/{reservation.maxPlayers + 2}
+                                    {reservation.playersJoined}/{calculateActualMaxPlayers(reservation.maxPlayers)}
                                 </span>
                                 </div>
                             </TableCell>
@@ -418,12 +428,11 @@ const Reservations = () => {
           isAdmin={userRole === 'admin'}
           onStatusChange={(status) => {
             if (userRole === 'admin' && selectedGameForDetails) {
-              const { updateReservationStatus } = useReservation();
               updateReservationStatus(selectedGameForDetails.id, status);
             }
           }}
           currentUserId={currentUserId || ""}
-          actualMaxPlayers={selectedGameForDetails.maxPlayers + 2}
+          actualMaxPlayers={calculateActualMaxPlayers(selectedGameForDetails.maxPlayers)}
         />
       )}
     </div>

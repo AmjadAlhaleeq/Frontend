@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useReservation, Highlight } from "@/context/ReservationContext";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 
 interface HighlightFormProps {
   reservationId: number;
@@ -13,14 +15,15 @@ interface HighlightFormProps {
 
 /**
  * HighlightForm component for adding match highlights
- * Allows admin to select highlight type, player, minute, and add description
+ * Allows admin to select highlight type, player from the game lineup, minute, and add description
  */
 const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) => {
   const [highlightType, setHighlightType] = useState<string>("goal");
+  const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [minute, setMinute] = useState<string>("1");
   const [description, setDescription] = useState<string>("");
-  const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
+  const [availablePlayers, setAvailablePlayers] = useState<{id: string, name: string}[]>([]);
   
   const { reservations } = useReservation();
 
@@ -28,18 +31,31 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
   useEffect(() => {
     const reservation = reservations.find(r => r.id === reservationId);
     if (reservation && reservation.lineup) {
-      // Extract player names from lineup
+      // Extract player names and IDs from lineup
       const players = reservation.lineup
         .filter(player => player.status === 'joined' && player.playerName)
-        .map(player => player.playerName || `Player ${player.userId}`);
+        .map(player => ({
+          id: player.userId,
+          name: player.playerName || `Player ${player.userId}`
+        }));
       
       setAvailablePlayers(players);
       // Set default player if available
       if (players.length > 0) {
-        setPlayerName(players[0]);
+        setPlayerId(players[0].id);
+        setPlayerName(players[0].name);
       }
     }
   }, [reservationId, reservations]);
+
+  // Update player name when player ID changes
+  const handlePlayerChange = (selectedPlayerId: string) => {
+    setPlayerId(selectedPlayerId);
+    const player = availablePlayers.find(p => p.id === selectedPlayerId);
+    if (player) {
+      setPlayerName(player.name);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +63,11 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     // Validate minute is a number between 1-90
     const minuteNum = parseInt(minute);
     if (isNaN(minuteNum) || minuteNum < 1 || minuteNum > 90) {
-      alert("Please enter a valid minute between 1 and 90");
+      toast({
+        title: "Invalid minute",
+        description: "Please enter a valid minute between 1 and 90",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -58,7 +78,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
       playerName: playerName,
       minute: minuteNum,
       description: description,
-      playerId: `player-${Date.now()}` // Generate a temporary playerId if not available
+      playerId: playerId
     };
     
     onSave(highlight);
@@ -90,15 +110,15 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
         <label className="block text-sm font-medium mb-1">Player</label>
         {availablePlayers.length > 0 ? (
           <Select 
-            value={playerName} 
-            onValueChange={setPlayerName}
+            value={playerId} 
+            onValueChange={handlePlayerChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select player" />
             </SelectTrigger>
             <SelectContent>
-              {availablePlayers.map((player, index) => (
-                <SelectItem key={index} value={player}>{player}</SelectItem>
+              {availablePlayers.map((player) => (
+                <SelectItem key={player.id} value={player.id}>{player.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -106,7 +126,8 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
           <Input 
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Enter player name"
+            placeholder="No players found in the lineup"
+            disabled
           />
         )}
       </div>
@@ -124,11 +145,12 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
       </div>
       
       <div>
-        <label className="block text-sm font-medium mb-1">Description (Optional)</label>
-        <Input 
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <Textarea 
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Brief description"
+          placeholder="Add details about the highlight"
+          className="resize-none"
         />
       </div>
       

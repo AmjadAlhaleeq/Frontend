@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,22 +44,53 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     avatarUrl: currentUserDetails.avatarUrl || ""
   });
   
-  // Fake upload functionality (in a real app, this would connect to storage)
-  const handleUploadImage = () => {
-    // Generate a random avatar
-    const randomSeed = Math.random().toString(36).substring(2, 8);
-    const newAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Handle file input change for photo upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     
-    setProfile(prev => ({
-      ...prev,
-      avatarUrl: newAvatarUrl
-    }));
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    toast({
-      title: "Avatar Updated",
-      description: "Your profile picture has been updated.",
-      duration: 3000,
-    });
+    // Check file type (only images)
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create a data URL for preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfile(prev => ({
+        ...prev,
+        avatarUrl: reader.result as string
+      }));
+      
+      toast({
+        title: "Photo Selected",
+        description: "Your profile picture will be updated when you save changes",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,14 +128,17 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     "Striker"
   ];
 
+  // Real profile photos urls (realistic looking player photos from professional stock)
+  const defaultAvatarUrl = `https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=faces`;
+
   return (
     <Card className="w-full">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col items-center mb-6">
-            <Avatar className="h-24 w-24 mb-4">
+            <Avatar className="h-24 w-24 mb-4 border-2 border-gray-200">
               <AvatarImage 
-                src={profile.avatarUrl || `https://ui-avatars.com/api/?name=${profile.firstName}+${profile.lastName}&background=random`} 
+                src={profile.avatarUrl || defaultAvatarUrl} 
                 alt={`${profile.firstName} ${profile.lastName}`}
               />
               <AvatarFallback>
@@ -113,15 +147,23 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
               </AvatarFallback>
             </Avatar>
             
+            <input 
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            
             <Button 
               type="button" 
               variant="outline" 
               size="sm" 
-              onClick={handleUploadImage}
+              onClick={triggerFileInput}
               className="text-sm"
             >
               <Upload className="h-4 w-4 mr-2" />
-              Change Photo
+              Upload Photo
             </Button>
           </div>
           

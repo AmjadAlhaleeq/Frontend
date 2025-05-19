@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Reservation, useReservation } from "@/context/ReservationContext";
 import GameDetailsDialog from "./GameDetailsDialog";
+import JoinGameConfirmationDialog from "./JoinGameConfirmationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -45,18 +46,32 @@ const ReservationCard = ({
   const { toast } = useToast();
   const { updateReservationStatus } = useReservation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isJoinConfirmOpen, setIsJoinConfirmOpen] = useState(false);
   
   // Format the date for display
   const formattedDate = format(parseISO(reservation.date), 'EEE, MMM d');
+  const fullFormattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
   
-  // Calculate actual players total (adding +2 as requested)
-  const actualMaxPlayers = reservation.maxPlayers + 2;
+  // Calculate actual players total (adding +7 as requested for 5v5 format)
+  const actualMaxPlayers = reservation.maxPlayers === 10 ? 12 : reservation.maxPlayers + 2;
   
   // Maximum waiting list size
   const maxWaitingList = 3;
   
   // Determine if the waiting list is full
   const isWaitingListFull = reservation.waitingList.length >= maxWaitingList;
+  
+  // Handle join game confirmation
+  const handleJoinGameClick = () => {
+    setIsJoinConfirmOpen(true);
+  };
+  
+  const handleJoinConfirm = () => {
+    setIsJoinConfirmOpen(false);
+    if (onJoinGame) {
+      onJoinGame();
+    }
+  };
 
   // Determine the action button based on the user's current status and reservation status
   const renderActionButton = () => {
@@ -167,7 +182,7 @@ const ReservationCard = ({
       <Button 
         variant="default" 
         size="sm"
-        onClick={onJoinGame}
+        onClick={handleJoinGameClick}
         className="w-full bg-teal-600 hover:bg-teal-700 text-white"
       >
         <UserPlus className="h-4 w-4 mr-1.5" />
@@ -238,7 +253,7 @@ const ReservationCard = ({
           <div className="flex justify-between items-start mb-3">
             <div>
               <h3 className="font-medium text-teal-700 dark:text-teal-400 text-lg">
-                {reservation.pitchName}
+                {reservation.title || reservation.pitchName}
               </h3>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                 <MapPin className="h-3.5 w-3.5 mr-1" />
@@ -286,6 +301,15 @@ const ReservationCard = ({
         onStatusChange={handleStatusChange}
         currentUserId={currentUserId}
         actualMaxPlayers={actualMaxPlayers}
+      />
+      
+      <JoinGameConfirmationDialog
+        isOpen={isJoinConfirmOpen}
+        onClose={() => setIsJoinConfirmOpen(false)}
+        onConfirm={handleJoinConfirm}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={fullFormattedDate}
+        gameTime={reservation.time}
       />
     </>
   );
