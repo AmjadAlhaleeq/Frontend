@@ -64,6 +64,16 @@ export interface Reservation {
   createdAt: string;
 }
 
+// Define player suspension
+export interface PlayerSuspension {
+  playerId: string;
+  playerName: string;
+  reason: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
 // Pitch interface
 export interface Pitch {
   id: number;
@@ -74,9 +84,12 @@ export interface Pitch {
   amenities: string[];
   availability?: string;
   rating: number;
+  playersPerSide?: number;
+  details?: string;
+  features?: string[];
 }
 
-// User statistics interface
+// Extended UserStats interface
 export interface UserStats {
   gamesPlayed: number;
   goalsScored: number;
@@ -84,6 +97,11 @@ export interface UserStats {
   yellowCards: number;
   redCards: number;
   mvps: number;
+  matches: number;
+  wins: number;
+  goals: number;
+  cleansheets: number;
+  tackles: number;
 }
 
 // Context interface
@@ -98,10 +116,18 @@ interface ReservationContextType {
   joinWaitingList: (id: number, userId: string) => void;
   leaveWaitingList: (id: number, userId: string) => void;
   updateReservationStatus: (id: number, status: ReservationStatus) => void;
-  addHighlight: (reservationId: number, highlight: Highlight) => void;
+  addHighlight: (reservationId: number, highlight: Omit<Highlight, "id">) => void;
   removeHighlight: (reservationId: number, highlightId: number) => void;
   getUserStats: (userId: string) => UserStats;
   navigateToReservation: (id: number) => void;
+  isUserJoined: (reservationId: number, userId: string) => boolean;
+  hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
+  getReservationsForDate: (date: Date) => Reservation[];
+  joinGame: (reservationId: number, playerName: string | undefined, userId: string) => void;
+  deleteHighlight: (reservationId: number, highlightId: number) => void;
+  suspendPlayer: (suspension: PlayerSuspension) => void;
+  addPitch: (pitch: Omit<Pitch, "id">) => void;
+  deletePitch: (pitchId: number) => void;
 }
 
 // Create the context
@@ -213,7 +239,10 @@ const initialPitches: Pitch[] = [
     imageUrl: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
     price: 15,
     amenities: ["Floodlights", "Changing Rooms", "Parking", "Café"],
-    rating: 4.7
+    rating: 4.7,
+    playersPerSide: 5,
+    details: "Our flagship pitch in the heart of downtown, perfect for small-sided games.",
+    features: ["Artificial turf", "Lighting", "Changing facilities"]
   },
   {
     id: 2,
@@ -222,7 +251,10 @@ const initialPitches: Pitch[] = [
     imageUrl: "https://images.unsplash.com/photo-1518604666860-9cd681bb7b24?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
     price: 20,
     amenities: ["Synthetic Turf", "Floodlights", "Changing Rooms", "Showers", "Parking"],
-    rating: 4.9
+    rating: 4.9,
+    playersPerSide: 5,
+    details: "Premium riverside location with state-of-the-art facilities.",
+    features: ["Premium synthetic turf", "Floodlights", "Changing rooms with showers"]
   },
   {
     id: 3,
@@ -231,7 +263,10 @@ const initialPitches: Pitch[] = [
     imageUrl: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1171&q=80",
     price: 18,
     amenities: ["Natural Grass", "Changing Rooms", "Parking", "Spectator Seating"],
-    rating: 4.5
+    rating: 4.5,
+    playersPerSide: 5,
+    details: "Natural grass pitch with excellent drainage for year-round play.",
+    features: ["Natural grass", "Spectator seating", "Post-game bar area"]
   }
 ];
 
@@ -242,6 +277,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // State for reservations and pitches
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
   const [pitches, setPitches] = useState<Pitch[]>(initialPitches);
+  const [suspensions, setSuspensions] = useState<PlayerSuspension[]>([]);
 
   // Add a new reservation
   const addReservation = (data: NewReservationData) => {
@@ -335,6 +371,11 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       title: "Game Joined",
       description: "You've successfully joined this game. See you on the pitch!",
     });
+  };
+
+  // Alias for joinReservation for the Reservations component
+  const joinGame = (reservationId: number, playerName: string | undefined, userId: string) => {
+    joinReservation(reservationId, userId, playerName);
   };
 
   // Cancel/leave a reservation
@@ -456,11 +497,20 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   // Add highlight
-  const addHighlight = (reservationId: number, highlight: Highlight) => {
+  const addHighlight = (reservationId: number, highlight: Omit<Highlight, "id">) => {
     setReservations(prev => 
       prev.map(res => {
         if (res.id === reservationId) {
-          const newHighlights = [...res.highlights, highlight];
+          const newId = res.highlights.length > 0 
+            ? Math.max(...res.highlights.map(h => h.id)) + 1 
+            : 1;
+          
+          const newHighlight = {
+            ...highlight,
+            id: newId
+          };
+          
+          const newHighlights = [...res.highlights, newHighlight];
           return { ...res, highlights: newHighlights };
         }
         return res;
@@ -479,6 +529,41 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return res;
       })
     );
+  };
+
+  // Alias for removeHighlight
+  const deleteHighlight = (reservationId: number, highlightId: number) => {
+    removeHighlight(reservationId, highlightId);
+  };
+
+  // Check if user is joined to a reservation
+  const isUserJoined = (reservationId: number, userId: string): boolean => {
+    const reservation = reservations.find(res => res.id === reservationId);
+    if (!reservation) return false;
+    
+    return reservation.lineup.some(player => player.userId === userId && player.status === 'joined');
+  };
+  
+  // Check if user has joined any reservation on a specific date
+  const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
+    const dateString = date.toISOString().split('T')[0];
+    
+    return reservations.some(res => {
+      // Match the date
+      const resDate = res.date;
+      // User is in the lineup with status 'joined'
+      const userJoined = res.lineup.some(player => 
+        player.userId === userId && player.status === 'joined'
+      );
+      
+      return resDate === dateString && userJoined;
+    });
+  };
+  
+  // Get reservations for a specific date
+  const getReservationsForDate = (date: Date): Reservation[] => {
+    const dateString = date.toISOString().split('T')[0];
+    return reservations.filter(res => res.date === dateString);
   };
 
   // Get user statistics
@@ -507,19 +592,60 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
     const mvps = userGames.filter(game => game.mvpPlayerId === userId).length;
     
+    // Extended stats for the Profile page
     return {
       gamesPlayed,
       goalsScored,
       assists,
       yellowCards,
       redCards,
-      mvps
+      mvps,
+      // Aliases for profile page
+      matches: gamesPlayed,
+      wins: Math.floor(gamesPlayed * 0.6), // Just an example calculation
+      goals: goalsScored,
+      cleansheets: Math.floor(gamesPlayed * 0.3), // Just an example calculation
+      tackles: Math.floor(gamesPlayed * 2.5) // Just an example calculation
     };
   };
 
   // Navigate to reservation details
   const navigateToReservation = (id: number) => {
     navigate('/reservations', { state: { selectedReservationId: id } });
+  };
+
+  // Suspend a player
+  const suspendPlayer = (suspension: PlayerSuspension) => {
+    setSuspensions(prev => [...prev, suspension]);
+    toast({
+      title: "Player Suspended",
+      description: `${suspension.playerName} has been suspended until ${suspension.endDate}`,
+    });
+  };
+
+  // Add a new pitch
+  const addPitch = (pitchData: Omit<Pitch, "id">) => {
+    const newPitch: Pitch = {
+      ...pitchData,
+      id: Date.now()
+    };
+
+    setPitches(prev => [...prev, newPitch]);
+    
+    toast({
+      title: "Pitch Added",
+      description: `New pitch ${pitchData.name} has been added.`,
+    });
+  };
+
+  // Delete a pitch
+  const deletePitch = (pitchId: number) => {
+    setPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+    
+    toast({
+      title: "Pitch Deleted",
+      description: "The pitch has been removed.",
+    });
   };
 
   return (
@@ -538,7 +664,15 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         addHighlight,
         removeHighlight,
         getUserStats,
-        navigateToReservation
+        navigateToReservation,
+        isUserJoined,
+        hasUserJoinedOnDate,
+        getReservationsForDate,
+        joinGame,
+        deleteHighlight,
+        suspendPlayer,
+        addPitch,
+        deletePitch
       }}
     >
       {children}
