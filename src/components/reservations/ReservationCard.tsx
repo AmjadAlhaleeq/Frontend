@@ -1,13 +1,15 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Trash2, Edit, Users, UserPlus, UserMinus } from "lucide-react";
+import { Trash2, Edit, Users, UserPlus, UserMinus, Clock, CheckCircle } from "lucide-react";
 import { Reservation, useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/components/ui/use-toast";
 import EditReservationDialog from "./EditReservationDialog";
 import CancelConfirmationDialog from "./CancelConfirmationDialog";
+import TransferReservationDialog from "./TransferReservationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -45,6 +47,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const { deleteReservation } = useReservation(); // Assuming this is admin-only or has internal checks
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
   
   // Determine if the user has already joined another game on the same date
   const userAlreadyJoinedOnDate =
@@ -103,6 +106,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 ? "bg-orange-500 text-white"
                 : reservation.status === "completed"
                 ? "bg-blue-500 text-white"
+                : reservation.status === "cancelled"
+                ? "bg-red-500 text-white"
                 : "bg-gray-500 text-white"
             )}
           >
@@ -120,6 +125,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">{reservation.date}, {reservation.time}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{reservation.location}</p>
+              {reservation.finalScore && type === "past" && (
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1">
+                  Final Score: <span className="text-teal-600 dark:text-teal-400">{reservation.finalScore}</span>
+                </p>
+              )}
             </div>
             {/* Admin controls for upcoming games */}
             {type === "upcoming" && isAdmin && (
@@ -136,6 +146,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 <Button
                   variant="outline"
                   size="icon"
+                  onClick={() => setShowTransferDialog(true)}
+                  className="h-8 w-8 text-blue-600 border-blue-600/30 hover:bg-blue-500/10 dark:text-blue-400 dark:border-blue-400/30 dark:hover:bg-blue-400/10"
+                  title="Complete Game"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={handleDeleteReservation}
                   className="h-8 w-8 text-red-500 border-red-500/30 hover:bg-red-500/10 dark:text-red-400 dark:border-red-400/30 dark:hover:bg-red-400/10"
                   title="Delete Reservation"
@@ -146,15 +165,26 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             )}
              {/* Admin control to delete past game records */}
             {type === "past" && isAdmin && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleDeleteReservation}
-                className="h-8 w-8 text-red-500 border-red-500/30 hover:bg-red-500/10 dark:text-red-400 dark:border-red-400/30 dark:hover:bg-red-400/10"
-                title="Delete Past Reservation Record"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <div className="flex space-x-1.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowEditDialog(true)}
+                  className="h-8 w-8 text-teal-600 border-teal-600/30 hover:bg-teal-500/10 dark:text-teal-400 dark:border-teal-400/30 dark:hover:bg-teal-400/10"
+                  title="Edit Reservation"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleDeleteReservation}
+                  className="h-8 w-8 text-red-500 border-red-500/30 hover:bg-red-500/10 dark:text-red-400 dark:border-red-400/30 dark:hover:bg-red-400/10"
+                  title="Delete Past Reservation Record"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
           </div>
 
@@ -292,6 +322,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           isOpen={showEditDialog}
           onClose={() => setShowEditDialog(false)}
           isAdmin={isAdmin} // Pass the isAdmin status to the dialog
+        />
+      )}
+
+      {/* Transfer Reservation Dialog - for completing games */}
+      {showTransferDialog && (
+        <TransferReservationDialog
+          reservation={reservation}
+          isOpen={showTransferDialog}
+          onClose={() => setShowTransferDialog(false)}
         />
       )}
 

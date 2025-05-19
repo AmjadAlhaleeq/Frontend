@@ -34,6 +34,8 @@ export interface Reservation {
   lineup: Player[]; // Detailed lineup of players
   highlights: Highlight[]; // Array of game highlights
   imageUrl?: string; // Optional URL for an image of the pitch/event
+  finalScore?: string; // Final score after a game is completed (e.g., "3-2")
+  mvpPlayerId?: string; // ID of the player who was MVP of the game
 }
 
 export interface NewPitchData {
@@ -83,6 +85,20 @@ interface ReservationContextType {
   hasUserJoinedOnDate: (date: string, userId?: string) => boolean; // Checks if a user has joined any game on a specific date
   getReservationsForDate: (targetDate: Date) => Reservation[]; // Retrieves reservations for a specific date
   getUserReservations: (userId: string) => Reservation[]; // Retrieves all reservations a specific user has joined
+  getUserStats: (userId: string) => UserStats; // Get statistics for a specific user
+}
+
+// Interface for user statistics
+export interface UserStats {
+  matches: number;
+  wins: number;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  cleansheets: number;
+  tackles: number;
+  mvps: number;
 }
 
 // Interface for a pitch
@@ -171,8 +187,149 @@ export const useReservation = () => {
 };
 
 // Initial sample data for reservations (can be replaced by API call)
-const initialReservationsData: Reservation[] = [];
-
+const initialReservationsData: Reservation[] = [
+  {
+    id: 1,
+    pitchName: "Central Park Soccer Field",
+    date: "2025-05-22",
+    time: "18:00",
+    location: "New York, NY",
+    price: 10,
+    playersJoined: 8,
+    maxPlayers: 14,
+    status: "open",
+    waitingList: [],
+    lineup: Array.from({ length: 14 }, (_, i) => ({
+      id: i,
+      status: i < 8 ? 'joined' : 'empty',
+      playerName: i < 8 ? `Player ${i+1}` : undefined,
+      userId: i < 8 ? `user${i+1}` : undefined
+    })),
+    highlights: [],
+    imageUrl: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=1000&auto=format&fit=crop"
+  },
+  {
+    id: 2,
+    pitchName: "Brooklyn Bridge Park Pitch 5",
+    date: "2025-05-23",
+    time: "19:30",
+    location: "Brooklyn, NY",
+    price: 8,
+    playersJoined: 10,
+    maxPlayers: 10,
+    status: "full",
+    waitingList: ["user11", "user12"],
+    lineup: Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      status: 'joined',
+      playerName: `Player ${i+1}`,
+      userId: `user${i+1}`
+    })),
+    highlights: [],
+    imageUrl: "https://images.unsplash.com/photo-1570496062523-38954834daa7?q=80&w=1000&auto=format&fit=crop"
+  },
+  {
+    id: 3,
+    pitchName: "Queens Indoor Soccer Center",
+    date: "2025-05-24",
+    time: "20:00",
+    location: "Queens, NY",
+    price: 12,
+    playersJoined: 6,
+    maxPlayers: 12,
+    status: "open",
+    waitingList: [],
+    lineup: Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      status: i < 6 ? 'joined' : 'empty',
+      playerName: i < 6 ? `Player ${i+1}` : undefined,
+      userId: i < 6 ? `user${i+1}` : undefined
+    })),
+    highlights: [],
+    imageUrl: "https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?q=80&w=1000&auto=format&fit=crop"
+  },
+  {
+    id: 4,
+    pitchName: "Central Park Soccer Field",
+    date: "2025-04-15",
+    time: "17:00",
+    location: "New York, NY",
+    price: 10,
+    playersJoined: 14,
+    maxPlayers: 14,
+    status: "completed",
+    waitingList: [],
+    lineup: Array.from({ length: 14 }, (_, i) => ({
+      id: i,
+      status: 'joined',
+      playerName: `Player ${i+1}`,
+      userId: `user${i+1}`
+    })),
+    highlights: [
+      {
+        id: 1,
+        type: 'goal',
+        playerName: 'Player 1',
+        minute: 23,
+        playerId: 'user1'
+      },
+      {
+        id: 2,
+        type: 'assist',
+        playerName: 'Player 3',
+        minute: 23,
+        playerId: 'user3'
+      },
+      {
+        id: 3,
+        type: 'goal',
+        playerName: 'Player 2',
+        minute: 45,
+        playerId: 'user2'
+      }
+    ],
+    finalScore: "2-1",
+    mvpPlayerId: "user1",
+    imageUrl: "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=1000&auto=format&fit=crop"
+  },
+  {
+    id: 5,
+    pitchName: "Brooklyn Bridge Park Pitch 5",
+    date: "2025-04-10",
+    time: "19:00",
+    location: "Brooklyn, NY",
+    price: 8,
+    playersJoined: 10,
+    maxPlayers: 10,
+    status: "completed",
+    waitingList: [],
+    lineup: Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      status: 'joined',
+      playerName: `Player ${i+1}`,
+      userId: `user${i+1}`
+    })),
+    highlights: [
+      {
+        id: 1,
+        type: 'goal',
+        playerName: 'Player 5',
+        minute: 12,
+        playerId: 'user5'
+      },
+      {
+        id: 2,
+        type: 'yellowCard',
+        playerName: 'Player 7',
+        minute: 35,
+        playerId: 'user7'
+      }
+    ],
+    finalScore: "1-0",
+    mvpPlayerId: "user5",
+    imageUrl: "https://images.unsplash.com/photo-1570496062523-38954834daa7?q=80&w=1000&auto=format&fit=crop"
+  }
+];
 
 /**
  * ReservationProvider component.
@@ -184,7 +341,6 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     // TODO: API Call: Fetch initial reservations from backend instead of localStorage
     const savedReservations = localStorage.getItem("reservations");
-    // ... keep existing code (localStorage loading logic for reservations)
     if (savedReservations) {
       try {
         const parsed = JSON.parse(savedReservations);
@@ -207,20 +363,17 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Effect to save reservations to localStorage when state changes
   useEffect(() => {
-    // TODO: This should be removed when backend API is used for persistence.
     localStorage.setItem("reservations", JSON.stringify(reservations));
   }, [reservations]);
 
   // State for pitches, initialized from localStorage or default
   const [pitches, setPitches] = useState<Pitch[]>(() => {
-    // TODO: API Call: Fetch initial pitches from backend instead of localStorage
     const savedPitches = localStorage.getItem("pitches");
     return savedPitches ? JSON.parse(savedPitches) : (initialPitchesData.length > 0 ? initialPitchesData : []);
   });
 
   // Effect to save pitches to localStorage when state changes
   useEffect(() => {
-    // TODO: This should be removed when backend API is used for persistence.
     localStorage.setItem("pitches", JSON.stringify(pitches));
   }, [pitches]);
 
@@ -229,11 +382,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param newPitchData - Data for the new pitch.
    */
   const addPitch = (newPitchData: NewPitchData) => {
-    // TODO: API Call: Send newPitchData to backend to create a new pitch.
-    // The backend should return the created pitch object (including its new ID).
-    // Then, update the local state with this new pitch.
     setPitches(prevPitches => {
-      // ... keep existing code (client-side ID generation and pitch creation)
       const newId = prevPitches.length > 0 ? Math.max(...prevPitches.map(p => p.id)) + 1 : 1;
       const newPitch: Pitch = {
         id: newId,
@@ -268,10 +417,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param pitchId - The ID of the pitch to delete.
    */
   const deletePitch = (pitchId: number) => {
-    // TODO: API Call: Send delete request to backend for pitchId.
-    // On successful deletion from backend, update the local state.
     setPitches(prevPitches => {
-      // ... keep existing code (client-side pitch deletion and toast)
       const pitchToDelete = prevPitches.find(p => p.id === pitchId);
       const updatedPitches = prevPitches.filter(pitch => pitch.id !== pitchId);
       if(pitchToDelete){
@@ -289,11 +435,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param reservationData - Data for the new reservation.
    */
   const addReservation = (reservationData: NewReservationData) => {
-    // TODO: API Call: Send reservationData to backend to create a new reservation.
-    // Backend should return the created reservation object (including new ID, initial status, etc.).
-    // Then, update local state.
     setReservations(prev => {
-      // ... keep existing code (client-side ID generation and reservation creation)
       const newId = prev.length > 0 ? Math.max(...prev.map(r => r.id)) + 1 : 1;
       const newReservation: Reservation = {
         id: newId,
@@ -314,10 +456,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param reservationId - The ID of the reservation to delete.
    */
   const deleteReservation = (reservationId: number) => {
-    // TODO: API Call: Send delete request to backend for reservationId.
-    // On successful deletion, update local state.
     setReservations(prev => {
-      // ... keep existing code (client-side reservation deletion and toast)
       const reservationToDelete = prev.find(r => r.id === reservationId);
       if (reservationToDelete) {
         toast({ title: "Reservation Deleted", description: `Reservation for ${reservationToDelete.pitchName} has been deleted.` });
@@ -333,12 +472,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param userId - The ID of the user joining.
    */
   const joinGame = (id: number, position?: number, userId: string = "user1") => {
-    // TODO: API Call: Send request to backend for userId to join reservation (id) at optional position.
-    // Backend should handle logic (is game full, is position taken, is user already joined) and return updated reservation or success/failure.
-    // Then update local state based on backend response.
     setReservations(prev => {
       return prev.map(res => {
-        // ... keep existing code (client-side join game logic)
         if (res.id === id && res.playersJoined < res.maxPlayers && res.status === 'open') {
           if (res.lineup.some(p => p.userId === userId && p.status === 'joined')) {
             toast({ title: "Already Joined", description: "You are already in this game.", variant: "default" });
@@ -379,12 +514,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param userId - The ID of the user cancelling.
    */
   const cancelReservation = (id: number, userId: string = "user1") => {
-    // TODO: API Call: Send request to backend for userId to cancel their spot in reservation (id).
-    // Backend should handle logic (was user joined, process waitlist if applicable) and return updated reservation.
-    // Then update local state.
     setReservations(prev => {
       return prev.map(res => {
-        // ... keep existing code (client-side cancel reservation logic)
         if (res.id === id) {
           const playerSpotIndex = res.lineup.findIndex(p => p.userId === userId && p.status === 'joined');
           if (playerSpotIndex !== -1) {
@@ -392,9 +523,6 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
             updatedLineup[playerSpotIndex] = { ...updatedLineup[playerSpotIndex], status: 'empty', playerName: undefined, userId: undefined };
             
             const newPlayersJoined = Math.max(0, res.playersJoined - 1);
-            // If a spot opens up, a user from the waiting list might be promoted.
-            // This logic would ideally be handled by the backend.
-            // For client-side, we just open the spot.
             const newStatus = res.status === 'full' && newPlayersJoined < res.maxPlayers ? 'open' : res.status; 
             toast({ title: "Reservation Cancelled", description: `Your spot for ${res.pitchName} has been cancelled.` });
             return { ...res, playersJoined: newPlayersJoined, status: newStatus, lineup: updatedLineup };
@@ -414,11 +542,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param userId - The ID of the user joining the waitlist.
    */
   const joinWaitingList = (id: number, userId: string = "user1") => {
-    // TODO: API Call: Send request to backend for userId to join waitlist for reservation (id).
-    // Backend handles logic (is game full, is user already on waitlist).
-    // Update local state based on response.
     setReservations(prev => {
-      // ... keep existing code (client-side join waitlist logic)
       return prev.map(res => {
         if (res.id === id && res.status === 'full' && !res.waitingList.includes(userId)) {
           toast({ title: "Joined Waitlist", description: `You've been added to the waitlist for ${res.pitchName}.` });
@@ -438,10 +562,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param userId - The ID of the user leaving the waitlist.
    */
   const leaveWaitingList = (id: number, userId: string = "user1") => {
-    // TODO: API Call: Send request to backend for userId to leave waitlist for reservation (id).
-    // Update local state based on response.
     setReservations(prev => {
-      // ... keep existing code (client-side leave waitlist logic)
       return prev.map(res => {
         if (res.id === id && res.waitingList.includes(userId)) {
           toast({ title: "Left Waitlist", description: `You've been removed from the waitlist for ${res.pitchName}.` });
@@ -458,12 +579,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param updatedData - Partial data with updates for the reservation.
    */
   const editReservation = (id: number, updatedData: Partial<Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>>) => {
-    // TODO: API Call: Send updatedData to backend for reservation (id).
-    // Backend handles validation and updates, then returns the fully updated reservation.
-    // Update local state with the response.
     setReservations(prev =>
       prev.map(res => {
-        // ... keep existing code (client-side edit reservation logic)
         if (res.id === id) {
           const newMaxPlayers = updatedData.maxPlayers !== undefined ? updatedData.maxPlayers : res.maxPlayers;
           const updatedRes = { 
@@ -491,12 +608,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
    * @param status - The new status for the reservation.
    */
   const updateReservationStatus = (id: number, status: ReservationStatus) => {
-    // TODO: API Call: Send request to backend to update status of reservation (id) to new status.
-    // Update local state on success.
     setReservations(prev =>
       prev.map(res => (res.id === id ? { ...res, status } : res))
     );
-    // ... keep existing code (toast messages for status update)
     if (status === 'completed') {
        toast({ title: "Game Completed!", description: "The reservation has been marked as completed." });
     } else if (status === 'cancelled') {
@@ -504,35 +618,20 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
-  // ... keep existing code (navigateToReservation, getPitchByName, getReservationsByPitch)
-  /** Placeholder for navigation logic, e.g., to a pitch-specific reservation page. */
   const navigateToReservation = (pitchName: string) => {
     console.log(`Navigating to reservations for pitch: ${pitchName}`);
-    // This could involve react-router navigation or other view changes.
     toast({title: "Loading Reservations", description: `Showing games for ${pitchName}.`});
   };
 
-  /** Retrieves a pitch object by its name (case-insensitive). */
   const getPitchByName = (name: string): Pitch | undefined => {
-    // TODO: API Call: If pitches are fetched on demand, this might involve an API lookup.
-    // For now, it searches the local 'pitches' state.
     return pitches.find(pitch => pitch.name.toLowerCase() === name.toLowerCase());
   };
 
-  /** Retrieves active (open/full) reservations for a specific pitch name (case-insensitive). */
   const getReservationsByPitch = (pitchName: string): Reservation[] => {
-    // TODO: API Call: Fetch reservations filtered by pitchName and status from backend.
     return reservations.filter(res => res.pitchName.toLowerCase() === pitchName.toLowerCase() && (res.status === 'open' || res.status === 'full'));
   };
   
-  /**
-   * Updates the lineup for a specific reservation.
-   * @param reservationId - The ID of the reservation.
-   * @param lineup - The new lineup array.
-   */
   const updateLineup = (reservationId: number, lineup: Player[]) => {
-    // TODO: API Call: Send the new lineup to the backend for reservationId.
-    // This is crucial for persisting manual lineup changes (e.g., by an admin).
     setReservations(prev => 
       prev.map(res => 
         res.id === reservationId ? { ...res, lineup } : res
@@ -541,16 +640,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast({ title: "Lineup Updated", description: "Player positions saved." });
   };
 
-  /**
-   * Adds a highlight to a reservation's list of highlights.
-   * @param reservationId - The ID of the reservation.
-   * @param highlight - The highlight data (without ID, as ID is generated).
-   */
   const addHighlight = (reservationId: number, highlight: Omit<Highlight, 'id'>) => {
-    // TODO: API Call: Send new highlight data to backend for reservationId.
-    // Backend generates ID and confirms addition. Update local state with response.
     setReservations(prev => prev.map(res => {
-      // ... keep existing code (client-side add highlight logic)
       if (res.id === reservationId) {
         const newHighlightId = res.highlights.length > 0 ? Math.max(...res.highlights.map(h => h.id)) + 1 : 1;
         const validTypes: Highlight['type'][] = ['goal', 'assist', 'yellowCard', 'redCard', 'save', 'other'];
@@ -566,17 +657,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast({title: "Highlight Added", description: `${highlight.type} by ${highlight.playerName} recorded.`});
   };
 
-  /**
-   * Edits an existing highlight for a reservation.
-   * @param reservationId - The ID of the reservation.
-   * @param highlightId - The ID of the highlight to edit.
-   * @param updatedHighlight - Partial data with updates for the highlight.
-   */
   const editHighlight = (reservationId: number, highlightId: number, updatedHighlight: Partial<Omit<Highlight, 'id'>>) => {
-    // TODO: API Call: Send updatedHighlight data to backend for reservationId and highlightId.
-    // Update local state on success.
-     setReservations(prev => prev.map(res => {
-      // ... keep existing code (client-side edit highlight logic)
+    setReservations(prev => prev.map(res => {
       if (res.id === reservationId) {
         return { 
           ...res, 
@@ -588,16 +670,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast({title: "Highlight Updated", description: "Changes to the highlight have been saved."});
   };
 
-  /**
-   * Deletes a highlight from a reservation.
-   * @param reservationId - The ID of the reservation.
-   * @param highlightId - The ID of the highlight to delete.
-   */
   const deleteHighlight = (reservationId: number, highlightId: number) => {
-    // TODO: API Call: Send delete request to backend for highlightId within reservationId.
-    // Update local state on success.
     setReservations(prev => prev.map(res => {
-      // ... keep existing code (client-side delete highlight logic)
       if (res.id === reservationId) {
         return { ...res, highlights: res.highlights.filter(h => h.id !== highlightId) };
       }
@@ -606,16 +680,12 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toast({title: "Highlight Deleted", description: "The highlight has been removed."});
   };
 
-  /** Checks if a given user has joined a specific reservation. */
   const isUserJoined = (reservationId: number, userId: string = "user1"): boolean => {
-    // This check is client-side. For critical checks, backend validation is needed.
     const reservation = reservations.find(r => r.id === reservationId);
     return reservation ? (reservation.lineup || []).some(p => p.userId === userId && p.status === 'joined') : false;
   };
 
-  /** Checks if a given user has joined any active game on a specific date. */
   const hasUserJoinedOnDate = (date: string, userId: string = "user1"): boolean => {
-    // Client-side check.
     return reservations.some(res => 
       res.date === date && 
       (res.lineup || []).some(p => p.userId === userId && p.status === 'joined') &&
@@ -623,22 +693,62 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
   };
   
-  /** Retrieves active (open/full) reservations for a specific target date. */
   const getReservationsForDate = (targetDate: Date): Reservation[] => {
-    // TODO: API Call: Fetch reservations for targetDate from backend.
     const dateStr = targetDate.toISOString().split('T')[0];
     return reservations.filter(res => res.date === dateStr && (res.status === 'open' || res.status === 'full'));
   };
 
-  /** Retrieves all reservations a specific user has joined. */
   const getUserReservations = (userId: string): Reservation[] => {
-    // TODO: API Call: Fetch reservations specifically for userId from backend.
     return reservations.filter(res => 
       (res.lineup || []).some(p => p.userId === userId && p.status === 'joined')
     );
   };
 
-  // Provide all context values to children
+  const getUserStats = (userId: string): UserStats => {
+    const userCompletedReservations = reservations.filter(res => 
+      res.status === 'completed' && 
+      (res.lineup || []).some(p => p.userId === userId && p.status === 'joined')
+    );
+    
+    const stats: UserStats = {
+      matches: userCompletedReservations.length,
+      wins: 0,
+      goals: 0,
+      assists: 0,
+      yellowCards: 0,
+      redCards: 0,
+      cleansheets: 0,
+      tackles: 0,
+      mvps: 0
+    };
+    
+    stats.mvps = userCompletedReservations.filter(res => res.mvpPlayerId === userId).length;
+    
+    userCompletedReservations.forEach(res => {
+      res.highlights.forEach(highlight => {
+        if (highlight.playerId === userId) {
+          if (highlight.type === 'goal') stats.goals++;
+          if (highlight.type === 'assist') stats.assists++;
+          if (highlight.type === 'yellowCard') stats.yellowCards++;
+          if (highlight.type === 'redCard') stats.redCards++;
+          if (highlight.type === 'other' && highlight.description?.toLowerCase().includes('tackle')) {
+            stats.tackles++;
+          }
+        }
+      });
+      
+      if (res.finalScore) {
+        const [teamA, teamB] = res.finalScore.split('-').map(s => parseInt(s, 10));
+        if (!isNaN(teamA) && !isNaN(teamB)) {
+          if (teamA > teamB) stats.wins++;
+          if (teamB === 0) stats.cleansheets++;
+        }
+      }
+    });
+    
+    return stats;
+  };
+
   return (
     <ReservationContext.Provider value={{ 
       reservations, 
@@ -663,7 +773,8 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       isUserJoined,
       hasUserJoinedOnDate,
       getReservationsForDate,
-      getUserReservations
+      getUserReservations,
+      getUserStats
     }}>
       {children}
     </ReservationContext.Provider>
