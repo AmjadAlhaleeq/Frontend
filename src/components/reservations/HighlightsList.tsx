@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Trash2, Trophy, Edit, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, Highlight } from "@/context/ReservationContext"; // Import Highlight
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext"; // Update import to include HighlightType
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,18 +14,14 @@ interface HighlightsListProps {
   isAdmin?: boolean;
 }
 
-// Use the type from context for consistency
-type HighlightType = Highlight['type']; 
-
 // Define the structure for a new highlight, matching Omit<Highlight, 'id'>
 type NewHighlightInput = Omit<Highlight, 'id'>;
-
 
 const HighlightsList: React.FC<HighlightsListProps> = ({ 
   reservationId,
   isAdmin = false 
 }) => {
-  const { reservations, deleteHighlight, addHighlight } = useReservation(); // Changed to deleteHighlight
+  const { reservations, deleteHighlight, addHighlight } = useReservation();
   const { toast } = useToast();
   const [showAddForm, setShowAddForm] = useState(false);
   
@@ -184,8 +180,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                   <SelectItem value="assist">👟 Assist</SelectItem>
                   <SelectItem value="yellowCard">🟨 Yellow Card</SelectItem>
                   <SelectItem value="redCard">🟥 Red Card</SelectItem>
-                  {/* <SelectItem value="save">🧤 Save</SelectItem> */}
-                  {/* <SelectItem value="other">⭐ Other</SelectItem> */}
+                  <SelectItem value="save">🧤 Save</SelectItem>
+                  <SelectItem value="other">⭐ Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -296,7 +292,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                     className="h-7 w-7 text-red-500 hover:bg-red-100 hover:text-red-600"
                     onClick={() => {
                       if (confirm("Are you sure you want to remove this highlight?")) {
-                        deleteHighlight(reservationId, highlight.id); // Changed here
+                        deleteHighlight(reservationId, highlight.id);
                         toast({
                           title: "Highlight removed",
                           description: "The highlight has been deleted successfully"

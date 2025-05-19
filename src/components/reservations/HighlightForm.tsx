@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useReservation, Highlight } from "@/context/ReservationContext";
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
@@ -18,7 +18,7 @@ interface HighlightFormProps {
  * Allows admin to select highlight type, player from the game lineup, minute, and add description
  */
 const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) => {
-  const [highlightType, setHighlightType] = useState<string>("goal");
+  const [highlightType, setHighlightType] = useState<HighlightType>("goal");
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [minute, setMinute] = useState<string>("1");
@@ -74,7 +74,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     // Create highlight object
     const highlight: Highlight = {
       id: Date.now(),
-      type: highlightType as "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other",
+      type: highlightType,
       playerName: playerName,
       minute: minuteNum,
       description: description,
@@ -90,7 +90,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
         <label className="block text-sm font-medium mb-1">Highlight Type</label>
         <Select 
           value={highlightType} 
-          onValueChange={setHighlightType}
+          onValueChange={(value: HighlightType) => setHighlightType(value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select highlight type" />

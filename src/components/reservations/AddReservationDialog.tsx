@@ -73,7 +73,7 @@ const AddReservationDialog = () => {
       date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
       time: data.time,
       location: data.location,
-      price: parseInt(data.price, 10), // Convert price to number
+      price: parseFloat(data.price), // Convert price to number
       maxPlayers: parseInt(data.maxPlayers, 10), // Convert maxPlayers to number
       imageUrl: data.imageUrl || undefined, // Use undefined if empty
     };
