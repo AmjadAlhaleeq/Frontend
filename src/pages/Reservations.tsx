@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -114,6 +113,7 @@ const Reservations = () => {
     isUserJoined,
     hasUserJoinedOnDate,
     getReservationsForDate,
+    updateReservationStatus,
   } = useReservation();
 
   // Calculate the actual maximum players based on the game format
