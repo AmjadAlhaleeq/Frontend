@@ -5,7 +5,6 @@ import { UserStats } from "@/context/ReservationContext";
 import {
   Award,
   Flag,
-  Soccer,
   Footprints,
   Goal,
   ShieldAlert,
@@ -14,6 +13,7 @@ import {
   Trophy,
   User,
   Zap,
+  BadgePlus,  // Using BadgePlus as a replacement for Soccer
 } from "lucide-react";
 
 interface PlayerStatsProps {
@@ -36,7 +36,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Soccer className="h-5 w-5 text-gray-500" />
+          <BadgePlus className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Goals Scored</p>
             <p className="text-lg font-bold">{stats.goalsScored}</p>
