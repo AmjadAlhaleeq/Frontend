@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "../shared/Logo";
 import LoginDialog from "@/components/auth/LoginDialog";
+import LogoutConfirmationDialog from "@/components/shared/LogoutConfirmationDialog"; // Import confirmation dialog
 
 // Define UserProfileData interface (can be moved to a shared types file)
 interface UserProfileData {
@@ -32,14 +33,16 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
-  const [currentUserDetails, setCurrentUserDetails] = useState<UserProfileData | null>(null); // State for user details
-  const [isDarkMode, setIsDarkMode] = useState(false); // Default to false (light mode)
+  const [currentUserDetails, setCurrentUserDetails] = useState<UserProfileData | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate(); // Initialize useNavigate
   const { language, setLanguage, t } = useLanguage();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isLogoutConfirmatioOpen, setIsLogoutConfirmationOpen] = useState(false); // State for logout dialog
 
-  // Effect to initialize auth state from localStorage on component mount
+  // Effect to initialize auth state and theme from localStorage
   useEffect(() => {
     // Initialize authentication state
     const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
@@ -70,6 +73,24 @@ const Navbar = () => {
     }
   }, []);
 
+  // Effect to listen for profile updates (e.g., avatar change)
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const storedUserDetails = localStorage.getItem('currentUser');
+      if (storedUserDetails) {
+        setCurrentUserDetails(JSON.parse(storedUserDetails));
+        // Optional: toast to indicate avatar updated in navbar if desired
+        // toast({ title: "Navbar Updated", description: "User details refreshed." });
+      }
+    };
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+    };
+  }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
+
+
   const toggleMenu = () => setIsOpen(!isOpen);
   
   const toggleTheme = () => {
@@ -98,24 +119,36 @@ const Navbar = () => {
   };
 
   /**
-   * Handles user logout.
-   * Clears user state and localStorage items related to session.
+   * Initiates the logout process by opening the confirmation dialog.
    */
-  const handleLogout = () => {
+  const initiateLogout = () => {
+    setIsLogoutConfirmationOpen(true);
+  };
+
+  /**
+   * Handles confirmed user logout.
+   * Clears user state, localStorage, shows toast, and navigates to home.
+   */
+  const confirmLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
-    setCurrentUserDetails(null); // Clear user details
+    setCurrentUserDetails(null);
     // Clear from localStorage
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userRole');
     localStorage.removeItem('currentUser');
+    
     toast({
       title: t('nav.logout'),
       description: "You have been successfully logged out.",
       duration: 3000,
     });
-    if (isOpen) setIsOpen(false); // Close mobile menu on logout
+    
+    setIsLogoutConfirmationOpen(false); // Close the dialog
+    if (isOpen) setIsOpen(false); // Close mobile menu if open
+    navigate('/'); // Redirect to home page
   };
+
 
   const handleLoginButtonClick = () => {
     setIsLoginDialogOpen(true);
@@ -198,10 +231,10 @@ const Navbar = () => {
 
               {isLoggedIn ? (
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative p-1">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={currentUserDetails?.avatarUrl || "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3"} alt={displayName} />
+                        <AvatarImage src={currentUserDetails?.avatarUrl || `https://ui-avatars.com/api/?name=${currentUserDetails?.firstName}+${currentUserDetails?.lastName}&background=random`} alt={displayName} />
                         <AvatarFallback>{avatarFallback}</AvatarFallback>
                       </Avatar>
                     </Button>
@@ -213,7 +246,6 @@ const Navbar = () => {
                         <span>{t('nav.profile')}</span>
                       </Link>
                     </DropdownMenuItem>
-                    {/* Admin-only "Add Pitch" link */}
                     {userRole === 'admin' && (
                        <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
                          <Link to="/admin/add-pitch" className="flex items-center text-bokit-600 dark:text-bokit-400">
@@ -228,7 +260,7 @@ const Navbar = () => {
                         <span>{t('nav.bookings')}</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={handleLogout}>
+                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}> {/* Changed to initiateLogout */}
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>{t('nav.logout')}</span>
                     </DropdownMenuItem>
@@ -241,7 +273,7 @@ const Navbar = () => {
                 </Button>
               )}
             </div>
-            <div className="flex items-center md:hidden">
+             <div className="flex items-center md:hidden">
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -292,9 +324,9 @@ const Navbar = () => {
             <div className="px-5 space-y-2">
               {isLoggedIn ? (
                 <>
-                  <div className="flex items-center px-2 py-2">
+                   <div className="flex items-center px-2 py-2">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={currentUserDetails?.avatarUrl || "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3"} alt={displayName} />
+                        <AvatarImage src={currentUserDetails?.avatarUrl || `https://ui-avatars.com/api/?name=${currentUserDetails?.firstName}+${currentUserDetails?.lastName}&background=random`} alt={displayName} />
                         <AvatarFallback>{avatarFallback}</AvatarFallback>
                       </Avatar>
                       <div className="ml-3">
@@ -340,14 +372,14 @@ const Navbar = () => {
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20"
-                    onClick={handleLogout} // handleLogout already closes menu if open
+                    onClick={() => { initiateLogout(); setIsOpen(false); }} // Changed to initiateLogout
                   >
                     <LogOut className="mr-2 h-5 w-5" />
                     <span>{t('nav.logout')}</span>
                   </Button>
                 </>
               ) : (
-                <Button 
+                 <Button 
                   onClick={() => { handleLoginButtonClick(); setIsOpen(false); }} 
                   className="w-full justify-start bg-bokit-500 hover:bg-bokit-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
                 >
@@ -363,6 +395,12 @@ const Navbar = () => {
         isOpen={isLoginDialogOpen} 
         onClose={() => setIsLoginDialogOpen(false)} 
         onLoginSuccess={handleLoginSuccess} 
+      />
+      {/* Add Logout Confirmation Dialog instance */}
+      <LogoutConfirmationDialog
+        isOpen={isLogoutConfirmatioOpen}
+        onClose={() => setIsLogoutConfirmationOpen(false)}
+        onConfirm={confirmLogout}
       />
     </>
   );

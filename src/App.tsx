@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-// Import theme for consistent color usage
 import "@/lib/theme";
 
 import Layout from "./components/layout/Layout";
@@ -19,6 +18,7 @@ import AboutPage from "./pages/AboutPage";
 import Faq from "./pages/Faq";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Rules from "./pages/Rules";
+import ScrollToTop from "./components/shared/ScrollToTop"; // Import ScrollToTop
 
 // Initialize QueryClient for data fetching
 const queryClient = new QueryClient();
@@ -27,6 +27,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
+        <ScrollToTop /> {/* Add ScrollToTop here */}
         <ReservationProvider>
           <Toaster />
           <Sonner />
@@ -111,7 +112,6 @@ const App = () => (
                 </Layout>
               }
             />
-
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ReservationProvider>
