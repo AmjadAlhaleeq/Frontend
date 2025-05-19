@@ -25,11 +25,6 @@ interface ReservationCardProps {
   isAdmin?: boolean;
 }
 
-/**
- * ReservationCard component
- * Card displaying information about a reservation with actions
- * Shows different options based on type (upcoming/past) and user role
- */
 const ReservationCard = ({
   reservation,
   type,
@@ -47,13 +42,14 @@ const ReservationCard = ({
   const { updateReservationStatus } = useReservation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isJoinConfirmOpen, setIsJoinConfirmOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Format the date for display
   const formattedDate = format(parseISO(reservation.date), 'EEE, MMM d');
   const fullFormattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
   
-  // Calculate actual players total (adding +7 as requested for 5v5 format)
-  const actualMaxPlayers = reservation.maxPlayers === 10 ? 12 : reservation.maxPlayers + 2;
+  // Calculate actual players total (10 for 5v5 format)
+  const actualMaxPlayers = reservation.maxPlayers;
   
   // Maximum waiting list size
   const maxWaitingList = 3;
@@ -68,14 +64,78 @@ const ReservationCard = ({
   
   const handleJoinConfirm = () => {
     setIsJoinConfirmOpen(false);
+    setIsLoading(true);
+    
     if (onJoinGame) {
       onJoinGame();
+      
+      // Simulate loading for better UX
+      setTimeout(() => {
+        setIsLoading(false);
+        toast({
+          title: "Joined Successfully",
+          description: "You have joined the game!",
+        });
+      }, 800);
+    }
+  };
+  
+  // Handle cancel reservation with loading state
+  const handleCancelReservation = () => {
+    setIsLoading(true);
+    
+    if (onCancelReservation) {
+      onCancelReservation();
+      
+      // Simulate loading for better UX
+      setTimeout(() => {
+        setIsLoading(false);
+        toast({
+          title: "Left Game",
+          description: "You've been removed from the game",
+        });
+      }, 800);
+    }
+  };
+  
+  // Handle waiting list actions with loading state
+  const handleJoinWaitingList = () => {
+    setIsLoading(true);
+    
+    if (onJoinWaitingList) {
+      onJoinWaitingList();
+      
+      // Simulate loading for better UX
+      setTimeout(() => {
+        setIsLoading(false);
+        toast({
+          title: "Added to Waiting List",
+          description: "You're now on the waiting list",
+        });
+      }, 800);
+    }
+  };
+  
+  const handleLeaveWaitingList = () => {
+    setIsLoading(true);
+    
+    if (onLeaveWaitingList) {
+      onLeaveWaitingList();
+      
+      // Simulate loading for better UX
+      setTimeout(() => {
+        setIsLoading(false);
+        toast({
+          title: "Removed from Waiting List",
+          description: "You've been removed from the waiting list",
+        });
+      }, 800);
     }
   };
 
   // Determine the action button based on the user's current status and reservation status
   const renderActionButton = () => {
-    // If the user is an admin, they cannot join games
+    // If the user is an admin, they can manage the game
     if (isAdmin) {
       return (
         <Button
@@ -88,6 +148,34 @@ const ReservationCard = ({
         </Button>
       );
     }
+    
+    // If the user is suspended, don't allow them to join games
+    const isSuspended = false; // This would come from user context in a real implementation
+    
+    if (isSuspended) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled
+                  className="w-full opacity-70 cursor-not-allowed"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-1.5" />
+                  Account Suspended
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Your account has been suspended. Contact an admin.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
 
     // If the user is already in this game
     if (isUserJoined) {
@@ -95,11 +183,24 @@ const ReservationCard = ({
         <Button 
           variant="outline" 
           size="sm"
-          onClick={onCancelReservation}
+          onClick={handleCancelReservation}
+          disabled={isLoading}
           className="w-full text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600"
         >
-          <UserMinus className="h-4 w-4 mr-1.5" />
-          Leave Game
+          {isLoading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </span>
+          ) : (
+            <>
+              <UserMinus className="h-4 w-4 mr-1.5" />
+              Leave Game
+            </>
+          )}
         </Button>
       );
     }
@@ -112,11 +213,24 @@ const ReservationCard = ({
           <Button 
             variant="outline" 
             size="sm"
-            onClick={onLeaveWaitingList}
+            onClick={handleLeaveWaitingList}
+            disabled={isLoading}
             className="w-full border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-600"
           >
-            <UserMinus className="h-4 w-4 mr-1.5" />
-            Leave Waiting List
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </span>
+            ) : (
+              <>
+                <UserMinus className="h-4 w-4 mr-1.5" />
+                Leave Waiting List
+              </>
+            )}
           </Button>
         );
       }
@@ -127,11 +241,24 @@ const ReservationCard = ({
           <Button 
             variant="outline" 
             size="sm"
-            onClick={onJoinWaitingList}
+            onClick={handleJoinWaitingList}
+            disabled={isLoading}
             className="w-full border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-600"
           >
-            <UserPlus className="h-4 w-4 mr-1.5" />
-            Join Waiting List
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </span>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                Join Waiting List
+              </>
+            )}
           </Button>
         );
       }
@@ -183,29 +310,30 @@ const ReservationCard = ({
         variant="default" 
         size="sm"
         onClick={handleJoinGameClick}
+        disabled={isLoading}
         className="w-full bg-teal-600 hover:bg-teal-700 text-white"
       >
-        <UserPlus className="h-4 w-4 mr-1.5" />
-        Join Game
+        {isLoading ? (
+          <span className="flex items-center">
+            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+          </span>
+        ) : (
+          <>
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Join Game
+          </>
+        )}
       </Button>
     );
   };
 
   // For past games, show details button instead
   const pastGameButton = () => {
-    if (isAdmin) {
-      return (
-        <Button
-          variant="default" 
-          size="sm"
-          onClick={() => setIsDialogOpen(true)}
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          Manage Game
-        </Button>
-      );
-    }
-    
+    // Same display for admin and players for past games
     return (
       <Button
         variant="outline" 
