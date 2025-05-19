@@ -3,41 +3,43 @@ import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserStats, useReservation } from "@/context/ReservationContext";
-import { useToast } from "@/components/ui/use-toast";
-import PlayerStats from "@/components/profile/PlayerStats";
-import PlayerReservations from "@/components/profile/PlayerReservations";
-import AuthForm from "@/components/auth/AuthForm";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { LogOut, User, Shield, Edit, Save, Plus } from "lucide-react";
+import { User, Shield, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { UserStats, useReservation } from "@/context/ReservationContext";
+import PlayerStats from "@/components/profile/PlayerStats";
+import PlayerReservations from "@/components/profile/PlayerReservations";
+import PlayerGameCards from "@/components/profile/PlayerGameCards";
+import ProfileEditor from "@/components/profile/ProfileEditor";
+import AuthForm from "@/components/auth/AuthForm";
 
 /**
  * Profile page showing user information, statistics, reservations, and authentication.
- * Includes authentication flow and access restrictions.
+ * Includes authentication flow and enhanced profile editing.
  */
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getUserStats } = useReservation();
+  const { getUserStats, reservations } = useReservation();
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [showLogoutButton, setShowLogoutButton] = useState(false);
   const [userProfile, setUserProfile] = useState<{
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
+    gender?: string;
+    age?: string;
+    city?: string;
+    favoritePosition?: string;
+    phoneNumber?: string;
     email: string;
     role: "player" | "admin";
     avatarUrl?: string;
   } | null>(null);
-  const [editableProfile, setEditableProfile] = useState({
-    name: "",
-    email: "",
-  });
 
   // Check if the user is logged in on page load
   useEffect(() => {
@@ -46,10 +48,6 @@ const Profile = () => {
       try {
         const userData = JSON.parse(storedUser);
         setUserProfile(userData);
-        setEditableProfile({
-          name: userData.name,
-          email: userData.email,
-        });
         setIsLoggedIn(true);
         
         // Also set user role in localStorage for other components to use
@@ -65,6 +63,7 @@ const Profile = () => {
   // Mock login functionality (should connect to backend in real app)
   const handleLogin = (data: { email: string; password: string }) => {
     setIsLoading(true);
+    console.info("Attempting login with:", JSON.stringify(data, null, 2));
     
     // Simulate API call
     setTimeout(() => {
@@ -72,18 +71,16 @@ const Profile = () => {
       if (data.email === "admin@example.com" && data.password === "admin123") {
         const userData = {
           id: "admin1",
-          name: "Admin User",
+          firstName: "Admin",
+          lastName: "User",
           email: data.email,
           role: "admin" as const,
           avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
         };
         localStorage.setItem("currentUser", JSON.stringify(userData));
         localStorage.setItem("userRole", userData.role);
+        localStorage.setItem("isLoggedIn", "true");
         setUserProfile(userData);
-        setEditableProfile({
-          name: userData.name,
-          email: userData.email,
-        });
         setIsLoggedIn(true);
         toast({
           title: "Welcome Admin!",
@@ -92,18 +89,21 @@ const Profile = () => {
       } else if (data.email === "player@example.com" && data.password === "player123") {
         const userData = {
           id: "user1",
-          name: "John Player",
+          firstName: "John",
+          lastName: "Player",
           email: data.email,
+          gender: "male",
+          age: "28",
+          city: "New York",
+          favoritePosition: "midfielder",
+          phoneNumber: "+1 (555) 123-4567",
           role: "player" as const,
           avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=player",
         };
         localStorage.setItem("currentUser", JSON.stringify(userData));
         localStorage.setItem("userRole", userData.role);
+        localStorage.setItem("isLoggedIn", "true");
         setUserProfile(userData);
-        setEditableProfile({
-          name: userData.name,
-          email: userData.email,
-        });
         setIsLoggedIn(true);
         toast({
           title: "Welcome Back!",
@@ -130,10 +130,16 @@ const Profile = () => {
     
     // Simulate API call
     setTimeout(() => {
+      // Parse name into first and last name
+      const nameParts = data.name.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
       // Create new user account (in real app, this would be stored in database)
       const userData = {
         id: `user${Date.now()}`,
-        name: data.name,
+        firstName,
+        lastName,
         email: data.email,
         role: "player" as const,
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name.replace(/\s+/g, '')}`,
@@ -141,11 +147,8 @@ const Profile = () => {
       
       localStorage.setItem("currentUser", JSON.stringify(userData));
       localStorage.setItem("userRole", userData.role);
+      localStorage.setItem("isLoggedIn", "true");
       setUserProfile(userData);
-      setEditableProfile({
-        name: userData.name,
-        email: userData.email,
-      });
       setIsLoggedIn(true);
       
       toast({
@@ -157,55 +160,30 @@ const Profile = () => {
     }, 1500);
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("userRole");
-    setUserProfile(null);
-    setIsLoggedIn(false);
-    setShowLogoutButton(false);
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-  };
-
-  // Toggle edit mode
-  const toggleEditMode = () => {
-    if (isEditingProfile) {
-      // Save changes
-      if (userProfile) {
-        const updatedProfile = {
-          ...userProfile,
-          name: editableProfile.name,
-          email: editableProfile.email
-        };
-        setUserProfile(updatedProfile);
-        localStorage.setItem("currentUser", JSON.stringify(updatedProfile));
-        toast({
-          title: "Profile Updated",
-          description: "Your profile information has been updated successfully."
-        });
-      }
-    } else {
-      // Enter edit mode
-      if (userProfile) {
-        setEditableProfile({
-          name: userProfile.name,
-          email: userProfile.email
-        });
-      }
+  // Handle saving profile changes
+  const handleSaveProfile = (updatedProfile: any) => {
+    if (userProfile) {
+      const newProfile = {
+        ...userProfile,
+        ...updatedProfile
+      };
+      setUserProfile(newProfile);
+      localStorage.setItem("currentUser", JSON.stringify(newProfile));
+      
+      // Dispatch event to notify other components about profile update
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      
+      setIsEditingProfile(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully."
+      });
     }
-    setIsEditingProfile(!isEditingProfile);
   };
 
-  // Handle input changes for profile editing
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditableProfile(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  // Handle navigation to reservations page
+  const handleNavigateToReservations = () => {
+    navigate('/reservations');
   };
 
   // Get user stats if logged in
@@ -213,10 +191,15 @@ const Profile = () => {
     ? getUserStats(userProfile.id)
     : { matches: 0, wins: 0, goals: 0, assists: 0, cleansheets: 0, tackles: 0, yellowCards: 0, redCards: 0, mvps: 0 };
 
-  // Handle navigation
-  const handleNavigate = (path: string) => {
-    navigate(path);
-  };
+  // Display username formatted nicely
+  const displayName = userProfile?.firstName 
+    ? `${userProfile.firstName} ${userProfile.lastName}`
+    : (userProfile?.role ? (userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)) : "User");
+    
+  // Avatar fallback text
+  const avatarFallback = userProfile?.firstName 
+    ? userProfile.firstName.charAt(0).toUpperCase() + (userProfile.lastName ? userProfile.lastName.charAt(0).toUpperCase() : '')
+    : (userProfile?.role ? userProfile.role.charAt(0).toUpperCase() : "U");
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -244,117 +227,101 @@ const Profile = () => {
         <>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
             <h1 className="text-3xl font-bold text-teal-700 dark:text-teal-400">My Profile</h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-800/40 dark:text-red-400 text-sm font-medium transition-colors"
-            >
-              <LogOut className="h-4 w-4 mr-2 inline" />
-              Logout
-            </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* User info card */}
-            <Card className="lg:col-span-1">
-              <CardHeader className="flex flex-col items-center text-center relative">
-                {/* Avatar with logout popup for admin */}
-                <div className="relative">
-                  <Avatar 
-                    className="h-24 w-24 mb-4 cursor-pointer" 
-                    onClick={() => setShowLogoutButton(!showLogoutButton)}
-                  >
-                    <AvatarImage src={userProfile?.avatarUrl} alt={userProfile?.name || 'User'} />
-                    <AvatarFallback className="text-2xl">
-                      {userProfile?.name ? userProfile.name.slice(0, 2).toUpperCase() : 'US'}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  {/* Logout popup */}
-                  {showLogoutButton && (
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white dark:bg-gray-800 shadow-md rounded-md p-2 z-50 border border-gray-200 dark:border-gray-700">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={handleLogout}
-                        className="flex items-center text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
+            <Card className="lg:col-span-1 max-w-md mx-auto lg:mx-0 w-full">
+              <CardHeader className="flex flex-col items-center text-center">
                 {isEditingProfile ? (
-                  <div className="w-full space-y-3">
-                    <Input 
-                      name="name"
-                      value={editableProfile.name}
-                      onChange={handleProfileChange}
-                      className="text-center"
-                      placeholder="Your Name"
-                    />
-                    <Input 
-                      name="email"
-                      value={editableProfile.email}
-                      onChange={handleProfileChange}
-                      className="text-center"
-                      placeholder="Your Email"
+                  <div className="w-full mb-4">
+                    <ProfileEditor
+                      currentUserDetails={userProfile}
+                      onSave={handleSaveProfile}
+                      onCancel={() => setIsEditingProfile(false)}
                     />
                   </div>
                 ) : (
                   <>
+                    <Avatar className="h-24 w-24 mb-4">
+                      <AvatarImage src={userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${userProfile?.firstName}+${userProfile?.lastName}&background=random`} alt={displayName} />
+                      <AvatarFallback className="text-lg">{avatarFallback}</AvatarFallback>
+                    </Avatar>
+                    
                     <CardTitle className="text-2xl text-teal-700 dark:text-teal-400">
-                      {userProfile?.name || 'User'}
+                      {displayName}
                     </CardTitle>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {userProfile?.email || ''}
+                    </div>
+                    
+                    <div className="mt-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        userProfile?.role === "admin"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                      }`}>
+                        {userProfile?.role === "admin" ? (
+                          <>
+                            <Shield className="h-3 w-3 mr-1" />
+                            Admin
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-3 w-3 mr-1" />
+                            Player
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    
+                    {userProfile?.role === "player" && (
+                      <div className="grid grid-cols-2 gap-4 w-full mt-4 text-sm">
+                        {userProfile.age && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Age</span>
+                            <p className="font-medium">{userProfile.age}</p>
+                          </div>
+                        )}
+                        {userProfile.city && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">City</span>
+                            <p className="font-medium">{userProfile.city}</p>
+                          </div>
+                        )}
+                        {userProfile.favoritePosition && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Position</span>
+                            <p className="font-medium capitalize">{userProfile.favoritePosition}</p>
+                          </div>
+                        )}
+                        {userProfile.phoneNumber && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Phone</span>
+                            <p className="font-medium">{userProfile.phoneNumber}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Edit profile button */}
+                    <div className="w-full mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setIsEditingProfile(true)}
+                        className="w-full mt-2 text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </Button>
                     </div>
                   </>
                 )}
-                
-                <div className="mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    userProfile?.role === "admin"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                  }`}>
-                    {userProfile?.role === "admin" ? (
-                      <>
-                        <Shield className="h-3 w-3 mr-1" />
-                        Admin
-                      </>
-                    ) : (
-                      <>
-                        <User className="h-3 w-3 mr-1" />
-                        Player
-                      </>
-                    )}
-                  </span>
-                </div>
-                
-                {/* Edit profile button */}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={toggleEditMode}
-                  className="mt-3 text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
-                >
-                  {isEditingProfile ? (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Profile
-                    </>
-                  )}
-                </Button>
               </CardHeader>
               
-              {userProfile?.role === "player" && (
+              {userProfile?.role === "player" && !isEditingProfile && (
                 <CardContent>
                   <Tabs 
                     defaultValue="overview" 
@@ -450,7 +417,6 @@ const Profile = () => {
                         </p>
                         
                         <div className="space-y-4">
-                          {/* Placeholder for account settings */}
                           <div className="flex items-center justify-between">
                             <span className="text-sm">Email Notifications</span>
                             <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded">
@@ -475,41 +441,45 @@ const Profile = () => {
                   </Tabs>
                 </CardContent>
               )}
-              
-              {userProfile?.role === "admin" && (
-                <CardContent>
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium mb-2">Admin Controls</h3>
-                    <div className="flex flex-col space-y-2">
-                      <Button 
-                        variant="outline" 
-                        className="justify-start text-left"
-                        onClick={() => handleNavigate('/admin/add-pitch')}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Pitch
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="justify-start text-left"
-                        onClick={() => handleNavigate('/reservations')}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Manage Reservations
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              )}
             </Card>
             
             {/* Main content area */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Player Overview Cards for quick navigation */}
+              {userProfile && userProfile.role === "player" && (
+                <PlayerGameCards 
+                  reservations={reservations}
+                  userId={userProfile.id}
+                />
+              )}
+              
               {/* User Stats - only show for players */}
               {userProfile && userProfile.role === "player" && <PlayerStats stats={userStats} />}
 
               {/* My Reservations */}
               {userProfile && <PlayerReservations userId={userProfile.id} />}
+              
+              {/* Logout Button */}
+              <div className="flex justify-end mt-8">
+                <Button
+                  onClick={() => {
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('currentUser');
+                    setIsLoggedIn(false);
+                    setUserProfile(null);
+                    toast({
+                      title: "Logged Out",
+                      description: "You have been successfully logged out."
+                    });
+                    navigate('/');
+                  }}
+                  variant="outline"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10"
+                >
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </>

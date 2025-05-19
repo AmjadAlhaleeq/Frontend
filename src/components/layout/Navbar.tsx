@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin, Loader } from "lucide-react";
+import { Menu, X, LogIn, Moon, Sun, Globe, User, Calendar, Trophy, Home, LogOut, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "../shared/Logo";
@@ -28,6 +29,10 @@ interface UserProfileData {
   avatarUrl?: string;
 }
 
+/**
+ * Main navigation component
+ * Handles authentication state, language switching, and navigation
+ */
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -41,6 +46,7 @@ const Navbar = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
 
+  // Load user state from localStorage on mount and update global state
   useEffect(() => {
     const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
     const storedUserRole = localStorage.getItem('userRole') as 'admin' | 'player' | null;
@@ -69,8 +75,36 @@ const Navbar = () => {
         localStorage.setItem('theme', 'light');
       }
     }
+    
+    // Add event listener for storage changes (in case user logs in from another tab)
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
+  // Handle local storage changes
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === 'isLoggedIn' || event.key === 'userRole' || event.key === 'currentUser') {
+      const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
+      const storedUserRole = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+      const storedUserDetails = localStorage.getItem('currentUser');
+      
+      if (storedIsLoggedIn === 'true' && storedUserRole) {
+        setIsLoggedIn(true);
+        setUserRole(storedUserRole);
+        if (storedUserDetails) {
+          setCurrentUserDetails(JSON.parse(storedUserDetails));
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setCurrentUserDetails(null);
+      }
+    }
+  };
+
+  // Listen for profile updates
   useEffect(() => {
     const handleProfileUpdate = () => {
       const storedUserDetails = localStorage.getItem('currentUser');
@@ -222,30 +256,34 @@ const Navbar = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 border dark:border-gray-700">
-                    <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
-                      <Link to="/profile" className="flex items-center text-gray-700 dark:text-gray-200">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>{t('nav.profile')}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    {userRole === 'admin' && (
-                       <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
-                         <Link to="/admin/add-pitch" className="flex items-center text-bokit-600 dark:text-bokit-400">
-                           <MapPin className="mr-2 h-4 w-4" /> 
-                           <span>Add Pitch</span>
-                         </Link>
-                       </DropdownMenuItem>
+                    {/* Show different menu items based on user role */}
+                    {userRole === 'admin' ? (
+                      // Admin only sees logout option
+                      <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>{t('nav.logout')}</span>
+                      </DropdownMenuItem>
+                    ) : (
+                      // Player sees profile, bookings and logout
+                      <>
+                        <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
+                          <Link to="/profile" className="flex items-center text-gray-700 dark:text-gray-200">
+                            <User className="mr-2 h-4 w-4" />
+                            <span>{t('nav.profile')}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
+                          <Link to="/reservations" className="flex items-center text-gray-700 dark:text-gray-200">
+                            <Calendar className="mr-2 h-4 w-4" />
+                            <span>{t('nav.bookings')}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>{t('nav.logout')}</span>
+                        </DropdownMenuItem>
+                      </>
                     )}
-                    <DropdownMenuItem asChild className="hover:!bg-gray-100 dark:hover:!bg-gray-700">
-                      <Link to="/reservations" className="flex items-center text-gray-700 dark:text-gray-200">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>{t('nav.bookings')}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20" onClick={initiateLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>{t('nav.logout')}</span>
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
@@ -316,49 +354,53 @@ const Navbar = () => {
                         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{userRole === 'admin' ? 'Admin' : 'Player'}</p>
                       </div>
                     </div>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-gray-700 dark:text-gray-200"
-                    asChild
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Link to="/profile">
-                      <User className="mr-2 h-5 w-5" />
-                      <span>{t('nav.profile')}</span>
-                    </Link>
-                  </Button>
-                  {userRole === 'admin' && (
-                     <Button 
+                    
+                    {/* Mobile menu: Different options based on user role */}
+                    {userRole === 'admin' ? (
+                      // Admin only sees logout option
+                      <Button 
                         variant="ghost" 
-                        className="w-full justify-start text-bokit-600 dark:text-bokit-400"
-                        asChild
-                        onClick={() => setIsOpen(false)}
+                        className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20"
+                        onClick={() => { initiateLogout(); setIsOpen(false); }} 
                       >
-                       <Link to="/admin/add-pitch">
-                         <MapPin className="mr-2 h-5 w-5" /> 
-                         <span>Add Pitch</span>
-                       </Link>
-                     </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-gray-700 dark:text-gray-200"
-                    asChild
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Link to="/reservations">
-                      <Calendar className="mr-2 h-5 w-5" />
-                      <span>{t('nav.bookings')}</span>
-                    </Link>
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20"
-                    onClick={() => { initiateLogout(); setIsOpen(false); }} 
-                  >
-                    <LogOut className="mr-2 h-5 w-5" />
-                    <span>{t('nav.logout')}</span>
-                  </Button>
+                        <LogOut className="mr-2 h-5 w-5" />
+                        <span>{t('nav.logout')}</span>
+                      </Button>
+                    ) : (
+                      // Player sees profile, bookings and logout
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-gray-700 dark:text-gray-200"
+                          asChild
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <Link to="/profile">
+                            <User className="mr-2 h-5 w-5" />
+                            <span>{t('nav.profile')}</span>
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-gray-700 dark:text-gray-200"
+                          asChild
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <Link to="/reservations">
+                            <Calendar className="mr-2 h-5 w-5" />
+                            <span>{t('nav.bookings')}</span>
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-red-500 hover:!text-red-600 focus:!text-red-600 dark:hover:!bg-red-700/20"
+                          onClick={() => { initiateLogout(); setIsOpen(false); }} 
+                        >
+                          <LogOut className="mr-2 h-5 w-5" />
+                          <span>{t('nav.logout')}</span>
+                        </Button>
+                      </>
+                    )}
                 </>
               ) : (
                  <Button 

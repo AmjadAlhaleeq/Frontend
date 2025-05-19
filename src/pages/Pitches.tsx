@@ -1,3 +1,4 @@
+
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
 import React, { useState, useEffect } from "react";
@@ -26,9 +27,8 @@ import {
   Utensils,
   Edit3,
   Trash2,
-  LogOut
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useReservation, Pitch as PitchType } from "@/context/ReservationContext";
 import {
   Dialog,
@@ -184,6 +184,7 @@ const Pitches = () => {
           pitch={selectedPitchForDetails}
           onBookPitch={() => navigateToReservation(selectedPitchForDetails.name)}
           onClose={() => setSelectedPitchForDetails(null)}
+          userRole={userRole}
         />
       )}
 
@@ -209,6 +210,9 @@ interface PitchCardProps {
   onDeleteClick: () => void;
 }
 
+/**
+ * Render star rating component (removed for admins and players)
+ */
 const RenderStars = ({ rating }: { rating: number }) => {
   const totalStars = 5;
   const fullStars = Math.floor(rating);
@@ -275,10 +279,6 @@ const PitchCard: React.FC<PitchCardProps> = ({
       <CardContent className="pt-4 flex-grow">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-semibold">{pitch.name}</h3>
-          <div className="flex items-center">
-            <RenderStars rating={pitch.rating} />
-            <span className="text-sm font-medium ml-1">{pitch.rating.toFixed(1)}</span>
-          </div>
         </div>
 
         <div className="flex items-start mb-3">
@@ -368,16 +368,19 @@ interface PitchDetailsDialogProps {
   pitch: PitchType;
   onClose: () => void;
   onBookPitch: () => void;
+  userRole: 'admin' | 'player' | null;
 }
 
 /**
  * PitchDetailsDialog component to display detailed information about a pitch
  * Shows a modal with comprehensive pitch details, including facilities and location
+ * Rating and opening hours are hidden for admin and player roles
  */
 const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   pitch,
   onClose,
   onBookPitch,
+  userRole
 }) => {
   const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(pitch.details?.address || pitch.location)}`;
 
@@ -398,11 +401,6 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               >
                 {pitch.location}
               </a>
-
-              <div className="ml-4 flex items-center">
-                <RenderStars rating={pitch.rating} />
-                <span className="text-sm font-medium ml-1">{pitch.rating.toFixed(1)}/5.0</span>
-              </div>
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -460,15 +458,6 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                   <h4 className="text-sm font-medium">Price</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     {pitch.details?.price}
-                  </p>
-                </div>
-              </div>
-               <div className="flex items-start">
-                <CalendarIcon className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                <div>
-                  <h4 className="text-sm font-medium">Opening Hours</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {pitch.details?.openingHours}
                   </p>
                 </div>
               </div>

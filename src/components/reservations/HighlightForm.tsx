@@ -81,7 +81,6 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
             <SelectItem value="yellowCard">Yellow Card</SelectItem>
             <SelectItem value="redCard">Red Card</SelectItem>
             <SelectItem value="save">Save</SelectItem>
-            <SelectItem value="tackle">Tackle</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>

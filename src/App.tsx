@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,16 +19,28 @@ import AboutPage from "./pages/AboutPage";
 import Faq from "./pages/Faq";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Rules from "./pages/Rules";
-import ScrollToTop from "./components/shared/ScrollToTop"; // Import ScrollToTop
+import ScrollToTop from "./components/shared/ScrollToTop";
 
 // Initialize QueryClient for data fetching
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      retry: 1, // Only retry failed queries once
+      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+    },
+  },
+});
 
+/**
+ * Main App component
+ * Sets up routing, providers, and app structure
+ */
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
-        <ScrollToTop /> {/* Add ScrollToTop here */}
+        <ScrollToTop /> {/* Scroll to top on page change */}
         <ReservationProvider>
           <Toaster />
           <Sonner />
@@ -74,6 +87,14 @@ const App = () => (
             />
             <Route
               path="/admin/add-pitch"
+              element={
+                <Layout>
+                  <AddPitch />
+                </Layout>
+              }
+            />
+            <Route
+              path="/admin/edit-pitch/:id"
               element={
                 <Layout>
                   <AddPitch />

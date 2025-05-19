@@ -1,7 +1,17 @@
+
 import React, { useState, useMemo, useEffect } from "react";
-import PlayerLineup from "./PlayerLineup";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Users, Calendar as CalendarIcon, ArrowRight, ListFilter, Search, MapPinIcon, XCircle } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  Users,
+  Calendar as CalendarIcon,
+  ArrowRight,
+  ListFilter,
+  Search,
+  MapPin,
+  XCircle,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,20 +30,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import PitchLineup from "@/components/PitchLineup";
-import { format, parseISO, isSameDay } from "date-fns";
 import AddReservationDialog from "@/components/reservations/AddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import { cn } from "@/lib/utils";
 import ReservationCard from "@/components/reservations/ReservationCard";
-import HighlightsList from "../components/reservations/HighlightsList";
+import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
+import { format, parseISO } from 'date-fns';
 
 /**
  * Formats a date string or Date object into a more readable format.
@@ -54,7 +56,8 @@ const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
 /**
  * Reservations page component.
  * Allows users to view, book, and manage football pitch reservations.
- * Admins have additional capabilities like adding new reservations.
+ * Admins can manage reservations but cannot join games.
+ * Players can join games and waiting lists.
  */
 const Reservations = () => {
   // Initialize currentDate to undefined to show all upcoming games initially
@@ -69,10 +72,10 @@ const Reservations = () => {
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
   
   useEffect(() => {
-    // TODO: Replace localStorage with a proper auth context/service for user role and ID
+    // Get user role and ID from localStorage
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     setUserRole(role);
-    const storedUser = localStorage.getItem('currentUser'); // Assuming 'currentUser' stores { id: '...' }
+    const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
@@ -82,6 +85,24 @@ const Reservations = () => {
         setCurrentUserId(null);
       }
     }
+    
+    // Listen for events to show game details from other components
+    const handleShowGameDetails = (event: any) => {
+      const gameId = event.detail?.gameId;
+      if (gameId) {
+        const game = reservations.find(r => r.id === gameId);
+        if (game) {
+          setSelectedGameForDetails(game);
+          setIsGameDetailsDialogOpen(true);
+        }
+      }
+    };
+    
+    window.addEventListener('showGameDetails', handleShowGameDetails);
+    
+    return () => {
+      window.removeEventListener('showGameDetails', handleShowGameDetails);
+    };
   }, []);
 
   const {
@@ -95,19 +116,14 @@ const Reservations = () => {
     getReservationsForDate,
   } = useReservation();
 
-  // Memoized list of upcoming reservations, now filtered by currentDate if set
+  // Memoized list of upcoming reservations, filtered by currentDate if set
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
     const today = new Date(new Date().setHours(0, 0, 0, 0)); // Start of today
 
     if (currentDate) {
-      // Ensure selected date is not in the past for "upcoming" view
-      if (currentDate < today && !isSameDay(currentDate, today)) {
-        gamesToShow = [];
-      } else {
-        gamesToShow = getReservationsForDate(currentDate)
-          .filter(res => res.status === "open" || res.status === "full");
-      }
+      gamesToShow = getReservationsForDate(currentDate)
+        .filter(res => res.status === "open" || res.status === "full");
     } else {
       // No specific date selected, show all upcoming games (today or future)
       gamesToShow = reservations.filter(
@@ -119,7 +135,7 @@ const Reservations = () => {
     return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
   }, [reservations, currentDate, getReservationsForDate]);
 
-  // Memoized list of past reservations (remains unchanged)
+  // Memoized list of past reservations
   const pastReservations = useMemo(() =>
     reservations.filter(
       (res) => res.status === "completed" || (res.status !== 'cancelled' && new Date(res.date) < new Date(new Date().setHours(0,0,0,0)))
@@ -133,18 +149,22 @@ const Reservations = () => {
   };
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
-    // This relies on getReservationsForDate which uses local data.
-    // For API, this might involve a separate lightweight API call or pre-fetched summary data.
     return getReservationsForDate(date).length > 0;
   };
 
-  // Action handlers for user interactions, ensuring userId is present
+  // Action handlers for user interactions
   const handleJoinGame = (reservationId: number) => {
+    // Admins cannot join games
+    if (userRole === 'admin') {
+      toast({ title: "Admin Restriction", description: "Admins cannot join games.", variant: "destructive"});
+      return;
+    }
+    
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to join a game.", variant: "destructive"});
       return;
     }
-    // TODO: API Call: Send request to backend for user (currentUserId) to join game (reservationId)
+    
     joinGame(reservationId, undefined, currentUserId);
   };
   
@@ -153,16 +173,22 @@ const Reservations = () => {
       toast({ title: "Login Required", description: "Please log in to cancel a reservation.", variant: "destructive"});
       return;
     }
-    // TODO: API Call: Send request to backend for user (currentUserId) to leave game (reservationId)
+    
     cancelReservation(reservationId, currentUserId);
   };
 
   const handleJoinWaitingList = (reservationId: number) => {
+    // Admins cannot join waiting lists
+    if (userRole === 'admin') {
+      toast({ title: "Admin Restriction", description: "Admins cannot join waiting lists.", variant: "destructive"});
+      return;
+    }
+    
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to join the waiting list.", variant: "destructive"});
       return;
     }
-    // TODO: API Call: Send request to backend for user (currentUserId) to join waitlist for game (reservationId)
+    
     joinWaitingList(reservationId, currentUserId);
   };
   
@@ -171,7 +197,7 @@ const Reservations = () => {
       toast({ title: "Login Required", description: "Please log in to leave the waiting list.", variant: "destructive"});
       return;
     }
-    // TODO: API Call: Send request to backend for user (currentUserId) to leave waitlist for game (reservationId)
+    
     leaveWaitingList(reservationId, currentUserId);
   };
 
@@ -186,7 +212,6 @@ const Reservations = () => {
     }
     return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
   }, [currentDate, upcomingReservations.length]);
-
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
@@ -210,7 +235,6 @@ const Reservations = () => {
             onDateChange={setCurrentDate}
             hasReservations={checkHasReservationsOnDate}
           />
-          {/* The card displaying games for selected date below calendar is REMOVED */}
         </div>
 
         {/* Right Column: Tabs for Upcoming and Past Games */}
@@ -255,7 +279,7 @@ const Reservations = () => {
                   onActionClick={
                     currentDate 
                     ? () => setCurrentDate(undefined) 
-                    : (userRole === 'admin' ? () => { /* This should ideally open the AddReservationDialog */ } : undefined)
+                    : undefined
                   }
                   actionIcon={currentDate ? <XCircle className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
                 />
@@ -359,29 +383,19 @@ const Reservations = () => {
                                 <div className="flex items-center text-gray-600 dark:text-gray-400">
                                 <Users className="h-3.5 w-3.5 mr-1.5 text-muted-foreground dark:text-gray-500" />
                                 <span>
-                                    {reservation.playersJoined}/{reservation.maxPlayers}
+                                    {reservation.playersJoined}/{reservation.maxPlayers + 2}
                                 </span>
                                 </div>
                             </TableCell>
                             <TableCell className="text-right">
-                                { userRole === 'admin' ? (
-                                     <ReservationCard
-                                        key={`${reservation.id}-admin-past`}
-                                        reservation={reservation}
-                                        type="past"
-                                        isAdmin={true}
-                                        currentUserId={currentUserId || ""}
-                                    />
-                                ) : (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleViewGameDetails(reservation)}
-                                        className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
-                                    >
-                                        View Details
-                                    </Button>
-                                )}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleViewGameDetails(reservation)}
+                                    className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+                                >
+                                    View Details
+                                </Button>
                             </TableCell>
                             </TableRow>
                         ))}
@@ -395,71 +409,23 @@ const Reservations = () => {
         </div>
       </div>
 
-      {/* Dialog for Viewing Past Game Details */}
-      <Dialog open={isGameDetailsDialogOpen} onOpenChange={setIsGameDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[80vh] flex flex-col bg-white dark:bg-gray-800 border dark:border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-teal-700 dark:text-teal-400">
-                {selectedGameForDetails?.pitchName || "Game"} Details
-            </DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
-              Summary of {selectedGameForDetails ? `${formatDate(selectedGameForDetails.date, "eeee, MMMM do, yyyy")} at ${selectedGameForDetails.time}` : "the game"}.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedGameForDetails && (
-            <div className="space-y-4 overflow-y-auto flex-grow pr-2">
-              <Card className="bg-gray-50 dark:bg-gray-700/50 p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center">
-                    <CalendarIcon className="h-4 w-4 text-teal-600 dark:text-teal-400 mr-2 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{formatDate(selectedGameForDetails.date, "MMMM d, yyyy")}</span>
-                  </div>
-                   <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-teal-600 dark:text-teal-400 mr-2 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{selectedGameForDetails.time}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 text-teal-600 dark:text-teal-400 mr-2 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{selectedGameForDetails.playersJoined} / {selectedGameForDetails.maxPlayers} players</span>
-                  </div>
-                   <div className="flex items-center">
-                     <MapPinIcon className="h-4 w-4 text-teal-600 dark:text-teal-400 mr-2 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{selectedGameForDetails.location}</span>
-                  </div>
-                </div>
-              </Card>
-              
-                {selectedGameForDetails.lineup && selectedGameForDetails.lineup.length > 0 && (
-                    <div>
-                        <h4 className="font-medium mb-2 text-gray-700 dark:text-gray-200">Team Lineup</h4>
-                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
-                        <PitchLineup
-                            maxPlayers={selectedGameForDetails.maxPlayers}
-                            players={selectedGameForDetails.lineup.map(p => p.status === 'joined' ? (p.userId === currentUserId ? "You" : p.playerName || `Player ${p.userId}`) : null)}
-                        />
-                        </div>
-                    </div>
-                )}
-
-              <div>
-                <h4 className="font-medium mb-2 text-gray-700 dark:text-gray-200">Game Highlights</h4>
-                {selectedGameForDetails.highlights && selectedGameForDetails.highlights.length > 0 ? (
-                    <HighlightsList 
-                    reservationId={selectedGameForDetails.id}
-                    isAdmin={userRole === 'admin'} 
-                    />
-                ) : (
-                    <p className="text-sm text-muted-foreground dark:text-gray-400 italic">No highlights were recorded for this game.</p>
-                )}
-              </div>
-            </div>
-          )}
-           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                <Button variant="outline" onClick={() => setIsGameDetailsDialogOpen(false)} className="dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Close</Button>
-            </div>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog for Viewing Game Details */}
+      {selectedGameForDetails && (
+        <GameDetailsDialog
+          reservation={selectedGameForDetails}
+          isOpen={isGameDetailsDialogOpen}
+          onClose={() => setIsGameDetailsDialogOpen(false)}
+          isAdmin={userRole === 'admin'}
+          onStatusChange={(status) => {
+            if (userRole === 'admin' && selectedGameForDetails) {
+              const { updateReservationStatus } = useReservation();
+              updateReservationStatus(selectedGameForDetails.id, status);
+            }
+          }}
+          currentUserId={currentUserId || ""}
+          actualMaxPlayers={selectedGameForDetails.maxPlayers + 2}
+        />
+      )}
     </div>
   );
 };
@@ -472,15 +438,15 @@ const EmptyState = ({
   description,
   actionText,
   onActionClick,
-  icon, // Added icon prop
-  actionIcon // Added actionIcon prop
+  icon,
+  actionIcon
 }: {
   title: string;
   description: string;
   actionText?: string; 
   onActionClick?: () => void;
-  icon?: React.ReactNode; // Optional custom icon for the empty state
-  actionIcon?: React.ReactNode; // Optional icon for the action button
+  icon?: React.ReactNode;
+  actionIcon?: React.ReactNode;
 }) => (
   <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">
     <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4">
