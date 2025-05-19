@@ -15,6 +15,7 @@ import {
   Users,
   ListFilter,
   Search,
+  MapPinIcon,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +114,7 @@ const Reservations = () => {
     return getReservationsForDate(date).length > 0;
   };
 
-  const handleJoinGame = (reservationId: string) => {
+  const handleJoinGame = (reservationId: number) => {
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to join a game.", variant: "destructive"});
       return;
@@ -121,7 +122,7 @@ const Reservations = () => {
     joinGame(reservationId, undefined, currentUserId);
   };
   
-  const handleCancelReservation = (reservationId: string) => {
+  const handleCancelReservation = (reservationId: number) => {
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to cancel a reservation.", variant: "destructive"});
       return;
@@ -129,7 +130,7 @@ const Reservations = () => {
     cancelReservation(reservationId, currentUserId);
   };
 
-  const handleJoinWaitingList = (reservationId: string) => {
+  const handleJoinWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to join the waiting list.", variant: "destructive"});
       return;
@@ -137,7 +138,7 @@ const Reservations = () => {
     joinWaitingList(reservationId, currentUserId);
   };
   
-  const handleLeaveWaitingList = (reservationId: string) => {
+  const handleLeaveWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ title: "Login Required", description: "Please log in to leave the waiting list.", variant: "destructive"});
       return;
@@ -259,8 +260,7 @@ const Reservations = () => {
                       isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
                       isUserOnWaitingList={currentUserId ? reservation.waitingList.includes(currentUserId) : false}
                       hasUserJoinedOnDate={(date) => currentUserId ? hasUserJoinedOnDate(date, currentUserId) : false}
-                      currentUserId={currentUserId || ""} // Pass empty string if null to satisfy prop type if it's string
-                      // Admin specific props for edit/delete would go here if ReservationCard supports them
+                      currentUserId={currentUserId || ""} 
                       // isAdmin={userRole === 'admin'} 
                     />
                   ))}
@@ -411,7 +411,7 @@ const Reservations = () => {
                 {selectedGameForDetails.highlights && selectedGameForDetails.highlights.length > 0 ? (
                     <HighlightsList 
                     reservationId={selectedGameForDetails.id}
-                    isAdmin={userRole === 'admin'} // Pass admin status for highlight management
+                    isAdmin={userRole === 'admin'} 
                     />
                 ) : (
                     <p className="text-sm text-muted-foreground dark:text-gray-400 italic">No highlights were recorded for this game.</p>
@@ -436,7 +436,7 @@ const EmptyState = ({
 }: {
   title: string;
   description: string;
-  actionText?: string; // Make actionText optional
+  actionText?: string; 
   onActionClick?: () => void;
 }) => (
   <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">

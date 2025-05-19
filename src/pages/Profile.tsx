@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import { Edit3, Save, ShieldCheck, UserCog, LogOut, CalendarDays, Trophy, UserCircle, Mail, Phone, MapPinIcon, Star } from "lucide-react"; // Added more icons
+import { Edit3, Save, ShieldCheck, UserCog, LogOut, CalendarDays, Trophy, UserCircle, Mail, Phone, MapPinIcon, Star, Users } from "lucide-react"; // Added more icons
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom'; // For logout redirect
 
