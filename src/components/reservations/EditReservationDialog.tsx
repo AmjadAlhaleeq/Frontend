@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { useReservation, Reservation } from "@/context/ReservationContext";
+import { useReservation, Reservation, Highlight } from "@/context/ReservationContext";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
@@ -31,6 +31,7 @@ import HighlightForm from "./HighlightForm";
 import HighlightsList from "./HighlightsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -65,6 +66,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   isAdmin = false, // Default isAdmin to false; should be explicitly passed
 }) => {
   const { editReservation } = useReservation(); // Context function to save changes
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details"); // For tabs in past game admin view
   const isPastGame = new Date(reservation.date) < new Date(new Date().setHours(0,0,0,0)) || reservation.status === "completed";
 
@@ -80,6 +82,22 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
       maxPlayers: reservation.maxPlayers,
     },
   });
+  
+  // Handle saving highlights
+  const handleSaveHighlight = (highlight: Highlight) => {
+    const updatedHighlights = [...(reservation.highlights || []), highlight];
+    editReservation(reservation.id, { highlights: updatedHighlights });
+    
+    toast({
+      title: "Highlight Added",
+      description: `Added a new highlight for ${highlight.playerName}`,
+    });
+  };
+  
+  // Handle canceling highlight addition
+  const handleCancelHighlight = () => {
+    // Just close the form or reset state if needed
+  };
 
   /**
    * Handles form submission.
@@ -120,12 +138,10 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
             <TabsContent value="details">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  {/* FormField for Pitch Name */}
                   <FormField
                     control={form.control}
                     name="pitchName"
                     render={({ field }) => (
-                      // ... keep existing code (Pitch Name FormItem)
                       <FormItem>
                         <FormLabel>Pitch Name</FormLabel>
                         <FormControl>
@@ -136,12 +152,10 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
-                  {/* FormField for Date */}
                   <FormField
                     control={form.control}
                     name="date"
                     render={({ field }) => (
-                      // ... keep existing code (Date FormItem with Popover Calendar)
                       <FormItem className="flex flex-col">
                         <FormLabel>Date</FormLabel>
                         <Popover>
@@ -178,12 +192,10 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
-                  {/* FormField for Time */}
                   <FormField
                     control={form.control}
                     name="time"
                     render={({ field }) => (
-                      // ... keep existing code (Time Select FormItem)
                       <FormItem>
                         <FormLabel>Time</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -203,12 +215,10 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
-                  {/* FormField for Location */}
                   <FormField
                     control={form.control}
                     name="location"
                     render={({ field }) => (
-                      // ... keep existing code (Location FormItem)
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
@@ -219,14 +229,11 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                     )}
                   />
 
-                  {/* Grid for Price and Max Players */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* FormField for Price */}
                     <FormField
                       control={form.control}
                       name="price"
                       render={({ field }) => (
-                        // ... keep existing code (Price FormItem)
                         <FormItem>
                           <FormLabel>Price per Player</FormLabel>
                           <FormControl>
@@ -237,12 +244,10 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                       )}
                     />
 
-                    {/* FormField for Max Players */}
                     <FormField
                       control={form.control}
                       name="maxPlayers"
                       render={({ field }) => (
-                        // ... keep existing code (Max Players Select FormItem)
                         <FormItem>
                           <FormLabel>Max Players</FormLabel>
                           <Select 
@@ -308,6 +313,8 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                   {/* Component form to add a new highlight */}
                   <HighlightForm 
                     reservationId={reservation.id}
+                    onSave={handleSaveHighlight}
+                    onCancel={handleCancelHighlight}
                   />
                 </div>
               </div>
@@ -324,7 +331,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 control={form.control}
                 name="pitchName"
                 render={({ field }) => (
-                    // ... keep existing code (Pitch Name FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Pitch Name</FormLabel>
                     <FormControl>
@@ -340,7 +346,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                    // ... keep existing code (Date FormItem - identical to above)
                   <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
                     <Popover>
@@ -382,7 +387,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 control={form.control}
                 name="time"
                 render={({ field }) => (
-                    // ... keep existing code (Time Select FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Time</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -407,7 +411,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 control={form.control}
                 name="location"
                 render={({ field }) => (
-                    // ... keep existing code (Location FormItem - identical to above)
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
@@ -425,7 +428,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                   control={form.control}
                   name="price"
                   render={({ field }) => (
-                        // ... keep existing code (Price FormItem - identical to above)
                     <FormItem>
                       <FormLabel>Price per Player</FormLabel>
                       <FormControl>
@@ -441,7 +443,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                   control={form.control}
                   name="maxPlayers"
                   render={({ field }) => (
-                        // ... keep existing code (Max Players Select FormItem - identical to above)
                     <FormItem>
                       <FormLabel>Max Players</FormLabel>
                       <Select 

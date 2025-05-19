@@ -54,7 +54,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     // Create highlight object
     const highlight: Highlight = {
       id: Date.now(),
-      type: highlightType as "goal" | "assist" | "card" | "save" | "tackle" | "other",
+      type: highlightType as "goal" | "assist" | "save" | "yellowCard" | "redCard" | "other",
       playerName: playerName,
       minute: minuteNum,
       description: description
@@ -77,7 +77,8 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
           <SelectContent>
             <SelectItem value="goal">Goal</SelectItem>
             <SelectItem value="assist">Assist</SelectItem>
-            <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="yellowCard">Yellow Card</SelectItem>
+            <SelectItem value="redCard">Red Card</SelectItem>
             <SelectItem value="save">Save</SelectItem>
             <SelectItem value="tackle">Tackle</SelectItem>
             <SelectItem value="other">Other</SelectItem>

@@ -10,13 +10,16 @@ import PlayerReservations from "@/components/profile/PlayerReservations";
 import AuthForm from "@/components/auth/AuthForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, User, Shield, Edit, Save } from "lucide-react";
+import { LogOut, User, Shield, Edit, Save, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Profile page showing user information, statistics, reservations, and authentication.
  * Includes authentication flow and access restrictions.
  */
 const Profile = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { getUserStats } = useReservation();
   const [activeTab, setActiveTab] = useState("overview");
@@ -210,6 +213,11 @@ const Profile = () => {
     ? getUserStats(userProfile.id)
     : { matches: 0, wins: 0, goals: 0, assists: 0, cleansheets: 0, tackles: 0, yellowCards: 0, redCards: 0, mvps: 0 };
 
+  // Handle navigation
+  const handleNavigate = (path: string) => {
+    navigate(path);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {!isLoggedIn ? (
@@ -395,40 +403,40 @@ const Profile = () => {
                         <h3 className="text-sm font-medium mb-2">Badges</h3>
                         <div className="grid grid-cols-3 gap-2">
                           {userStats.goals >= 5 && (
-                            <Badge className="flex flex-col items-center p-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            <div className="flex flex-col items-center p-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">
                               <span className="text-lg">⚽</span>
                               <span className="text-xs mt-1">Scorer</span>
-                            </Badge>
+                            </div>
                           )}
                           {userStats.assists >= 3 && (
-                            <Badge className="flex flex-col items-center p-2 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                            <div className="flex flex-col items-center p-2 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
                               <span className="text-lg">🅰️</span>
                               <span className="text-xs mt-1">Playmaker</span>
-                            </Badge>
+                            </div>
                           )}
                           {userStats.mvps >= 2 && (
-                            <Badge className="flex flex-col items-center p-2 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                            <div className="flex flex-col items-center p-2 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
                               <span className="text-lg">🏆</span>
                               <span className="text-xs mt-1">MVP</span>
-                            </Badge>
+                            </div>
                           )}
                           {userStats.cleansheets >= 2 && (
-                            <Badge className="flex flex-col items-center p-2 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            <div className="flex flex-col items-center p-2 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
                               <span className="text-lg">🧤</span>
                               <span className="text-xs mt-1">Keeper</span>
-                            </Badge>
+                            </div>
                           )}
                           {userStats.tackles >= 10 && (
-                            <Badge className="flex flex-col items-center p-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                            <div className="flex flex-col items-center p-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-full">
                               <span className="text-lg">🛡️</span>
                               <span className="text-xs mt-1">Defender</span>
-                            </Badge>
+                            </div>
                           )}
                           {userStats.matches >= 10 && (
-                            <Badge className="flex flex-col items-center p-2 bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300">
+                            <div className="flex flex-col items-center p-2 bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300 rounded-full">
                               <span className="text-lg">🏃</span>
                               <span className="text-xs mt-1">Regular</span>
-                            </Badge>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -476,7 +484,7 @@ const Profile = () => {
                       <Button 
                         variant="outline" 
                         className="justify-start text-left"
-                        onClick={() => navigate('/admin/add-pitch')}
+                        onClick={() => handleNavigate('/admin/add-pitch')}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add New Pitch
@@ -484,7 +492,7 @@ const Profile = () => {
                       <Button 
                         variant="outline" 
                         className="justify-start text-left"
-                        onClick={() => navigate('/reservations')}
+                        onClick={() => handleNavigate('/reservations')}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Manage Reservations

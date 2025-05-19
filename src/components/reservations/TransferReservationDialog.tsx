@@ -38,6 +38,9 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
   const [awayteamScore, setAwayteamScore] = useState("0");
   const [mvpPlayerId, setMvpPlayerId] = useState("");
   const [isGamePlayed, setIsGamePlayed] = useState(true);
+  
+  // Add a state to handle the highlight form
+  const [tempHighlight, setTempHighlight] = useState<null | any>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +70,27 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
     }
     
     onClose();
+  };
+  
+  // Handle saving highlights
+  const handleSaveHighlight = (highlight: any) => {
+    const { editReservation } = useReservation();
+    if (reservation) {
+      const updatedHighlights = [...(reservation.highlights || []), highlight];
+      editReservation(reservation.id, { highlights: updatedHighlights });
+      
+      toast({
+        title: "Highlight Added",
+        description: `Added a new highlight for ${highlight.playerName}`,
+      });
+      
+      setShowHighlightForm(false);
+    }
+  };
+  
+  // Handle canceling highlight addition
+  const handleCancelHighlight = () => {
+    setShowHighlightForm(false);
   };
 
   return (
@@ -152,7 +176,8 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
                     </div>
                     <HighlightForm 
                       reservationId={reservation.id}
-                      onComplete={() => {}} 
+                      onSave={handleSaveHighlight}
+                      onCancel={handleCancelHighlight}
                     />
                   </div>
                 )}

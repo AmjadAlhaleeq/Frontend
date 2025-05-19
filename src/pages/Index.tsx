@@ -30,7 +30,13 @@ const Index = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/rules" element={<Rules />} />
-        <Route path="/lineup" element={<PlayerLineup />} />
+        <Route path="/lineup" element={
+          <PlayerLineup 
+            maxPlayers={10} 
+            currentPlayers={0} 
+            onSelect={() => {}} 
+            onCancel={() => {}} 
+          />} />
         <Route path="/admin/add-pitch" element={<AddPitch />} />
         <Route path="/admin/edit-pitch/:id" element={<AddPitch />} />
         <Route path="*" element={<NotFound />} />
