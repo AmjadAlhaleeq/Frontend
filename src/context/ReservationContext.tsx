@@ -2,6 +2,19 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
+// Define HighlightType enum
+export type HighlightType = "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other";
+
+// Define Highlight interface
+export interface Highlight {
+  id: number;
+  type: HighlightType;
+  playerName: string;
+  playerId: string;
+  minute: number;
+  description?: string;
+}
+
 // Types for player in lineup
 export interface LineupPlayer {
   userId: string;
@@ -33,6 +46,7 @@ export interface Reservation {
   pitchImage?: string; // For linking to pitch image
   finalScore?: string;
   mvpPlayerId?: string;
+  highlights?: Highlight[]; // Add highlights property
 }
 
 // Type for new reservation data
@@ -61,6 +75,7 @@ export interface Pitch {
   description?: string;
   price: number;
   facilities?: string[]; // Renamed from features for consistency
+  openingHours?: string; // Add openingHours property
   details?: {
     address?: string;
     description?: string;
@@ -104,6 +119,9 @@ interface ReservationContextType {
   updatePitch: (pitchId: number, data: Partial<Omit<Pitch, 'id'>>) => void;
   getUserStats: (userId: string) => UserStats;
   suspendPlayer: (userId: string, duration: number, reason: string) => void;
+  // Add new functions for highlight management
+  addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
+  deleteHighlight: (reservationId: number, highlightId: number) => void;
 }
 
 // Create the context
@@ -590,6 +608,39 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     console.log(`Player ${userId} suspended for ${duration} days. Reason: ${reason}`);
   };
 
+  // Add new highlight to a reservation
+  const addHighlight = (reservationId: number, highlight: Omit<Highlight, 'id'>) => {
+    setReservations(prev => prev.map(res => {
+      if (res.id !== reservationId) return res;
+      
+      const newHighlight = {
+        ...highlight,
+        id: Date.now(), // Simple ID generation
+      };
+      
+      const highlights = res.highlights || [];
+      
+      return {
+        ...res,
+        highlights: [...highlights, newHighlight],
+      };
+    }));
+  };
+  
+  // Delete a highlight from a reservation
+  const deleteHighlight = (reservationId: number, highlightId: number) => {
+    setReservations(prev => prev.map(res => {
+      if (res.id !== reservationId) return res;
+      
+      const highlights = res.highlights || [];
+      
+      return {
+        ...res,
+        highlights: highlights.filter(h => h.id !== highlightId),
+      };
+    }));
+  };
+
   // Return provider with context value
   return (
     <ReservationContext.Provider value={{ 
@@ -610,7 +661,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       addPitch,
       updatePitch,
       getUserStats,
-      suspendPlayer
+      suspendPlayer,
+      addHighlight,
+      deleteHighlight
     }}>
       {children}
     </ReservationContext.Provider>

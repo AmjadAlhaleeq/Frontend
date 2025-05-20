@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,7 @@ const EditPitch = () => {
     name: "",
     location: "",
     city: "",
-    image: "",
+    image: "", // Add this field to fix the error
     images: ["", "", "", ""], // Array to store up to 4 images
     playersPerSide: "",
     description: "",
@@ -76,6 +75,7 @@ const EditPitch = () => {
           name: pitch.name || "",
           location: pitch.location || "",
           city: pitch.city || "",
+          image: pitch.image || "", // Add this field to fix the error
           images,
           playersPerSide: pitch.playersPerSide?.toString() || "",
           description: pitch.description || "",

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { MapPin, Clock, Calendar, Users, Star, CheckCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -201,6 +200,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                   </div>
                 </div>
                 
+                {/* Check if openingHours property exists before rendering */}
                 {pitch.openingHours && (
                   <div className="flex items-start">
                     <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
