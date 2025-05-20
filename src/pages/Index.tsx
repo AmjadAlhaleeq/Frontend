@@ -1,6 +1,6 @@
 
-import React, { useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Home from "./Home";
 import Profile from "./Profile";
 import Pitches from "./Pitches";
@@ -12,6 +12,7 @@ import Rules from "./Rules";
 import NotFound from "./NotFound";
 import PlayerLineup from "./PlayerLineup";
 import AddPitch from "./admin/AddPitch";
+import EditPitch from "./admin/EditPitch";
 import Layout from "@/components/layout/Layout";
 
 /**
@@ -23,23 +24,31 @@ import Layout from "@/components/layout/Layout";
  */
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false);
   
-  // Check for first-time login redirect
+  // Check for first-time login redirect only once on component mount
   useEffect(() => {
     const firstTimeLogin = localStorage.getItem("firstTimeLogin");
+    
     if (firstTimeLogin === "true") {
-      // The redirect will be handled by Home.tsx, we just need to make sure
-      // we're on the home page for the firstTimeLogin effect to trigger
-      if (window.location.pathname !== "/") {
+      // Mark that we've handled this first-time login
+      setIsFirstTimeLogin(true);
+      // Clear the flag so it only happens once
+      localStorage.removeItem("firstTimeLogin");
+      
+      // If we're not on the home page, redirect there
+      if (location.pathname !== "/") {
         navigate("/");
       }
+      // Else the Home component will handle the welcome messages
     }
-  }, [navigate]);
+  }, [navigate, location.pathname]);
   
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home isFirstTimeLogin={isFirstTimeLogin} />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/pitches" element={<Pitches />} />
         <Route path="/reservations" element={<Reservations />} />
@@ -55,7 +64,7 @@ const Index = () => {
             onCancel={() => {}} 
           />} />
         <Route path="/admin/add-pitch" element={<AddPitch />} />
-        <Route path="/admin/edit-pitch/:id" element={<AddPitch />} />
+        <Route path="/admin/edit-pitch/:id" element={<EditPitch />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

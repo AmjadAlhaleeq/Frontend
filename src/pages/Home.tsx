@@ -7,20 +7,22 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const Home = () => {
+/**
+ * Home page component showing main app features and CTAs
+ * 
+ * @param {Object} props - Component props
+ * @param {boolean} props.isFirstTimeLogin - Flag indicating if this is the first time login
+ */
+const Home = ({ isFirstTimeLogin = false }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
   
   // Check for first-time login flag
   useEffect(() => {
-    const firstTimeLogin = localStorage.getItem("firstTimeLogin");
     const isLoggedIn = localStorage.getItem("isLoggedIn");
     const userRole = localStorage.getItem("userRole");
     
-    if (firstTimeLogin === "true" && isLoggedIn === "true") {
-      // Remove the flag so it only happens once
-      localStorage.removeItem("firstTimeLogin");
-      
+    if (isFirstTimeLogin && isLoggedIn === "true") {      
       // Show welcome toast based on role
       if (userRole === "admin") {
         toast({
@@ -33,12 +35,8 @@ const Home = () => {
           description: "You can now book pitches and join games.",
         });
       }
-      
-      // Refresh the page to load all functionality based on role
-      // This ensures all components recognize the user's role
-      window.location.reload();
     }
-  }, [toast]);
+  }, [toast, isFirstTimeLogin]);
 
   return (
     <div className="flex flex-col">
