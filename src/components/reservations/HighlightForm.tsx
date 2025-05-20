@@ -1,94 +1,168 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X, Award, Goal, Star, Zap } from "lucide-react"; // Replace Whistle and Football with appropriate icons
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 
 interface HighlightFormProps {
-  onClose: () => void;
-  onSubmit: (data: any) => void;
+  reservationId: number;
+  onSave: (highlight: Highlight) => void;
+  onCancel: () => void;
 }
 
-const HighlightForm: React.FC<HighlightFormProps> = ({ onClose, onSubmit }) => {
+/**
+ * HighlightForm component for adding match highlights
+ * Allows admin to select highlight type, player from the game lineup, minute, and add description
+ */
+const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) => {
+  const [highlightType, setHighlightType] = useState<HighlightType>("goal");
+  const [playerId, setPlayerId] = useState<string>("");
+  const [playerName, setPlayerName] = useState<string>("");
+  const [minute, setMinute] = useState<string>("1");
+  const [description, setDescription] = useState<string>("");
+  const [availablePlayers, setAvailablePlayers] = useState<{id: string, name: string}[]>([]);
+  
+  const { reservations } = useReservation();
+
+  // Load players who participated in this game
+  useEffect(() => {
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (reservation && reservation.lineup) {
+      // Extract player names and IDs from lineup
+      const players = reservation.lineup
+        .filter(player => player.status === 'joined' && player.playerName)
+        .map(player => ({
+          id: player.userId || `player-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is never empty
+          name: player.playerName || `Player ${player.userId}`
+        }));
+      
+      setAvailablePlayers(players);
+      // Set default player if available
+      if (players.length > 0) {
+        setPlayerId(players[0].id);
+        setPlayerName(players[0].name);
+      }
+    }
+  }, [reservationId, reservations]);
+
+  // Update player name when player ID changes
+  const handlePlayerChange = (selectedPlayerId: string) => {
+    setPlayerId(selectedPlayerId);
+    const player = availablePlayers.find(p => p.id === selectedPlayerId);
+    if (player) {
+      setPlayerName(player.name);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate minute is a number between 1-90
+    const minuteNum = parseInt(minute);
+    if (isNaN(minuteNum) || minuteNum < 1 || minuteNum > 90) {
+      toast({
+        title: "Invalid minute",
+        description: "Please enter a valid minute between 1 and 90",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create highlight object
+    const highlight: Highlight = {
+      id: Date.now(),
+      type: highlightType,
+      playerName: playerName,
+      minute: minuteNum,
+      description: description,
+      playerId: playerId || `player-${Date.now()}` // Ensure playerId is never empty
+    };
+    
+    onSave(highlight);
+  };
+
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Add Highlight</h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Highlight Type</label>
+        <Select 
+          value={highlightType} 
+          onValueChange={(value: HighlightType) => setHighlightType(value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select highlight type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="goal">Goal</SelectItem>
+            <SelectItem value="assist">Assist</SelectItem>
+            <SelectItem value="yellowCard">Yellow Card</SelectItem>
+            <SelectItem value="redCard">Red Card</SelectItem>
+            <SelectItem value="save">Save</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          const data = {
-            type: formData.get("type"),
-            minute: formData.get("minute"),
-            playerId: formData.get("playerId"),
-            description: formData.get("description"),
-            isPenalty: formData.get("isPenalty"),
-          };
-          onSubmit(data);
-          onClose();
-        }}
-        className="space-y-4"
-      >
-        <div>
-          <Label htmlFor="type">Type</Label>
-          <Select>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Player</label>
+        {availablePlayers.length > 0 ? (
+          <Select 
+            value={playerId} 
+            onValueChange={handlePlayerChange}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select a highlight type" />
+              <SelectValue placeholder="Select player" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="goal">
-                <Goal className="mr-2 h-4 w-4" />
-                Goal
-              </SelectItem>
-              <SelectItem value="assist">
-                <Zap className="mr-2 h-4 w-4" />
-                Assist
-              </SelectItem>
-              <SelectItem value="yellowCard">
-                <Award className="mr-2 h-4 w-4" />
-                Yellow Card
-              </SelectItem>
-              <SelectItem value="redCard">
-                <Star className="mr-2 h-4 w-4" />
-                Red Card
-              </SelectItem>
+              {availablePlayers.map((player) => (
+                <SelectItem key={player.id} value={player.id || `player-${Math.random().toString(36).substring(2, 9)}`}>
+                  {player.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
-          <Label htmlFor="minute">Minute</Label>
-          <Input type="number" id="minute" placeholder="Enter minute" />
-        </div>
-        <div>
-          <Label htmlFor="playerId">Player ID</Label>
-          <Input type="text" id="playerId" placeholder="Enter player ID" />
-        </div>
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Input type="text" id="description" placeholder="Enter description" />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox id="isPenalty" />
-          <Label htmlFor="isPenalty">Is Penalty</Label>
-        </div>
-        <div className="flex justify-end">
-          <Button type="submit">Add Highlight</Button>
-        </div>
-      </form>
-    </div>
+        ) : (
+          <Input 
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="No players found in the lineup"
+            disabled
+          />
+        )}
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Minute</label>
+        <Input 
+          type="number" 
+          min="1" 
+          max="90" 
+          value={minute}
+          onChange={(e) => setMinute(e.target.value)}
+          placeholder="Minute"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <Textarea 
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Add details about the highlight"
+          className="resize-none"
+        />
+      </div>
+      
+      <div className="flex justify-end space-x-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">Save Highlight</Button>
+      </div>
+    </form>
   );
 };
 

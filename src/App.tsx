@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,7 +20,6 @@ import Faq from "./pages/Faq";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Rules from "./pages/Rules";
 import ScrollToTop from "./components/shared/ScrollToTop";
-import PlayerProfile from "./pages/PlayerProfile";
 
 // Initialize QueryClient for data fetching
 const queryClient = new QueryClient({
@@ -80,7 +80,9 @@ const App = () => (
             <Route
               path="/profile"
               element={
-                <PlayerProfile />
+                <Layout>
+                  <Profile />
+                </Layout>
               }
             />
             <Route
