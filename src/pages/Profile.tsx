@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   ArrowRight,
@@ -28,7 +29,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useNavigate } from "react-router-dom";
 import { useReservation, UserStats } from "@/context/ReservationContext";
 import PlayerReservations from "@/components/profile/PlayerReservations";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ const Profile = () => {
   const [user, setUser] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState("profile");
   const { getUserStats } = useReservation();
+  const { toast } = useToast(); // Fixed: correct usage of useToast hook
   
   useEffect(() => {
     // Get user from localStorage
@@ -77,9 +80,9 @@ const Profile = () => {
     mvps: stats.mvps || 0,
     yellowCards: stats.yellowCards || 0,
     redCards: stats.redCards || 0,
-    matches: stats.gamesPlayed || 0,  // Alias for backwards compatibility
-    wins: stats.wins || Math.floor((stats.gamesPlayed || 0) * 0.6), // Estimated if not available
-    tackles: stats.tackles || Math.floor((stats.gamesPlayed || 0) * 2) // Estimated if not available
+    matches: stats.matches || stats.gamesPlayed || 0,  // Alias for backwards compatibility
+    wins: stats.wins || Math.floor((stats.matches || stats.gamesPlayed || 0) * 0.6), // Estimated if not available
+    tackles: stats.tackles || Math.floor((stats.matches || stats.gamesPlayed || 0) * 2) // Estimated if not available
   };
 
   const handleLogout = () => {
@@ -91,7 +94,7 @@ const Profile = () => {
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setEditMode(false);
-    useToast().toast({
+    toast({
       title: "Profile updated", 
       description: "Your profile has been updated successfully."
     });

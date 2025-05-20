@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +65,7 @@ const Reservations = () => {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAddReservationOpen, setIsAddReservationOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("upcoming");
   
@@ -247,6 +249,15 @@ const Reservations = () => {
             onDateChange={setCurrentDate}
             hasReservations={checkHasReservationsOnDate}
           />
+          
+          {userRole === 'admin' && (
+            <div className="mt-4">
+              <AddReservationDialog 
+                open={isAddReservationOpen}
+                onOpenChange={setIsAddReservationOpen}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Column: Tabs for Upcoming and Past Games */}

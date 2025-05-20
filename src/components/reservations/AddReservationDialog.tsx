@@ -9,9 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, Reservation } from "@/context/ReservationContext";
 
-interface AddReservationDialogProps {
+export interface AddReservationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -61,7 +61,7 @@ const AddReservationDialog: React.FC<AddReservationDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newReservation = {
+    const newReservation: Partial<Reservation> = {
       pitchName: formState.pitchName,
       date: formState.date,
       time: formState.time,
@@ -69,8 +69,10 @@ const AddReservationDialog: React.FC<AddReservationDialogProps> = ({
       price: formState.price,
       maxPlayers: formState.maxPlayers,
       imageUrl: formState.imageUrl,
-      status: 'open' as const,  // Add the missing status property
-      playersJoined: 0,  // Add the missing playersJoined property
+      status: 'open',
+      playersJoined: 0,
+      waitingList: [],
+      lineup: []
     };
     
     addReservation(newReservation);
