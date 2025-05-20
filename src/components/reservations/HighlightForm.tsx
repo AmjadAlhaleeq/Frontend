@@ -35,7 +35,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
       const players = reservation.lineup
         .filter(player => player.status === 'joined' && player.playerName)
         .map(player => ({
-          id: player.userId,
+          id: player.userId || `player-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is never empty
           name: player.playerName || `Player ${player.userId}`
         }));
       
@@ -78,7 +78,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
       playerName: playerName,
       minute: minuteNum,
       description: description,
-      playerId: playerId
+      playerId: playerId || `player-${Date.now()}` // Ensure playerId is never empty
     };
     
     onSave(highlight);
@@ -118,7 +118,9 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
             </SelectTrigger>
             <SelectContent>
               {availablePlayers.map((player) => (
-                <SelectItem key={player.id} value={player.id}>{player.name}</SelectItem>
+                <SelectItem key={player.id} value={player.id || `player-${Math.random().toString(36).substring(2, 9)}`}>
+                  {player.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
