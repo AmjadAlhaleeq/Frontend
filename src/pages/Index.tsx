@@ -14,6 +14,7 @@ import AddPitch from "./admin/AddPitch";
 import EditPitch from "./admin/EditPitch";
 import MyBookings from "./MyBookings";
 import Layout from "@/components/layout/Layout";
+import PrivacyPolicy from "./PrivacyPolicy";
 
 /**
  * Main routing component for the application
@@ -57,6 +58,7 @@ const Index = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/rules" element={<Rules />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/admin/add-pitch" element={<AddPitch />} />
         <Route path="/admin/edit-pitch/:id" element={<EditPitch />} />
         <Route path="*" element={<NotFound />} />
