@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
-import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban, Image } from "lucide-react";
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import SuspendPlayerDialog from "@/components/reservations/SuspendPlayerDialog";
 import { sendGameCancellationNotification, sendWaitingListNotification } from "@/utils/emailNotifications";
 import JoinGameConfirmationDialog from "./JoinGameConfirmationDialog";
 import LeaveGameDialog from "./LeaveGameDialog";
+import WaitlistConfirmationDialog from "./WaitlistConfirmationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -120,6 +122,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle joining a game
   const handleJoinGame = async () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join a game.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (hasUserJoinedOnDate(reservation.date) && !isUserJoined) {
       toast({
         title: "Already joined a game on this date",
@@ -158,6 +169,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle leaving a game
   const handleCancelReservation = async () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to leave this game.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Show confirmation dialog with penalty warning if applicable
     setShowLeaveGameDialog(true);
   };
@@ -214,6 +234,25 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle joining waiting list
   const handleJoinWaitingList = async () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Max waiting list of 3 people
+    if (reservation.waitingList.length >= 3) {
+      toast({
+        title: "Waiting List Full",
+        description: "The waiting list is limited to 3 players.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Show confirmation dialog
     setShowJoinWaitlistDialog(true);
   };
@@ -243,6 +282,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle leaving waiting list
   const handleLeaveWaitingList = async () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to leave the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Show confirmation dialog
     setShowLeaveWaitlistDialog(true);
   };
@@ -370,9 +418,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       
       <CardContent className="pb-2">
         <div className="space-y-3">
-          {/* Pitch image - fixed property from image to imageUrl */}
+          {/* Pitch image - smaller size for better UX */}
           {reservation.imageUrl && (
-            <div className="aspect-video w-full rounded-md overflow-hidden mb-3">
+            <div className="aspect-video h-32 w-full rounded-md overflow-hidden mb-3">
               <img 
                 src={reservation.imageUrl} 
                 alt={reservation.title || reservation.pitchName}
@@ -553,34 +601,21 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </>
         )}
         
-        {/* Admin actions button - added delete button */}
+        {/* Admin action button - only delete button, removed Manage */}
         {isAdmin && (
-          <div className="flex gap-2 w-full">
-            <Button 
-              variant="default" 
-              className="flex-1 bg-teal-600 hover:bg-teal-700"
-              onClick={() => {
-                // Action for admin to view/manage game
-                // Implementation depends on your app's requirements
-              }}
-            >
-              Manage
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-              onClick={handleDeleteReservation}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            className="w-full text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+            onClick={handleDeleteReservation}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
+            {isDeleting ? "Deleting..." : "Delete Reservation"}
+          </Button>
         )}
       </CardFooter>
       
@@ -605,16 +640,34 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         timeToGame={getTimeToGame()}
       />
       
+      <WaitlistConfirmationDialog
+        isOpen={showJoinWaitlistDialog}
+        onClose={() => setShowJoinWaitlistDialog(false)}
+        onConfirm={confirmJoinWaitlist}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
+        isJoining={true}
+      />
+      
+      <WaitlistConfirmationDialog
+        isOpen={showLeaveWaitlistDialog}
+        onClose={() => setShowLeaveWaitlistDialog(false)}
+        onConfirm={confirmLeaveWaitlist}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
+        isJoining={false}
+      />
+      
       {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && (
-        <DeleteConfirmationDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          onConfirm={confirmDeleteReservation}
-          itemName={reservation.title || reservation.pitchName}
-          itemType="reservation"
-        />
-      )}
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={confirmDeleteReservation}
+        itemName={reservation.title || reservation.pitchName}
+        itemType="reservation"
+      />
       
       {/* Suspend Player Dialog */}
       {showSuspendDialog && (

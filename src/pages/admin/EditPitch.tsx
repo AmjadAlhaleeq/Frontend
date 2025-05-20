@@ -123,7 +123,7 @@ const EditPitch = () => {
     
     setIsSaving(true);
     
-    setTimeout(() => {
+    try {
       if (pitchId) {
         updatePitch(parseInt(pitchId), {
           name: pitchData.name,
@@ -135,22 +135,28 @@ const EditPitch = () => {
           description: pitchData.description,
           price: Number(pitchData.price),
           facilities: pitchData.facilities,
-          openingHours: "9:00 AM - 10:00 PM", // Default value instead of from form
           highlights: pitchData.highlights || []
         });
         
-        setIsSaving(false);
-        setSuccessMessage("Pitch has been updated successfully!");
+        // Show success message
+        toast({
+          title: "Success!",
+          description: "Pitch has been updated successfully.",
+        });
         
-        setTimeout(() => {
-          toast({
-            title: "Success!",
-            description: "Pitch has been updated successfully.",
-          });
-          navigate('/pitches');
-        }, 1500);
+        // Navigate away after success
+        navigate('/pitches');
       }
-    }, 1000);
+    } catch (error) {
+      console.error("Error updating pitch:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update pitch. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -282,7 +288,7 @@ const EditPitch = () => {
     description: pitchData.description || "Pitch description...",
     price: Number(pitchData.price) || 0,
     facilities: pitchData.facilities,
-    openingHours: "9:00 AM - 10:00 PM", // Default value
+    openingHours: "9:00 AM - 10:00 PM", // Default value instead of from form
     highlights: pitchData.highlights || []
   };
 
