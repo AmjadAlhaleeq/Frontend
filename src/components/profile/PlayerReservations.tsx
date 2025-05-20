@@ -10,11 +10,16 @@ import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-f
 import LeaveGameDialog from '../reservations/LeaveGameDialog';
 import { useToast } from '@/hooks/use-toast';
 import WaitlistConfirmationDialog from '../reservations/WaitlistConfirmationDialog';
+import { sendGameJoinedConfirmation } from '@/utils/emailNotifications';
 
 interface PlayerReservationsProps {
   userId: string;
 }
 
+/**
+ * PlayerReservations component
+ * Shows a player's upcoming game reservations with options to leave games or join waiting lists
+ */
 const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   const { reservations, cancelReservation, joinWaitingList, leaveWaitingList } = useReservation();
   const { toast } = useToast();
@@ -197,16 +202,16 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
               ? "bg-green-500" 
               : reservation.status === 'full' 
               ? "bg-orange-500" 
-              : "bg-gray-500" // Simplified as past games are removed
+              : "bg-gray-500"
           )}
         >
           {reservation.status}
         </Badge>
       </div>
       
-      {/* Pitch image - using imageUrl with smaller height */}
+      {/* Pitch image - using imageUrl with height reduced to make it smaller */}
       {reservation.imageUrl && (
-        <div className="h-28 w-full rounded-md overflow-hidden mb-3">
+        <div className="h-24 w-full rounded-md overflow-hidden mb-3">
           <img 
             src={reservation.imageUrl} 
             alt={reservation.title || reservation.pitchName}

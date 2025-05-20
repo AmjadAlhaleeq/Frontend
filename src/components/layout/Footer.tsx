@@ -56,7 +56,9 @@ const Footer = () => {
               <FooterLink to="/about">About Us</FooterLink>
               <FooterLink to="/faq">FAQ</FooterLink>
               <FooterLink to="/rules">Rules</FooterLink>
-              <FooterLink to="/privacy-policy">Privacy Policy</FooterLink>
+              <Link to="/privacy-policy" className="text-gray-600 hover:text-teal-500 dark:text-gray-400 dark:hover:text-teal-400 transition-colors">
+                Privacy Policy
+              </Link>
             </div>
           </div>
 

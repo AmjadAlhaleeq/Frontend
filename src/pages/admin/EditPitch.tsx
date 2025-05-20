@@ -101,7 +101,8 @@ const EditPitch = () => {
     setIsLoading(false);
   }, [pitchId, pitches, toast]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fixed: Handle submit function to avoid infinite loop
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.price) {
@@ -126,8 +127,10 @@ const EditPitch = () => {
     
     try {
       if (pitchId) {
-        // Fix: Clone the object to avoid reference issues
+        const id = parseInt(pitchId);
+        // Fix: Create a completely new object to avoid reference issues
         const pitchToUpdate = {
+          id: id,
           name: pitchData.name,
           location: pitchData.location,
           city: pitchData.city,
@@ -140,18 +143,19 @@ const EditPitch = () => {
           highlights: [...pitchData.highlights]
         };
         
-        updatePitch(parseInt(pitchId), pitchToUpdate);
+        // Call updatePitch with the new object
+        await updatePitch(id, pitchToUpdate);
         
-        // Show success message
+        // Show success toast
         toast({
           title: "Success!",
           description: "Pitch has been updated successfully.",
         });
         
-        // Navigate away after success
+        // Navigate away after success - with slight delay to allow toast to be seen
         setTimeout(() => {
           navigate('/pitches');
-        }, 1000);
+        }, 1500);
       }
     } catch (error) {
       console.error("Error updating pitch:", error);
