@@ -67,7 +67,7 @@ const PlayerProfile = () => {
         </TabsContent>
         
         <TabsContent value="badges">
-          <PlayerBadges stats={userStats} />
+          <PlayerBadges userId={profileId} />
         </TabsContent>
       </Tabs>
     </div>

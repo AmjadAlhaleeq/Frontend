@@ -31,7 +31,7 @@ import HighlightForm from "./HighlightForm";
 import HighlightsList from "./HighlightsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -65,7 +65,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   onClose,
   isAdmin = false, // Default isAdmin to false; should be explicitly passed
 }) => {
-  const { editReservation } = useReservation(); // Context function to save changes
+  const { updateReservation } = useReservation(); // Use updateReservation instead of editReservation
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details"); // For tabs in past game admin view
   const [highlightState, setHighlightState] = useState<Highlight[]>([]);
@@ -95,19 +95,15 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
     // This is necessary since editReservation doesn't accept highlights directly
     const updatedReservation = { ...reservation, highlights: updatedHighlights };
     
-    // Use the editReservation to save other fields, but we'll rely on the local state update for highlights
-    editReservation(reservation.id, {
-      pitchName: updatedReservation.pitchName,
+    // Use updateReservation instead of editReservation and pass only one argument
+    updateReservation({
+      ...updatedReservation,
       date: updatedReservation.date,
       time: updatedReservation.time,
       location: updatedReservation.location,
       price: updatedReservation.price,
       maxPlayers: updatedReservation.maxPlayers,
     });
-    
-    // Update the reservation context directly for highlights
-    // Note: In a real app with a backend, you'd make an API call here
-    // For this example, we're relying on the ReservationContext to handle it internally
     
     toast({
       title: "Highlight Added",
@@ -137,9 +133,9 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
    * @param data - Validated form data.
    */
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    // TODO: API Call: Send 'data' to backend to update the reservation.
-    // The context's editReservation would then ideally update based on backend response.
-    editReservation(reservation.id, {
+    // Update the updateReservation call to use the correct signature (one argument)
+    updateReservation({
+      ...reservation,
       ...data,
       date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD string
     });

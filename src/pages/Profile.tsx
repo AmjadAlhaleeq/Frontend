@@ -28,6 +28,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useNavigate } from "react-router-dom";
 import { useReservation, UserStats } from "@/context/ReservationContext";
 import PlayerReservations from "@/components/profile/PlayerReservations";
+import { useToast } from "@/components/ui/use-toast";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ const Profile = () => {
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setEditMode(false);
-    toast({
+    useToast().toast({
       title: "Profile updated", 
       description: "Your profile has been updated successfully."
     });
