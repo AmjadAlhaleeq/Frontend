@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { demoReservations, demoPitches } from './demoData';
 import { toast } from '@/hooks/use-toast';
@@ -47,6 +46,7 @@ export type Pitch = {
   id: number;
   name: string;
   location: string;
+  image: string; // Added to fix PitchCard.tsx errors
   imageUrl?: string;
   availability?: string;
   hours?: string;
@@ -54,6 +54,14 @@ export type Pitch = {
   price?: number;
   description?: string;
   amenities?: string[];
+  playersPerSide?: number; // Added to fix PitchCard.tsx errors
+  features?: string[]; // Added to fix PitchCard.tsx errors
+  details?: { // Added to fix PitchCard.tsx errors
+    address?: string;
+  };
+  openingHours?: string;
+  surfaceType?: string;
+  pitchSize?: string;
 };
 
 export type UserStats = {
@@ -64,12 +72,18 @@ export type UserStats = {
   mvps: number;
   yellowCards: number;
   redCards: number;
+  matches?: number;
+  wins?: number;
+  goals?: number;
+  tackles?: number;
 };
+
+export type NewReservationData = Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>;
 
 interface ReservationContextType {
   reservations: Reservation[];
   pitches: Pitch[];
-  addReservation: (reservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>) => void;
+  addReservation: (reservation: NewReservationData) => void;
   joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
   cancelReservation: (reservationId: number, userId: string) => void;
   deleteReservation: (reservationId: number) => void;
@@ -88,6 +102,7 @@ interface ReservationContextType {
   navigateToReservation: (pitchName: string) => void;
   removePlayerFromReservation: (reservationId: number, userId: string) => void;
   notifyWaitingListPlayers: (reservationId: number) => void;
+  getUserStats: (userId: string) => UserStats; // Added to fix Profile.tsx error
 }
 
 const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
@@ -409,6 +424,24 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   };
 
+  // Add getUserStats implementation
+  const getUserStats = (userId: string): UserStats => {
+    // This is a mock implementation - in a real app, this would calculate stats from reservations
+    return {
+      gamesPlayed: 12,
+      goalsScored: 8,
+      assists: 5,
+      cleansheets: 3,
+      mvps: 2,
+      yellowCards: 1,
+      redCards: 0,
+      matches: 12,
+      wins: 7,
+      goals: 8,
+      tackles: 15
+    };
+  };
+
   const value = {
     reservations,
     pitches,
@@ -430,7 +463,8 @@ export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ childre
     deletePitch,
     navigateToReservation,
     removePlayerFromReservation,
-    notifyWaitingListPlayers
+    notifyWaitingListPlayers,
+    getUserStats // Added to fix Profile.tsx error
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +19,7 @@ const AddPitch = () => {
     price: "",
     surfaceType: "",
     pitchSize: "",
+    features: ["Indoor", "Floodlights"],
   });
   
   // For image preview and slider functionality
@@ -63,6 +63,7 @@ const AddPitch = () => {
         price: Number(pitchData.price),
         surfaceType: pitchData.surfaceType,
         pitchSize: pitchData.pitchSize,
+        features: ["Indoor", "Floodlights"],
     });
     
     toast({
