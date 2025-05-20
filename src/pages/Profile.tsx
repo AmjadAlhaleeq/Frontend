@@ -28,7 +28,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { getUserStats } = useReservation();
+  const { getUserStats, reservations } = useReservation();
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -158,7 +158,7 @@ const Profile = () => {
             <CardContent>
               {isEditing ? (
                 <ProfileEditor 
-                  user={currentUser} 
+                  userData={currentUser} 
                   onSave={handleProfileUpdate} 
                   onCancel={() => setIsEditing(false)} 
                 />
@@ -234,7 +234,7 @@ const Profile = () => {
             
             <TabsContent value="info" className="space-y-4">
               <h3 className="text-xl font-semibold mb-4">Recent Games</h3>
-              <PlayerGameCards userId={currentUser.id} />
+              <PlayerGameCards userId={currentUser.id} reservations={reservations} />
             </TabsContent>
             
             <TabsContent value="reservations">

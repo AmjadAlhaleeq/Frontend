@@ -75,6 +75,7 @@ export interface Pitch {
   price: number;
   facilities?: string[]; // Renamed from features for consistency
   openingHours?: string; // Add openingHours property
+  highlights?: string[]; // Add highlights property for pitch
   details?: {
     address?: string;
     description?: string;

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,6 +36,9 @@ const formSchema = z.object({
   maxPlayers: z.number().min(2, { message: "At least 2 players required" }).max(22, { message: "Maximum 22 players allowed" }),
   price: z.number().nonnegative({ message: "Price cannot be negative" }),
   description: z.string().optional(),
+  location: z.string().optional(),
+  locationLink: z.string().optional(),
+  city: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -61,9 +66,10 @@ const AddReservationDialog = () => {
       location: "",
       locationLink: "",
       city: "",
-      price: "",
-      imageUrl: "",
+      price: 0,
+      maxPlayers: 10,
       time: "",
+      description: "",
     },
   });
 
@@ -78,8 +84,8 @@ const AddReservationDialog = () => {
       location: data.location,
       locationLink: data.locationLink,
       city: data.city,
-      price: parseFloat(data.price), // Convert price to number
-      maxPlayers: parseInt(data.maxPlayers, 10), // Convert maxPlayers to number
+      price: data.price, // Already a number from the form schema
+      maxPlayers: data.maxPlayers, // Already a number from the form schema
       imageUrl: imagePreview || undefined, // Use uploaded image
     };
     
@@ -280,8 +286,8 @@ const AddReservationDialog = () => {
                         min={2}
                         max={22}
                         placeholder="Enter max players"
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value) || 10)}
+                        value={field.value}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 10)}
                       />
                     </FormControl>
                     <FormDescription>
@@ -373,7 +379,12 @@ const AddReservationDialog = () => {
                   <FormItem>
                     <FormLabel>Price per Player</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(e.target.value)} />
+                      <Input 
+                        type="number" 
+                        placeholder="25" 
+                        value={field.value} 
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
