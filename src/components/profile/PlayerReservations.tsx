@@ -19,7 +19,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
 
   // Get user's reservations
   const userReservations = reservations.filter(res => 
-    res.lineup && res.lineup.some(player => player.userId === userId && (!player.status || player.status === 'joined'))
+    res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined')
   );
 
   // Split into upcoming and past
@@ -110,7 +110,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
       {activeTab === 'past' && reservation.finalScore && (
         <div className="mt-3 pt-3 border-t">
           <p className="text-center font-medium">
-            Final Score: {reservation.finalScore.home} - {reservation.finalScore.away}
+            Final Score: <span className="text-teal-600 dark:text-teal-400">{reservation.finalScore}</span>
           </p>
         </div>
       )}

@@ -1,528 +1,724 @@
 
-// Import the missing Zap icon
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState } from "react";
+import { format, parseISO } from 'date-fns';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import {
-  Calendar,
-  CalendarDays,
-  Clock,
-  MapPin,
-  Users,
-  X,
-  ChevronRight,
-  Award,
-  Star,
-  UserX,
-  AlertTriangle,
-  Trash2,
-  Edit,
-  Check,
-  Trophy,
-  ArrowRight,
-  Zap // Import Zap directly from lucide-react
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Reservation, Highlight } from "@/context/ReservationContext";
+import { 
+  MapPin, 
+  Clock, 
+  Calendar, 
+  Users, 
+  Trophy, 
+  Star, 
+  AlertTriangle,
+  UserCheck,
+  UserX,
+  Edit,
+  Trash,
+  Send,
+  CheckCircle,
+  XCircle
+} from "lucide-react";
+import { Reservation, LineupPlayer, Highlight, useReservation } from "@/context/ReservationContext";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import SuspendPlayerForm from "./SuspendPlayerForm";
-import HighlightForm from "./HighlightForm";
-import CancelConfirmationDialog from "./CancelConfirmationDialog";
-import TransferReservationDialog from "./TransferReservationDialog";
-import { format, parseISO } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-
-// Define a Goal component since it's not available in lucide-react
-const Goal = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 6v12" />
-    <path d="M8 10h8" />
-  </svg>
-);
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GameDetailsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   reservation: Reservation;
-  isAdmin: boolean;
-  onStatusChange: (status: 'open' | 'full' | 'completed' | 'cancelled') => void;
+  isOpen: boolean;
+  onClose: () => void;
+  isAdmin?: boolean;
+  onStatusChange?: (status: 'open' | 'full' | 'completed' | 'cancelled') => void;
   currentUserId: string;
   actualMaxPlayers: number;
 }
 
-const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
-  open,
-  onOpenChange,
+type HighlightType = 'goal' | 'assist' | 'yellowCard' | 'redCard' | 'save' | 'other';
+
+const GameDetailsDialog = ({
   reservation,
-  isAdmin,
+  isOpen,
+  onClose,
+  isAdmin = false,
   onStatusChange,
   currentUserId,
   actualMaxPlayers
-}) => {
+}: GameDetailsDialogProps) => {
+  const [activeTab, setActiveTab] = useState("lineup");
   const { toast } = useToast();
-  const [isPlayerSuspensionOpen, setIsPlayerSuspensionOpen] = useState(false);
-  const [isHighlightFormOpen, setIsHighlightFormOpen] = useState(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [highlights, setHighlights] = useState<Highlight[]>(reservation.highlights || []);
-  const [finalScore, setFinalScore] = useState<{home: number, away: number}>({home: 0, away: 0});
-  const [mvp, setMvp] = useState<string>("");
-  const [showScoreInput, setShowScoreInput] = useState(false);
-  const [waitingListNotified, setWaitingListNotified] = useState<string[]>([]);
-
-  // Initialize final score from reservation if available
-  useEffect(() => {
-    if (reservation.finalScore) {
-      setFinalScore(reservation.finalScore);
-    }
-    if (reservation.mvp) {
-      setMvp(reservation.mvp);
-    }
-  }, [reservation]);
-
-  const handleOpenSuspendPlayer = (playerId: string) => {
-    setSelectedPlayerId(playerId);
-    setIsPlayerSuspensionOpen(true);
-  };
-
-  const handlePlayerSuspension = (playerId: string, reason: string) => {
-    // Implement suspension logic here
-    toast({
-      title: "Player Suspended",
-      description: `Player ${playerId} has been suspended for: ${reason}`,
-    });
-    setIsPlayerSuspensionOpen(false);
-  };
-
-  const handleRemovePlayer = (playerId: string) => {
-    // Implement remove player logic here
-    toast({
-      title: "Player Removed",
-      description: `Player ${playerId} has been removed from the game.`,
-    });
-  };
-
-  const handleCancelReservation = () => {
-    // Implement cancel reservation logic here
-    onStatusChange('cancelled');
-    toast({
-      title: "Reservation Cancelled",
-      description: "This reservation has been cancelled.",
-    });
-    onOpenChange(false);
-  };
-
-  const handleTransferReservation = (newReservationId: string) => {
-    // Implement transfer reservation logic here
-    toast({
-      title: "Reservation Transferred",
-      description: `Reservation has been transferred to ${newReservationId}.`,
-    });
-    setIsTransferDialogOpen(false);
-    onOpenChange(false);
-  };
-
-  const handleAddHighlight = (data: Highlight) => {
-    const newHighlight = {
-      ...data,
-      id: Date.now().toString(),
-    };
-    setHighlights([...highlights, newHighlight]);
-    toast({
-      title: "Highlight Added",
-      description: "The game highlight has been recorded.",
-    });
-    setIsHighlightFormOpen(false);
-  };
-
-  const handleCompleteGame = () => {
-    setShowScoreInput(true);
-  };
-
-  const handleSaveGameResult = () => {
-    // Save final score and MVP
-    onStatusChange('completed');
-    toast({
-      title: "Game Completed",
-      description: `Final score: ${finalScore.home}-${finalScore.away}, MVP: ${mvp || 'Not selected'}`,
-    });
-    setShowScoreInput(false);
-  };
-
-  const handleNotifyWaitingList = (playerId: string) => {
-    if (!waitingListNotified.includes(playerId)) {
-      setWaitingListNotified([...waitingListNotified, playerId]);
+  const { updateReservationStatus, addHighlight, deleteHighlight, editReservation } = useReservation();
+  
+  // States for delete confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showSuspendConfirmation, setShowSuspendConfirmation] = useState(false);
+  const [playerToSuspend, setPlayerToSuspend] = useState<LineupPlayer | null>(null);
+  const [showNotifyConfirmation, setShowNotifyConfirmation] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  
+  // States for transferring to past games
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [finalScore, setFinalScore] = useState("");
+  const [mvpPlayerId, setMvpPlayerId] = useState("");
+  
+  // States for adding highlights
+  const [newHighlight, setNewHighlight] = useState<{
+    type: HighlightType;
+    minute: number;
+    playerId: string;
+    description: string;
+  }>({
+    type: 'goal',
+    minute: 1,
+    playerId: '',
+    description: ''
+  });
+  
+  // Format date for display
+  const formattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
+  
+  // Handle highlight deletion
+  const handleDeleteHighlight = (highlightId: number) => {
+    if (isAdmin) {
+      deleteHighlight(reservation.id, highlightId);
       toast({
-        title: "Player Notified",
-        description: `Player ${playerId} has been notified of an open spot.`,
+        title: "Highlight Deleted",
+        description: "The highlight has been removed",
       });
     }
   };
-
-  const isPastGame = reservation.status === 'completed' || new Date(reservation.date) < new Date();
-  const formattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
-
-  // Filter highlights by type to show statistics
-  const goals = highlights.filter(h => h.type === 'goal');
-  const assists = highlights.filter(h => h.type === 'assist');
-  const yellowCards = highlights.filter(h => h.type === 'yellowCard');
-  const redCards = highlights.filter(h => h.type === 'redCard');
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px]">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">
-            {isPastGame ? "Game Details" : "Game Management"}
-          </h2>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-            <X className="h-4 w-4" />
+  
+  // Handle highlight addition
+  const handleAddHighlight = () => {
+    if (!newHighlight.playerId) {
+      toast({
+        title: "Player Required",
+        description: "Please select a player for this highlight",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Find player name from lineup
+    const player = reservation.lineup.find(p => p.userId === newHighlight.playerId);
+    if (!player) {
+      toast({
+        title: "Invalid Player",
+        description: "Selected player not found in lineup",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addHighlight(reservation.id, {
+      type: newHighlight.type,
+      minute: newHighlight.minute,
+      playerId: newHighlight.playerId,
+      playerName: player.playerName || `Player ${newHighlight.playerId.substring(0, 4)}`,
+      description: newHighlight.description
+    });
+    
+    // Reset form
+    setNewHighlight({
+      type: 'goal',
+      minute: 1,
+      playerId: '',
+      description: ''
+    });
+    
+    toast({
+      title: "Highlight Added",
+      description: "New highlight has been added to the game",
+    });
+  };
+  
+  // Handle reservation deletion (for admins)
+  const handleDeleteReservation = () => {
+    if (isAdmin) {
+      // Here we would delete the reservation
+      // For now we just close and show a toast
+      setShowDeleteConfirmation(false);
+      onClose();
+      
+      toast({
+        title: "Reservation Deleted",
+        description: "Players have been notified by email",
+      });
+    }
+  };
+  
+  // Handle player suspension (for admins)
+  const handleSuspendPlayer = () => {
+    if (isAdmin && playerToSuspend) {
+      // In a real application, you would update the player's status in the database
+      // For now we just show a toast notification
+      setShowSuspendConfirmation(false);
+      
+      toast({
+        title: "Player Suspended",
+        description: `${playerToSuspend.playerName} has been suspended and removed from this game`,
+      });
+    }
+  };
+  
+  // Handle notification to players (for admins)
+  const handleNotifyPlayers = () => {
+    if (isAdmin && notificationMessage) {
+      // In a real application, you would send emails to all players
+      // For now we just show a toast notification
+      setShowNotifyConfirmation(false);
+      setNotificationMessage("");
+      
+      toast({
+        title: "Notification Sent",
+        description: "All players have been notified by email",
+      });
+    }
+  };
+  
+  // Handle transferring to past games (for admins)
+  const handleTransferToPast = () => {
+    if (isAdmin) {
+      if (!finalScore) {
+        toast({
+          title: "Final Score Required",
+          description: "Please enter the final score",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update the reservation status and add final score
+      editReservation(reservation.id, {
+        status: 'completed',
+        finalScore: finalScore,
+        mvpPlayerId: mvpPlayerId || undefined
+      });
+      
+      setShowTransferDialog(false);
+      onClose();
+      
+      toast({
+        title: "Game Completed",
+        description: "The game has been moved to past games",
+      });
+    }
+  };
+  
+  // Find MVP player name
+  const getMvpPlayerName = () => {
+    if (!reservation.mvpPlayerId) return 'None selected';
+    
+    const mvpPlayer = reservation.lineup.find(p => p.userId === reservation.mvpPlayerId);
+    return mvpPlayer ? mvpPlayer.playerName || 'Unknown Player' : 'Unknown Player';
+  };
+  
+  // Check if a user is the current user
+  const isCurrentUser = (userId: string) => {
+    return userId === currentUserId;
+  };
+  
+  // Admin action buttons
+  const renderAdminActions = () => {
+    if (!isAdmin) return null;
+    
+    return (
+      <div className="flex flex-col space-y-2 mt-4">
+        <div className="flex justify-between space-x-2">
+          <Button
+            onClick={() => setShowDeleteConfirmation(true)}
+            variant="destructive"
+            size="sm"
+            className="flex-1"
+          >
+            <Trash className="h-4 w-4 mr-1.5" />
+            Delete Reservation
+          </Button>
+          
+          <Button
+            onClick={() => setShowNotifyConfirmation(true)}
+            variant="outline"
+            size="sm"
+            className="flex-1"
+          >
+            <Send className="h-4 w-4 mr-1.5" />
+            Notify Players
           </Button>
         </div>
+        
+        <div className="flex justify-between space-x-2">
+          <Button
+            onClick={() => {/* Navigate to edit page */}}
+            variant="outline"
+            size="sm"
+            className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+          >
+            <Edit className="h-4 w-4 mr-1.5" />
+            Edit Reservation
+          </Button>
+          
+          {reservation.status !== 'completed' && (
+            <Button
+              onClick={() => setShowTransferDialog(true)}
+              variant="outline"
+              size="sm"
+              className="flex-1 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600"
+            >
+              <CheckCircle className="h-4 w-4 mr-1.5" />
+              Complete & Transfer
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
-        <Separator className="my-4" />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column: Game Info */}
-          <div>
-            {reservation.imageUrl && (
-              <div className="aspect-video rounded-lg overflow-hidden mb-4">
-                <img 
-                  src={reservation.imageUrl} 
-                  alt={reservation.pitchName} 
-                  className="object-cover w-full h-full"
-                />
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {reservation.title || reservation.pitchName}
+            </DialogTitle>
+            <DialogDescription>
+              <div className="flex items-center mt-2">
+                <MapPin className="h-4 w-4 text-gray-500 mr-1.5" />
+                <span className="text-gray-700 dark:text-gray-300">{reservation.location}</span>
               </div>
-            )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+              <div>
+                <p className="text-sm font-medium">Date</p>
+                <p className="text-sm text-gray-500">{formattedDate}</p>
+              </div>
+            </div>
             
-            <div className="flex items-center space-x-2 mb-3">
-              <CalendarDays className="h-5 w-5 text-gray-500" />
-              <span>{formattedDate}</span>
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 text-gray-500 mr-2" />
+              <div>
+                <p className="text-sm font-medium">Time</p>
+                <p className="text-sm text-gray-500">{reservation.time}</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 mb-3">
-              <Clock className="h-5 w-5 text-gray-500" />
-              <span>{reservation.time}</span>
+            
+            <div className="flex items-center">
+              <Users className="h-4 w-4 text-gray-500 mr-2" />
+              <div>
+                <p className="text-sm font-medium">Players</p>
+                <p className="text-sm text-gray-500">{reservation.playersJoined}/{actualMaxPlayers}</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 mb-3">
-              <MapPin className="h-5 w-5 text-gray-500" />
-              <span>{reservation.location}</span>
-            </div>
-            <div className="flex items-center space-x-2 mb-3">
-              <Users className="h-5 w-5 text-gray-500" />
-              <span>
-                {reservation.playersJoined} / {actualMaxPlayers} Players
-              </span>
-            </div>
+          </div>
 
-            {reservation.finalScore && (
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mb-3 text-center">
-                <div className="text-sm text-gray-500 mb-1">Final Score</div>
-                <div className="text-2xl font-bold">
-                  {reservation.finalScore.home} - {reservation.finalScore.away}
+          {reservation.status === 'completed' && (
+            <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-md font-medium text-blue-700 dark:text-blue-400">Final Score</h3>
+                  <p className="text-xl font-bold text-blue-800 dark:text-blue-300">{reservation.finalScore}</p>
                 </div>
-              </div>
-            )}
-
-            {reservation.mvp && (
-              <div className="flex items-center space-x-2 mb-3">
-                <Trophy className="h-5 w-5 text-amber-500" />
-                <span>MVP: {reservation.mvp}</span>
-              </div>
-            )}
-
-            <Separator className="my-4" />
-
-            <h3 className="text-md font-semibold mb-2">Players Joined</h3>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
-              {reservation.lineup.map((player) => (
-                <div key={player.userId} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${player.playerName}`} />
-                      <AvatarFallback>{player.playerName?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <span>{player.playerName}</span>
+                
+                {reservation.mvpPlayerId && (
+                  <div className="text-right">
+                    <h3 className="text-md font-medium text-amber-700 dark:text-amber-400">MVP</h3>
+                    <p className="text-md font-semibold text-amber-800 dark:text-amber-300">{getMvpPlayerName()}</p>
                   </div>
-                  {isAdmin && !isPastGame && (
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleOpenSuspendPlayer(player.userId)}
-                      >
-                        <UserX className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleRemovePlayer(player.userId)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                )}
+              </div>
             </div>
+          )}
 
-            {/* Waiting list section */}
-            {reservation.waitingList && reservation.waitingList.length > 0 && (
-              <>
-                <h3 className="text-md font-semibold mt-4 mb-2">Waiting List</h3>
-                <div className="space-y-3">
-                  {reservation.waitingList.map((playerId) => (
-                    <div key={playerId} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${playerId}`} />
-                          <AvatarFallback>{playerId?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span>{playerId}</span>
+          <Tabs defaultValue="lineup" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="lineup">
+                <Users className="h-4 w-4 mr-2" />
+                Players
+              </TabsTrigger>
+              <TabsTrigger value="highlights">
+                <Star className="h-4 w-4 mr-2" />
+                Highlights
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Players Tab */}
+            <TabsContent value="lineup" className="h-[300px] overflow-y-auto">
+              {reservation.lineup.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-10 w-10 mx-auto text-gray-400" />
+                  <p className="mt-2 text-gray-500">No players have joined this game yet</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player</TableHead>
+                      <TableHead>Status</TableHead>
+                      {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reservation.lineup.map((player) => (
+                      <TableRow key={player.userId}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarFallback>
+                                {player.playerName?.charAt(0) || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className={isCurrentUser(player.userId) ? "font-semibold text-teal-600" : ""}>
+                              {player.playerName || `Player ${player.userId.substring(0, 4)}`}
+                              {isCurrentUser(player.userId) && " (You)"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={player.status === 'joined' ? "default" : "secondary"}>
+                            {player.status === 'joined' ? 'Joined' : player.status === 'left' ? 'Left' : 'Invited'}
+                          </Badge>
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setPlayerToSuspend(player);
+                                setShowSuspendConfirmation(true);
+                              }}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              
+              {/* Waiting List Section */}
+              {reservation.waitingList.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center mb-2">
+                    <AlertTriangle className="h-4 w-4 mr-1.5" />
+                    Waiting List ({reservation.waitingList.length})
+                  </h3>
+                  <ul className="space-y-1 text-sm">
+                    {reservation.waitingList.map((userId, index) => (
+                      <li key={userId} className="text-gray-600 dark:text-gray-400">
+                        {index + 1}. Player {userId.substring(0, 4)}
+                        {isCurrentUser(userId) && " (You)"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </TabsContent>
+            
+            {/* Highlights Tab */}
+            <TabsContent value="highlights" className="h-[300px] overflow-y-auto">
+              {/* Current Highlights List */}
+              {reservation.highlights.length === 0 ? (
+                <div className="text-center py-8">
+                  <Trophy className="h-10 w-10 mx-auto text-gray-400" />
+                  <p className="mt-2 text-gray-500">No highlights recorded for this game yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reservation.highlights.map((highlight) => (
+                    <div 
+                      key={highlight.id} 
+                      className="p-3 border rounded-md flex justify-between items-start"
+                    >
+                      <div>
+                        <div className="flex items-center">
+                          <Badge variant={
+                            highlight.type === 'goal' ? "default" : 
+                            highlight.type === 'assist' ? "outline" : 
+                            highlight.type === 'yellowCard' ? "secondary" : 
+                            highlight.type === 'redCard' ? "destructive" : "outline"
+                          }>
+                            {highlight.type === 'goal' ? 'Goal' : 
+                             highlight.type === 'assist' ? 'Assist' : 
+                             highlight.type === 'yellowCard' ? 'Yellow Card' : 
+                             highlight.type === 'redCard' ? 'Red Card' : 
+                             highlight.type === 'save' ? 'Save' : 'Highlight'}
+                          </Badge>
+                          <span className="ml-2 text-sm font-medium">{highlight.playerName}</span>
+                          <span className="ml-2 text-xs text-gray-500">{highlight.minute}'</span>
+                        </div>
+                        {highlight.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {highlight.description}
+                          </p>
+                        )}
                       </div>
-                      {isAdmin && !isPastGame && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleNotifyWaitingList(playerId)}
-                          disabled={waitingListNotified.includes(playerId)}
+                      {isAdmin && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDeleteHighlight(highlight.id)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
                         >
-                          {waitingListNotified.includes(playerId) ? (
-                            <>
-                              <Check className="h-4 w-4 mr-1" /> Notified
-                            </>
-                          ) : (
-                            "Notify"
-                          )}
+                          <Trash className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
                   ))}
                 </div>
-              </>
-            )}
-          </div>
-
-          {/* Right Column: Game Management or Details */}
-          <div>
-            {!isPastGame && isAdmin && !showScoreInput && (
-              <>
-                <h3 className="text-md font-semibold mb-2">Game Management</h3>
-                <div className="space-y-3">
-                  <Button onClick={() => setIsHighlightFormOpen(true)} className="w-full">
-                    Add Highlight
-                  </Button>
-                  <Button 
-                    onClick={handleCompleteGame} 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    Complete Game
-                  </Button>
-                  <Button onClick={() => setIsTransferDialogOpen(true)} className="w-full">
-                    Transfer Reservation
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setIsCancelDialogOpen(true)}
-                    className="w-full"
-                  >
-                    Cancel Game
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {showScoreInput && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Complete Game</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2 items-center">
-                    <div className="space-y-1">
-                      <Label htmlFor="homeScore">Home</Label>
-                      <Input 
-                        id="homeScore" 
-                        type="number" 
-                        value={finalScore.home}
-                        onChange={(e) => setFinalScore({...finalScore, home: parseInt(e.target.value) || 0})}
-                        min="0"
-                      />
-                    </div>
-                    <div className="flex justify-center items-center text-xl font-bold">
-                      vs
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="awayScore">Away</Label>
-                      <Input 
-                        id="awayScore" 
-                        type="number" 
-                        value={finalScore.away}
-                        onChange={(e) => setFinalScore({...finalScore, away: parseInt(e.target.value) || 0})}
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label htmlFor="mvp">MVP Player</Label>
-                    <Input 
-                      id="mvp" 
-                      type="text" 
-                      value={mvp}
-                      onChange={(e) => setMvp(e.target.value)}
-                      placeholder="Enter MVP player name"
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setShowScoreInput(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSaveGameResult}>
-                      Save Result
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Separator className="my-4" />
-
-            <h3 className="text-md font-semibold mb-2">Game Highlights</h3>
-            
-            {/* Game statistics */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded text-center">
-                <div className="text-green-600 dark:text-green-400 flex justify-center mb-1">
-                  <Goal className="h-5 w-5" />
-                </div>
-                <div className="text-lg font-bold">{goals.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Goals</div>
-              </div>
-              
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-center">
-                <div className="text-blue-600 dark:text-blue-400 flex justify-center mb-1">
-                  <Zap className="h-5 w-5" />
-                </div>
-                <div className="text-lg font-bold">{assists.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Assists</div>
-              </div>
-              
-              <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded text-center">
-                <div className="text-yellow-600 dark:text-yellow-400 flex justify-center mb-1">
-                  <Award className="h-5 w-5" />
-                </div>
-                <div className="text-lg font-bold">{yellowCards.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Yellow</div>
-              </div>
-              
-              <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded text-center">
-                <div className="text-red-600 dark:text-red-400 flex justify-center mb-1">
-                  <Star className="h-5 w-5" />
-                </div>
-                <div className="text-lg font-bold">{redCards.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Red</div>
-              </div>
-            </div>
-            
-            {/* Highlight list */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {highlights.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No highlights recorded yet
-                </div>
-              ) : (
-                highlights.map((highlight) => (
-                  <div 
-                    key={highlight.id} 
-                    className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center"
-                  >
-                    <div className="mr-3">
-                      {highlight.type === 'goal' && <Goal className="h-5 w-5 text-green-500" />}
-                      {highlight.type === 'assist' && <Zap className="h-5 w-5 text-blue-500" />}
-                      {highlight.type === 'yellowCard' && <Award className="h-5 w-5 text-yellow-500" />}
-                      {highlight.type === 'redCard' && <Star className="h-5 w-5 text-red-500" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <span className="font-medium">
-                          {highlight.playerId} 
-                          {highlight.type === 'goal' && highlight.assistPlayerId && 
-                            <span className="font-normal text-sm"> (assist: {highlight.assistPlayerId})</span>
-                          }
-                        </span>
-                        {highlight.isPenalty && (
-                          <Badge variant="outline" className="ml-2">Penalty</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {highlight.minute}' - {highlight.description}
-                      </div>
-                    </div>
-                    {isAdmin && (
-                      <Button variant="ghost" size="icon" className="ml-2">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))
               )}
+              
+              {/* Add Highlight Form (Admins only) */}
+              {isAdmin && (reservation.status === 'completed' || true) && (
+                <div className="mt-4 p-3 border rounded-md">
+                  <h3 className="text-sm font-medium mb-2">Add New Highlight</h3>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Type</label>
+                        <Select 
+                          value={newHighlight.type} 
+                          onValueChange={(value) => setNewHighlight({
+                            ...newHighlight, 
+                            type: value as HighlightType
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="goal">Goal</SelectItem>
+                            <SelectItem value="assist">Assist</SelectItem>
+                            <SelectItem value="yellowCard">Yellow Card</SelectItem>
+                            <SelectItem value="redCard">Red Card</SelectItem>
+                            <SelectItem value="save">Save</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Minute</label>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="90" 
+                          value={newHighlight.minute} 
+                          onChange={(e) => setNewHighlight({
+                            ...newHighlight, 
+                            minute: parseInt(e.target.value) || 1
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Player</label>
+                      <Select 
+                        value={newHighlight.playerId} 
+                        onValueChange={(value) => setNewHighlight({
+                          ...newHighlight, 
+                          playerId: value
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select player" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {reservation.lineup.map((player) => (
+                            <SelectItem key={player.userId} value={player.userId}>
+                              {player.playerName || `Player ${player.userId.substring(0, 4)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Description (optional)</label>
+                      <Textarea 
+                        placeholder="Describe the highlight..." 
+                        value={newHighlight.description}
+                        onChange={(e) => setNewHighlight({
+                          ...newHighlight, 
+                          description: e.target.value
+                        })}
+                        className="resize-none"
+                        rows={2}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddHighlight}
+                      size="sm"
+                      className="w-full"
+                    >
+                      Add Highlight
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+          
+          {/* Admin Actions Section */}
+          {renderAdminActions()}
+          
+          <DialogFooter>
+            {!isAdmin && reservation.status === 'open' && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 italic mr-auto">
+                Note: Players can join or leave games up to 2 hours before start time.
+              </p>
+            )}
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this reservation? All players will be notified by email.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteReservation} className="bg-red-600 text-white hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Suspend Player Dialog */}
+      <AlertDialog open={showSuspendConfirmation} onOpenChange={setShowSuspendConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend Player</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to suspend {playerToSuspend?.playerName || 'this player'}?
+              They will be removed from this game and restricted from joining future games.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSuspendPlayer} className="bg-red-600 text-white hover:bg-red-700">
+              Suspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Notify Players Dialog */}
+      <AlertDialog open={showNotifyConfirmation} onOpenChange={setShowNotifyConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Notify Players</AlertDialogTitle>
+            <AlertDialogDescription>
+              Send a notification to all players in this game. This will be delivered via email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Type your message here..."
+              value={notificationMessage}
+              onChange={(e) => setNotificationMessage(e.target.value)}
+              className="w-full resize-none"
+              rows={4}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNotifyPlayers} disabled={!notificationMessage.trim()}>
+              Send Notification
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Transfer to Past Games Dialog */}
+      <AlertDialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Game</AlertDialogTitle>
+            <AlertDialogDescription>
+              Complete this game and move it to past games. Add the final score and other details.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Final Score</label>
+              <Input
+                placeholder="e.g., 3-2"
+                value={finalScore}
+                onChange={(e) => setFinalScore(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">MVP (Optional)</label>
+              <Select
+                value={mvpPlayerId}
+                onValueChange={setMvpPlayerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select MVP player" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No MVP selected</SelectItem>
+                  {reservation.lineup.map((player) => (
+                    <SelectItem key={player.userId} value={player.userId}>
+                      {player.playerName || `Player ${player.userId.substring(0, 4)}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
-
-        {/* Highlight Form Dialog */}
-        <HighlightForm
-          open={isHighlightFormOpen}
-          onOpenChange={setIsHighlightFormOpen}
-          onClose={() => setIsHighlightFormOpen(false)}
-          onSubmit={handleAddHighlight}
-          reservationId={reservation.id}
-        />
-
-        {/* Suspend Player Dialog */}
-        <SuspendPlayerForm
-          open={isPlayerSuspensionOpen}
-          onOpenChange={setIsPlayerSuspensionOpen}
-          playerId={selectedPlayerId}
-          onSuspend={handlePlayerSuspension}
-        />
-
-        {/* Cancel Confirmation Dialog */}
-        <CancelConfirmationDialog
-          open={isCancelDialogOpen}
-          onOpenChange={setIsCancelDialogOpen}
-          onConfirm={handleCancelReservation}
-          pitchName={reservation.pitchName}
-          date={formattedDate}
-          time={reservation.time}
-        />
-
-        {/* Transfer Reservation Dialog */}
-        <TransferReservationDialog
-          open={isTransferDialogOpen}
-          onOpenChange={setIsTransferDialogOpen}
-          onConfirm={handleTransferReservation}
-        />
-      </DialogContent>
-    </Dialog>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTransferToPast}>
+              Complete & Transfer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

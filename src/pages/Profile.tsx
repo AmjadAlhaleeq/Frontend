@@ -1,519 +1,502 @@
-
 import React, { useState, useEffect } from "react";
-import {
-  ArrowRight,
-  Trophy,
-  Calendar,
-  User,
-  Settings,
-  LogOut,
-  Mail,
-  Phone,
-  MapPin,
-  Check,
-  Edit,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { User, Shield, Edit } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useReservation, UserStats } from "@/context/ReservationContext";
-import PlayerReservations from "@/components/profile/PlayerReservations";
 import { useToast } from "@/hooks/use-toast";
-import { Switch } from "@/components/ui/switch";
+import { UserStats, useReservation } from "@/context/ReservationContext";
+import PlayerStats from "@/components/profile/PlayerStats";
+import PlayerReservations from "@/components/profile/PlayerReservations";
+import PlayerGameCards from "@/components/profile/PlayerGameCards";
+import ProfileEditor from "@/components/profile/ProfileEditor";
+import AuthForm from "@/components/auth/AuthForm";
 
+/**
+ * Profile page showing user information, statistics, reservations, and authentication.
+ * Includes authentication flow and enhanced profile editing.
+ */
 const Profile = () => {
   const navigate = useNavigate();
-  const [editMode, setEditMode] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [selectedTab, setSelectedTab] = useState("profile");
-  const { getUserStats } = useReservation();
-  const { toast } = useToast(); // Fixed: correct usage of useToast hook
-  
+  const { toast } = useToast();
+  const { getUserStats, reservations } = useReservation();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    gender?: string;
+    age?: string;
+    city?: string;
+    favoritePosition?: string;
+    phoneNumber?: string;
+    email: string;
+    role: "player" | "admin";
+    avatarUrl?: string;
+  } | null>(null);
+
+  // Check if the user is logged in on page load
   useEffect(() => {
-    // Get user from localStorage
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        setUser(userData);
-      } catch (e) {
-        console.error("Failed to parse user data", e);
-        navigate("/");
+        setUserProfile(userData);
+        setIsLoggedIn(true);
+        
+        // Also set user role in localStorage for other components to use
+        localStorage.setItem("userRole", userData.role);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("userRole");
       }
-    } else {
-      navigate("/");
     }
-  }, [navigate]);
+  }, []);
 
-  if (!user) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="py-10 text-center">
-            <p>Loading user data...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Get user stats
-  const stats = getUserStats(user.id);
-
-  // Ensure stats has all required properties 
-  const userStats: UserStats = {
-    gamesPlayed: stats.gamesPlayed || 0,
-    goals: stats.goals || stats.goalsScored || 0, 
-    assists: stats.assists || 0,
-    cleansheets: stats.cleansheets || 0,
-    mvps: stats.mvps || 0,
-    yellowCards: stats.yellowCards || 0,
-    redCards: stats.redCards || 0,
-    matches: stats.matches || stats.gamesPlayed || 0,  // Alias for backwards compatibility
-    wins: stats.wins || Math.floor((stats.matches || stats.gamesPlayed || 0) * 0.6), // Estimated if not available
-    tackles: stats.tackles || Math.floor((stats.matches || stats.gamesPlayed || 0) * 2) // Estimated if not available
+  // Mock login functionality (should connect to backend in real app)
+  const handleLogin = (data: { email: string; password: string }) => {
+    setIsLoading(true);
+    console.info("Attempting login with:", JSON.stringify(data, null, 2));
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Demo accounts (in real app, this would be authenticated against backend)
+      if (data.email === "admin@example.com" && data.password === "admin123") {
+        const userData = {
+          id: "admin1",
+          firstName: "Admin",
+          lastName: "User",
+          email: data.email,
+          role: "admin" as const,
+          avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
+        };
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+        localStorage.setItem("userRole", userData.role);
+        localStorage.setItem("isLoggedIn", "true");
+        setUserProfile(userData);
+        setIsLoggedIn(true);
+        toast({
+          title: "Welcome Admin!",
+          description: "You have successfully logged in as an admin.",
+        });
+      } else if (data.email === "player@example.com" && data.password === "player123") {
+        const userData = {
+          id: "user1",
+          firstName: "John",
+          lastName: "Player",
+          email: data.email,
+          gender: "male",
+          age: "28",
+          city: "New York",
+          favoritePosition: "midfielder",
+          phoneNumber: "+1 (555) 123-4567",
+          role: "player" as const,
+          avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=player",
+        };
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+        localStorage.setItem("userRole", userData.role);
+        localStorage.setItem("isLoggedIn", "true");
+        setUserProfile(userData);
+        setIsLoggedIn(true);
+        toast({
+          title: "Welcome Back!",
+          description: "You have successfully logged in.",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        });
+      }
+      setIsLoading(false);
+    }, 1000);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("userRole");
-    navigate("/");
+  // Mock registration functionality (should connect to backend in real app)
+  const handleRegister = (data: {
+    name: string;
+    email: string;
+    password: string;
+  }) => {
+    setIsLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Parse name into first and last name
+      const nameParts = data.name.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      // Create new user account (in real app, this would be stored in database)
+      const userData = {
+        id: `user${Date.now()}`,
+        firstName,
+        lastName,
+        email: data.email,
+        role: "player" as const,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name.replace(/\s+/g, '')}`,
+      };
+      
+      localStorage.setItem("currentUser", JSON.stringify(userData));
+      localStorage.setItem("userRole", userData.role);
+      localStorage.setItem("isLoggedIn", "true");
+      setUserProfile(userData);
+      setIsLoggedIn(true);
+      
+      toast({
+        title: "Account Created",
+        description: "Your account has been successfully created.",
+      });
+      
+      setIsLoading(false);
+    }, 1500);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditMode(false);
-    toast({
-      title: "Profile updated", 
-      description: "Your profile has been updated successfully."
-    });
+  // Handle saving profile changes
+  const handleSaveProfile = (updatedProfile: any) => {
+    if (userProfile) {
+      const newProfile = {
+        ...userProfile,
+        ...updatedProfile
+      };
+      setUserProfile(newProfile);
+      localStorage.setItem("currentUser", JSON.stringify(newProfile));
+      
+      // Dispatch event to notify other components about profile update
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      
+      setIsEditingProfile(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully."
+      });
+    }
   };
 
-  const formatDateString = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  // Handle navigation to reservations page
+  const handleNavigateToReservations = () => {
+    navigate('/reservations');
   };
+
+  // Get user stats if logged in - Fix type issues
+  const userStats = userProfile 
+    ? getUserStats(userProfile.id)
+    : {
+        matches: 0,
+        wins: 0,
+        goals: 0,
+        assists: 0,
+        cleansheets: 0,
+        tackles: 0,
+        yellowCards: 0,
+        redCards: 0,
+        mvps: 0,
+        gamesPlayed: 0,
+        goalsScored: 0
+      };
+      
+  // Display username formatted nicely
+  const displayName = userProfile?.firstName 
+    ? `${userProfile.firstName} ${userProfile.lastName}`
+    : (userProfile?.role ? (userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)) : "User");
+    
+  // Avatar fallback text
+  const avatarFallback = userProfile?.firstName 
+    ? userProfile.firstName.charAt(0).toUpperCase() + (userProfile.lastName ? userProfile.lastName.charAt(0).toUpperCase() : '')
+    : (userProfile?.role ? userProfile.role.charAt(0).toUpperCase() : "U");
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column: User Profile */}
-        <div className="md:col-span-1 space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">Profile</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
-                  onClick={() => setEditMode(!editMode)}
-                >
-                  {editMode ? (
-                    <Check className="h-4 w-4 mr-1" />
-                  ) : (
-                    <Edit className="h-4 w-4 mr-1" />
-                  )}
-                  {editMode ? "Save" : "Edit"}
-                </Button>
-              </div>
-              <CardDescription>Manage your account details</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {editMode ? (
-                <form onSubmit={handleSaveProfile} className="space-y-4">
-                  <div className="flex justify-center mb-4">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                          alt={user.name}
-                        />
-                        <AvatarFallback>
-                          {user.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button
-                        size="sm"
-                        className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Change avatar</span>
-                      </Button>
-                    </div>
-                  </div>
+    <div className="container mx-auto px-4 py-8">
+      {!isLoggedIn ? (
+        // Authentication Form when not logged in
+        <div className="max-w-md mx-auto py-10">
+          <h1 className="text-3xl font-bold text-center mb-6 text-teal-700 dark:text-teal-400">
+            Account Access
+          </h1>
+          <AuthForm
+            onLogin={handleLogin}
+            onRegister={handleRegister}
+            isLoading={isLoading}
+          />
+          <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-500 mb-1">Demo Accounts</h3>
+            <div className="text-xs space-y-1 text-yellow-700 dark:text-yellow-400">
+              <p><strong>Admin:</strong> admin@example.com / admin123</p>
+              <p><strong>Player:</strong> player@example.com / player123</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Profile UI when logged in
+        <>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <h1 className="text-3xl font-bold text-teal-700 dark:text-teal-400">My Profile</h1>
+          </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      defaultValue={user.name}
-                      placeholder="Your full name"
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* User info card */}
+            <Card className="lg:col-span-1 max-w-md mx-auto lg:mx-0 w-full">
+              <CardHeader className="flex flex-col items-center text-center">
+                {isEditingProfile ? (
+                  <div className="w-full mb-4">
+                    <ProfileEditor
+                      currentUserDetails={userProfile}
+                      onSave={handleSaveProfile}
+                      onCancel={() => setIsEditingProfile(false)}
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      defaultValue={user.email}
-                      placeholder="Your email address"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      defaultValue={user.phone || ""}
-                      placeholder="Your phone number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      defaultValue={user.location || ""}
-                      placeholder="Your location"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Preferred Position</Label>
-                    <RadioGroup
-                      defaultValue={user.position || "midfielder"}
-                      className="grid grid-cols-2 gap-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value="goalkeeper"
-                          id="goalkeeper"
-                        />
-                        <Label htmlFor="goalkeeper">Goalkeeper</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value="defender"
-                          id="defender"
-                        />
-                        <Label htmlFor="defender">Defender</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value="midfielder"
-                          id="midfielder"
-                        />
-                        <Label htmlFor="midfielder">Midfielder</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem
-                          value="forward"
-                          id="forward"
-                        />
-                        <Label htmlFor="forward">Forward</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    Save Changes
-                  </Button>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex flex-col items-center">
+                ) : (
+                  <>
                     <Avatar className="h-24 w-24 mb-4">
-                      <AvatarImage
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                        alt={user.name}
-                      />
-                      <AvatarFallback>
-                        {user.name?.charAt(0) || "U"}
-                      </AvatarFallback>
+                      <AvatarImage src={userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${userProfile?.firstName}+${userProfile?.lastName}&background=random`} alt={displayName} />
+                      <AvatarFallback className="text-lg">{avatarFallback}</AvatarFallback>
                     </Avatar>
-                    <h3 className="text-xl font-medium">{user.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Joined {formatDateString(user.joinedAt || new Date().toISOString())}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3 text-sm">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {user.email}
+                    
+                    <CardTitle className="text-2xl text-teal-700 dark:text-teal-400">
+                      {displayName}
+                    </CardTitle>
+                    
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {userProfile?.email || ''}
+                    </div>
+                    
+                    <div className="mt-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        userProfile?.role === "admin"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                      }`}>
+                        {userProfile?.role === "admin" ? (
+                          <>
+                            <Shield className="h-3 w-3 mr-1" />
+                            Admin
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-3 w-3 mr-1" />
+                            Player
+                          </>
+                        )}
                       </span>
                     </div>
-                    {user.phone && (
-                      <div className="flex items-center space-x-3 text-sm">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {user.phone}
-                        </span>
+                    
+                    {userProfile?.role === "player" && (
+                      <div className="grid grid-cols-2 gap-4 w-full mt-4 text-sm">
+                        {userProfile.age && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Age</span>
+                            <p className="font-medium">{userProfile.age}</p>
+                          </div>
+                        )}
+                        {userProfile.city && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">City</span>
+                            <p className="font-medium">{userProfile.city}</p>
+                          </div>
+                        )}
+                        {userProfile.favoritePosition && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Position</span>
+                            <p className="font-medium capitalize">{userProfile.favoritePosition}</p>
+                          </div>
+                        )}
+                        {userProfile.phoneNumber && (
+                          <div className="text-left">
+                            <span className="text-gray-500 dark:text-gray-400">Phone</span>
+                            <p className="font-medium">{userProfile.phoneNumber}</p>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {user.location && (
-                      <div className="flex items-center space-x-3 text-sm">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {user.location}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Preferred Position</h4>
-                    <div className="inline-block bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm">
-                      {user.position || "Midfielder"}
+                    
+                    {/* Edit profile button */}
+                    <div className="w-full mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setIsEditingProfile(true)}
+                        className="w-full mt-2 text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" /> Log Out
-                    </Button>
-                  </div>
-                </div>
+                  </>
+                )}
+              </CardHeader>
+              
+              {userProfile?.role === "player" && !isEditingProfile && (
+                <CardContent>
+                  <Tabs 
+                    defaultValue="overview" 
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="settings">Settings</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="overview" className="space-y-4 mt-4">
+                      <div>
+                        <h3 className="text-sm font-medium mb-2">Account Summary</h3>
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Member Since</span>
+                            <span className="font-medium">May 2025</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Games Played</span>
+                            <span className="font-medium">{userStats.matches}</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Win Rate</span>
+                            <span className="font-medium">
+                              {userStats.matches > 0 
+                                ? `${Math.round((userStats.wins / userStats.matches) * 100)}%` 
+                                : '0%'}
+                            </span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Goals</span>
+                            <span className="font-medium">{userStats.goals}</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">MVP Awards</span>
+                            <span className="font-medium">{userStats.mvps}</span>
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      {/* Player badges section */}
+                      <div>
+                        <h3 className="text-sm font-medium mb-2">Badges</h3>
+                        <div className="grid grid-cols-3 gap-2">
+                          {userStats.goals >= 5 && (
+                            <div className="flex flex-col items-center p-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">
+                              <span className="text-lg">⚽</span>
+                              <span className="text-xs mt-1">Scorer</span>
+                            </div>
+                          )}
+                          {userStats.assists >= 3 && (
+                            <div className="flex flex-col items-center p-2 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                              <span className="text-lg">🅰️</span>
+                              <span className="text-xs mt-1">Playmaker</span>
+                            </div>
+                          )}
+                          {userStats.mvps >= 2 && (
+                            <div className="flex flex-col items-center p-2 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
+                              <span className="text-lg">🏆</span>
+                              <span className="text-xs mt-1">MVP</span>
+                            </div>
+                          )}
+                          {userStats.cleansheets >= 2 && (
+                            <div className="flex flex-col items-center p-2 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                              <span className="text-lg">🧤</span>
+                              <span className="text-xs mt-1">Keeper</span>
+                            </div>
+                          )}
+                          {userStats.tackles >= 10 && (
+                            <div className="flex flex-col items-center p-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-full">
+                              <span className="text-lg">🛡️</span>
+                              <span className="text-xs mt-1">Defender</span>
+                            </div>
+                          )}
+                          {userStats.matches >= 10 && (
+                            <div className="flex flex-col items-center p-2 bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300 rounded-full">
+                              <span className="text-lg">🏃</span>
+                              <span className="text-xs mt-1">Regular</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="settings" className="space-y-4 mt-4">
+                      <div>
+                        <h3 className="text-sm font-medium mb-2">Account Settings</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          Manage your account preferences and settings.
+                        </p>
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Email Notifications</span>
+                            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded">
+                              Coming Soon
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Change Password</span>
+                            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded">
+                              Coming Soon
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Dark Mode</span>
+                            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded">
+                              Coming Soon
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
               )}
-            </CardContent>
-          </Card>
+            </Card>
+            
+            {/* Main content area */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Player Overview Cards for quick navigation */}
+              {userProfile && userProfile.role === "player" && (
+                <PlayerGameCards 
+                  reservations={reservations}
+                  userId={userProfile.id}
+                />
+              )}
+              
+              {/* User Stats - only show for players */}
+              {userProfile && userProfile.role === "player" && <PlayerStats stats={userStats} />}
 
-          {/* Stats Summary Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Player Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                    {userStats.gamesPlayed}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Games Played
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {userStats.wins}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Wins ({userStats.wins && userStats.gamesPlayed ? Math.round((userStats.wins / userStats.gamesPlayed) * 100) : 0}%)
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {userStats.goals}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Goals</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {userStats.assists}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Assists
-                  </p>
-                </div>
+              {/* My Reservations */}
+              {userProfile && <PlayerReservations userId={userProfile.id} />}
+              
+              {/* Logout Button */}
+              <div className="flex justify-end mt-8">
+                <Button
+                  onClick={() => {
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('currentUser');
+                    setIsLoggedIn(false);
+                    setUserProfile(null);
+                    toast({
+                      title: "Logged Out",
+                      description: "You have been successfully logged out."
+                    });
+                    navigate('/');
+                  }}
+                  variant="outline"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10"
+                >
+                  Logout
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column: Reservations & Activity */}
-        <div className="md:col-span-2">
-          <Card className="h-full">
-            <CardHeader>
-              <Tabs
-                value={selectedTab}
-                onValueChange={setSelectedTab}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="profile">My Activity</TabsTrigger>
-                  <TabsTrigger value="settings">
-                    Account Settings
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent>
-              {selectedTab === "profile" && (
-                <div className="space-y-6">
-                  <PlayerReservations userId={user.id} />
-
-                  <div className="pt-4">
-                    <h3 className="text-lg font-medium mb-3">
-                      Recent Activity
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
-                            <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <span>
-                            <strong>Achievement unlocked:</strong> Scored{" "}
-                            {userStats.goals} goals
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date().toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
-                            <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <span>
-                            <strong>Game joined:</strong> City Center Pitch
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date(
-                            Date.now() - 2 * 24 * 60 * 60 * 1000
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="bg-teal-100 dark:bg-teal-900/30 p-2 rounded-full">
-                            <User className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                          </div>
-                          <span>
-                            <strong>Profile updated:</strong> Changed position to{" "}
-                            {user.position || "Midfielder"}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date(
-                            Date.now() - 7 * 24 * 60 * 60 * 1000
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selectedTab === "settings" && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">
-                      Account Settings
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md">
-                        <div>
-                          <p className="font-medium">Email Notifications</p>
-                          <p className="text-sm text-gray-500">
-                            Receive emails about game updates
-                          </p>
-                        </div>
-                        <Switch checked={true} />
-                      </div>
-                      <div className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md">
-                        <div>
-                          <p className="font-medium">Privacy Settings</p>
-                          <p className="text-sm text-gray-500">
-                            Manage who can see your profile
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          Configure
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md">
-                        <div>
-                          <p className="font-medium">Change Password</p>
-                          <p className="text-sm text-gray-500">
-                            Update your account password
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          Update
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pt-4">
-                    <h3 className="text-lg font-medium mb-4">
-                      Danger Zone
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 border border-red-200 dark:border-red-900/30 rounded-md bg-red-50 dark:bg-red-900/10">
-                        <div>
-                          <p className="font-medium">Deactivate Account</p>
-                          <p className="text-sm text-gray-500">
-                            Temporarily disable your account
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          Deactivate
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center p-3 border border-red-200 dark:border-red-900/30 rounded-md bg-red-50 dark:bg-red-900/10">
-                        <div>
-                          <p className="font-medium">Delete Account</p>
-                          <p className="text-sm text-gray-500">
-                            Permanently delete your account and all data
-                          </p>
-                        </div>
-                        <Button variant="destructive" size="sm">
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
-};
-
-// Add missing component for compilation
-const Switch = ({ checked }: { checked: boolean }) => {
-  return (
-    <div 
-      className={`relative h-6 w-11 rounded-full transition-colors ${checked ? 'bg-teal-600' : 'bg-gray-300'}`}
-    >
-      <div 
-        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : ''}`}
-      />
-    </div>
-  );
-};
-
-const toast = {
-  title: '',
-  description: '',
 };
 
 export default Profile;

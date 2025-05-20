@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +64,6 @@ const Reservations = () => {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAddReservationOpen, setIsAddReservationOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState("upcoming");
   
@@ -240,6 +238,17 @@ const Reservations = () => {
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+      {/* Page Header and Admin's Add Reservation Button */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Reservations</h1>
+          <p className="text-sm text-muted-foreground dark:text-gray-400 mt-1">
+            Book and manage your football pitch reservations.
+          </p>
+        </div>
+        {userRole === 'admin' && <AddReservationDialog />}
+      </div>
+
       {/* Main layout: Calendar on left, Tabs for Upcoming/Past games on right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Left Column: Calendar */}
@@ -249,15 +258,6 @@ const Reservations = () => {
             onDateChange={setCurrentDate}
             hasReservations={checkHasReservationsOnDate}
           />
-          
-          {userRole === 'admin' && (
-            <div className="mt-4">
-              <AddReservationDialog 
-                open={isAddReservationOpen}
-                onOpenChange={setIsAddReservationOpen}
-              />
-            </div>
-          )}
         </div>
 
         {/* Right Column: Tabs for Upcoming and Past Games */}
@@ -436,8 +436,8 @@ const Reservations = () => {
       {selectedGameForDetails && (
         <GameDetailsDialog
           reservation={selectedGameForDetails}
-          open={isGameDetailsDialogOpen}
-          onOpenChange={setIsGameDetailsDialogOpen}
+          isOpen={isGameDetailsDialogOpen}
+          onClose={() => setIsGameDetailsDialogOpen(false)}
           isAdmin={userRole === 'admin'}
           onStatusChange={(status) => {
             if (userRole === 'admin' && selectedGameForDetails) {

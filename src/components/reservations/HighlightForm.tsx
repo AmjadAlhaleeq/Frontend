@@ -1,236 +1,166 @@
 
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Highlight } from "@/context/ReservationContext";
+import { toast } from "@/hooks/use-toast";
 
-// Define a Goal icon component
-const Goal = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 6v12" />
-    <path d="M8 10h8" />
-  </svg>
-);
-
-// Define a Zap icon component (already imported from lucide-react)
-import { Zap, Award, Star } from "lucide-react";
-
-export interface HighlightFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (highlight: Highlight) => void;
+interface HighlightFormProps {
   reservationId: number;
-  onClose?: () => void;
+  onSave: (highlight: Highlight) => void;
+  onCancel: () => void;
 }
 
-const HighlightForm: React.FC<HighlightFormProps> = ({
-  open,
-  onOpenChange,
-  onSubmit,
-  reservationId,
-  onClose
-}) => {
-  const [formState, setFormState] = useState({
-    type: "goal",
-    playerId: "",
-    assistPlayerId: "",
-    minute: "",
-    description: "",
-    isPenalty: false,
-  });
+/**
+ * HighlightForm component for adding match highlights
+ * Allows admin to select highlight type, player from the game lineup, minute, and add description
+ */
+const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) => {
+  const [highlightType, setHighlightType] = useState<HighlightType>("goal");
+  const [playerId, setPlayerId] = useState<string>("");
+  const [playerName, setPlayerName] = useState<string>("");
+  const [minute, setMinute] = useState<string>("1");
+  const [description, setDescription] = useState<string>("");
+  const [availablePlayers, setAvailablePlayers] = useState<{id: string, name: string}[]>([]);
+  
+  const { reservations } = useReservation();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormState((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  // Load players who participated in this game
+  useEffect(() => {
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (reservation && reservation.lineup) {
+      // Extract player names and IDs from lineup
+      const players = reservation.lineup
+        .filter(player => player.status === 'joined' && player.playerName)
+        .map(player => ({
+          id: player.userId,
+          name: player.playerName || `Player ${player.userId}`
+        }));
+      
+      setAvailablePlayers(players);
+      // Set default player if available
+      if (players.length > 0) {
+        setPlayerId(players[0].id);
+        setPlayerName(players[0].name);
+      }
+    }
+  }, [reservationId, reservations]);
 
-  const handleSelectChange = (value: string) => {
-    setFormState((prev) => ({
-      ...prev,
-      type: value,
-    }));
-  };
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormState((prev) => ({
-      ...prev,
-      isPenalty: checked,
-    }));
+  // Update player name when player ID changes
+  const handlePlayerChange = (selectedPlayerId: string) => {
+    setPlayerId(selectedPlayerId);
+    const player = availablePlayers.find(p => p.id === selectedPlayerId);
+    if (player) {
+      setPlayerName(player.name);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newHighlight: Highlight = {
-      id: Date.now().toString(),
-      reservationId,
-      type: formState.type as "goal" | "assist" | "yellowCard" | "redCard",
-      playerId: formState.playerId,
-      assistPlayerId: formState.type === "goal" ? formState.assistPlayerId : undefined,
-      minute: formState.minute,
-      description: formState.description,
-      isPenalty: formState.type === "goal" && formState.isPenalty,
+    // Validate minute is a number between 1-90
+    const minuteNum = parseInt(minute);
+    if (isNaN(minuteNum) || minuteNum < 1 || minuteNum > 90) {
+      toast({
+        title: "Invalid minute",
+        description: "Please enter a valid minute between 1 and 90",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create highlight object
+    const highlight: Highlight = {
+      id: Date.now(),
+      type: highlightType,
+      playerName: playerName,
+      minute: minuteNum,
+      description: description,
+      playerId: playerId
     };
     
-    onSubmit(newHighlight);
-    
-    // Reset form
-    setFormState({
-      type: "goal",
-      playerId: "",
-      assistPlayerId: "",
-      minute: "",
-      description: "",
-      isPenalty: false,
-    });
-    
-    // Close dialog
-    if (onClose) {
-      onClose();
-    } else {
-      onOpenChange(false);
-    }
+    onSave(highlight);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Game Highlight</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Type</Label>
-            <Select
-              value={formState.type}
-              onValueChange={handleSelectChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select highlight type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="goal">
-                  <div className="flex items-center">
-                    <Goal className="h-4 w-4 mr-2 text-green-500" />
-                    <span>Goal</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="assist">
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-blue-500" />
-                    <span>Assist</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="yellowCard">
-                  <div className="flex items-center">
-                    <Award className="h-4 w-4 mr-2 text-amber-500" />
-                    <span>Yellow Card</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="redCard">
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 mr-2 text-red-500" />
-                    <span>Red Card</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="playerId">Player</Label>
-            <Input
-              id="playerId"
-              name="playerId"
-              value={formState.playerId}
-              onChange={handleInputChange}
-              placeholder="Enter player name/ID"
-              required
-            />
-          </div>
-
-          {formState.type === "goal" && (
-            <div className="space-y-2">
-              <Label htmlFor="assistPlayerId">Assist By (Optional)</Label>
-              <Input
-                id="assistPlayerId"
-                name="assistPlayerId"
-                value={formState.assistPlayerId}
-                onChange={handleInputChange}
-                placeholder="Enter assisting player name/ID"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="minute">Minute</Label>
-            <Input
-              id="minute"
-              name="minute"
-              value={formState.minute}
-              onChange={handleInputChange}
-              placeholder="Enter minute (e.g. 32)"
-              required
-            />
-          </div>
-
-          {formState.type === "goal" && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isPenalty"
-                checked={formState.isPenalty}
-                onCheckedChange={handleCheckboxChange}
-              />
-              <Label htmlFor="isPenalty" className="text-sm font-normal">
-                Penalty Goal
-              </Label>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formState.description}
-              onChange={handleInputChange}
-              placeholder="Add details about this highlight..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button type="submit">Add Highlight</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Highlight Type</label>
+        <Select 
+          value={highlightType} 
+          onValueChange={(value: HighlightType) => setHighlightType(value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select highlight type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="goal">Goal</SelectItem>
+            <SelectItem value="assist">Assist</SelectItem>
+            <SelectItem value="yellowCard">Yellow Card</SelectItem>
+            <SelectItem value="redCard">Red Card</SelectItem>
+            <SelectItem value="save">Save</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Player</label>
+        {availablePlayers.length > 0 ? (
+          <Select 
+            value={playerId} 
+            onValueChange={handlePlayerChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select player" />
+            </SelectTrigger>
+            <SelectContent>
+              {availablePlayers.map((player) => (
+                <SelectItem key={player.id} value={player.id}>{player.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input 
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="No players found in the lineup"
+            disabled
+          />
+        )}
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Minute</label>
+        <Input 
+          type="number" 
+          min="1" 
+          max="90" 
+          value={minute}
+          onChange={(e) => setMinute(e.target.value)}
+          placeholder="Minute"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <Textarea 
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Add details about the highlight"
+          className="resize-none"
+        />
+      </div>
+      
+      <div className="flex justify-end space-x-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">Save Highlight</Button>
+      </div>
+    </form>
   );
 };
 

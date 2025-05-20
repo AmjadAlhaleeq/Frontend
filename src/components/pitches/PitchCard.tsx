@@ -38,7 +38,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
   
   // Sample gallery photos (would come from pitch.galleryImages in production)
   const galleryPhotos = [
-    pitch.image || pitch.imageUrl || '',
+    pitch.image,
     // These would be populated from actual gallery images in a real implementation
     "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
     "https://images.unsplash.com/photo-1518604666860-9ed391f76460?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
@@ -93,7 +93,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
       <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
         <div className="relative h-48 overflow-hidden group">
           <img
-            src={pitch.image || pitch.imageUrl || ''}
+            src={pitch.image}
             alt={pitch.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
             onClick={() => setShowGallery(true)}
@@ -163,7 +163,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
           <div className="flex items-center mb-3">
             <Users className="h-4 w-4 text-gray-500 mr-1" />
             <span className="text-sm text-gray-600 dark:text-gray-300">
-              {pitch.playersPerSide || 5} vs {pitch.playersPerSide || 5}
+              {pitch.playersPerSide} vs {pitch.playersPerSide}
             </span>
           </div>
 
