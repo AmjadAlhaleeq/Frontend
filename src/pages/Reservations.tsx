@@ -1,21 +1,17 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle,
-  // Clock, // Removed as Past Games tab is gone
   Users,
   Calendar as CalendarIcon,
   ArrowRight,
   ListFilter,
-  // Search, // Not used
-  // MapPin, // Not used
   XCircle,
+  Loader,
 } from "lucide-react";
-// Card, CardHeader, CardTitle, CardContent related to past summary removed
-// Tabs, TabsContent, TabsList, TabsTrigger - Tabs system will be simplified/removed
-// Table components for past games removed
 import { useToast } from "@/hooks/use-toast";
-// Badge removed if not used elsewhere after past games removal
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import AddReservationDialog from "@/components/reservations/AddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
@@ -40,14 +36,22 @@ const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
   }
 };
 
-
+/**
+ * Reservations Page Component
+ * Displays and manages game reservations
+ * 
+ * Features:
+ * - Filter reservations by date
+ * - Join or leave games
+ * - View game details
+ * - Admin controls for managing reservations
+ */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
-  // activeTab state removed as Past Games tab is gone
+  const [isLoading, setIsLoading] = useState(true);
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
@@ -80,13 +84,16 @@ const Reservations = () => {
     
     window.addEventListener('showGameDetails', handleShowGameDetails);
     
+    // Simulate API loading
+    setTimeout(() => setIsLoading(false), 800);
+    
     return () => {
       window.removeEventListener('showGameDetails', handleShowGameDetails);
     };
-  }, []); // reservations dependency removed as it might cause loop with game selection
+  }, []); 
 
   const {
-    reservations, // Kept for selectedGameForDetails listener
+    reservations,
     joinGame,
     cancelReservation,
     joinWaitingList,
@@ -95,6 +102,7 @@ const Reservations = () => {
     hasUserJoinedOnDate,
     getReservationsForDate,
     updateReservationStatus,
+    deleteReservation,
   } = useReservation();
 
   /**
@@ -106,7 +114,6 @@ const Reservations = () => {
     if (maxPlayers === 10) return 12;
     return maxPlayers + 2;
   };
-
 
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
@@ -123,10 +130,6 @@ const Reservations = () => {
     }
     return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
   }, [reservations, currentDate, getReservationsForDate]);
-
-  // pastReservations memo and logic removed
-
-  // handleViewGameDetails removed as ReservationCard click now handles it
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
     return getReservationsForDate(date).length > 0;
@@ -172,7 +175,6 @@ const Reservations = () => {
     leaveWaitingList(reservationId, currentUserId);
   };
 
-
   const upcomingGamesHeader = useMemo(() => {
     if (currentDate) {
       const formattedDate = format(currentDate, "MMM d, yyyy");
@@ -195,6 +197,16 @@ const Reservations = () => {
     }
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <Loader className="h-8 w-8 text-teal-500 animate-spin mb-4" />
+        <p className="text-muted-foreground">Loading reservations...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
       {/* Page Header */}
@@ -205,7 +217,11 @@ const Reservations = () => {
             Book and manage your football pitch reservations.
           </p>
         </div>
-        {userRole === 'admin' && <AddReservationDialog />}
+        {userRole === 'admin' && (
+          <div id="add-reservation-dialog-trigger">
+            <AddReservationDialog />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -218,7 +234,7 @@ const Reservations = () => {
           />
         </div>
 
-        {/* Right Column: Upcoming Games (Tabs system removed) */}
+        {/* Right Column: Upcoming Games */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between p-2 rounded-lg bg-gray-100 dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-teal-600 dark:text-teal-400 flex items-center">
@@ -243,16 +259,13 @@ const Reservations = () => {
               actionText={
                 currentDate 
                 ? "Clear Date Filter" 
-                : (userRole === 'admin' ? "Add New Reservation" : undefined) // For admin to add if no games
+                : (userRole === 'admin' ? "Add New Reservation" : undefined)
               }
               onActionClick={
                 currentDate 
                 ? () => setCurrentDate(undefined) 
                 : userRole === 'admin' ? () => { 
-                    // Logic to open AddReservationDialog if it were a controlled component
-                    // For now, admin sees the button at top of page. This could be a new AddReservationDialog trigger.
-                    // This is a placeholder if we want a direct action from empty state for admin.
-                    const addDialogButton = document.getElementById('add-reservation-dialog-trigger'); // Assuming AddReservationDialog has a button with this id
+                    const addDialogButton = document.getElementById('add-reservation-dialog-trigger')?.querySelector('button');
                     if (addDialogButton) addDialogButton.click();
                   }
                 : undefined
@@ -290,8 +303,8 @@ const Reservations = () => {
               ))}
             </>
           )}
-        </div> {/* End of lg:col-span-2 */}
-      </div> {/* End of grid */}
+        </div>
+      </div>
 
       {/* Dialog for Viewing Game Details */}
       {selectedGameForDetails && (

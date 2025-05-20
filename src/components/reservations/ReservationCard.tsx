@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
 import { format, parseISO } from 'date-fns';
-import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink } from "lucide-react";
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Reservation, useReservation } from "@/context/ReservationContext";
@@ -44,10 +45,11 @@ const ReservationCard = ({
   isAdmin = false
 }: ReservationCardProps) => {
   const { toast } = useToast();
-  const { updateReservationStatus } = useReservation();
+  const { updateReservationStatus, deleteReservation } = useReservation();
   const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
   const [isJoinConfirmOpen, setIsJoinConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // State for generic action confirmation
   const [actionConfirmState, setActionConfirmState] = useState<{
@@ -64,6 +66,12 @@ const ReservationCard = ({
   const actualMaxPlayers = reservation.maxPlayers;
   const maxWaitingList = 3;
   const isWaitingListFull = reservation.waitingList.length >= maxWaitingList;
+
+  // Calculate progress percentage for player count
+  const playerCountPercentage = Math.min(
+    (reservation.playersJoined / actualMaxPlayers) * 100,
+    100
+  );
 
   // Get image for reservation
   const reservationImage = reservation.imageUrl || `https://source.unsplash.com/400x200/?soccer,football,${reservation.pitchName.split(" ").join(",")}`;
@@ -123,6 +131,32 @@ const ReservationCard = ({
     });
   };
 
+  const handleDeleteReservation = () => {
+    if (!isAdmin) return;
+    
+    setActionConfirmState({
+      isOpen: true,
+      title: "Delete Reservation?",
+      description: "This will permanently delete the reservation and cannot be undone. All players will be removed.",
+      confirmText: "Yes, Delete",
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setActionConfirmState({ ...actionConfirmState, isOpen: false });
+        setIsDeleting(true);
+        
+        // Simulate API call
+        setTimeout(() => {
+          deleteReservation(reservation.id);
+          setIsDeleting(false);
+          toast({ 
+            title: "Reservation Deleted", 
+            description: `The reservation for "${reservation.title || reservation.pitchName}" has been deleted.` 
+          });
+        }, 1000);
+      }
+    });
+  };
+
   const handleCancelReservationAction = () => {
     confirmAndExecute(
       onCancelReservation,
@@ -156,10 +190,31 @@ const ReservationCard = ({
   };
 
   const renderActionButton = () => {
-    // Admin specific buttons are removed as card click opens manage dialog
     if (isAdmin && type === "upcoming") { 
-        // Admins don't join, they manage via card click. No specific button here unless new admin actions are needed.
-        return null; 
+        return (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteReservation();
+            }} 
+            className="w-full text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600"
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <Loader className="h-4 w-4 mr-1.5 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Delete Reservation
+              </>
+            )}
+          </Button>
+        );
     }
 
     if (isUserJoined) {
@@ -260,12 +315,29 @@ const ReservationCard = ({
                 <Clock className="h-4 w-4 text-gray-500 mr-1.5 flex-shrink-0" />
                 <span>{reservation.time}</span>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center col-span-2">
                 <Users className="h-4 w-4 text-gray-500 mr-1.5 flex-shrink-0" />
                 <span>
                   {reservation.playersJoined}/{actualMaxPlayers} players
                 </span>
               </div>
+            </div>
+            
+            {/* Player progress bar */}
+            <div className="pt-1">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className={`font-medium ${playerCountPercentage >= 75 ? 'text-amber-600' : 'text-teal-600'}`}>
+                  {playerCountPercentage === 100 ? 'Full!' : `${Math.round(playerCountPercentage)}% full`}
+                </span>
+                <span className="text-gray-500">
+                  {reservation.playersJoined} joined
+                </span>
+              </div>
+              <Progress 
+                value={playerCountPercentage} 
+                className="h-1.5" 
+                indicatorClassName={`${playerCountPercentage < 50 ? 'bg-teal-500' : playerCountPercentage < 75 ? 'bg-amber-500' : 'bg-red-500'}`}
+              />
             </div>
           </div>
 
@@ -286,10 +358,17 @@ const ReservationCard = ({
         isOpen={isGameDetailsOpen}
         onClose={() => setIsGameDetailsOpen(false)}
         isAdmin={isAdmin}
-        onStatusChange={() => {}} // Removed status change functionality
+        onStatusChange={(status) => {
+          if (isAdmin && reservation) {
+            updateReservationStatus(reservation.id, status);
+            toast({
+              title: "Status Updated",
+              description: `Reservation status changed to ${status}`
+            });
+          }
+        }}
         currentUserId={currentUserId}
         actualMaxPlayers={actualMaxPlayers}
-        showAdminControls={false} // Disable admin controls
       />
       
       <JoinGameConfirmationDialog

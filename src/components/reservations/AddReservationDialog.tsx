@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,20 +27,13 @@ import { Slider } from "@/components/ui/slider";
  * Form schema for reservation data validation
  */
 const formSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  pitchName: z.string().min(2, "Pitch name must be at least 2 characters"),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  time: z.string().min(1, "Please enter a time"),
-  location: z.string().min(2, "Location must be at least 2 characters"),
-  locationLink: z.string().optional(),
-  city: z.string().min(1, "City is required"),
-  price: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Price must be a non-negative number" }),
-  maxPlayers: z.string({
-    required_error: "Please select number of players",
-  }),
-  imageUrl: z.string().optional(),
+  title: z.string().min(3, { message: "Title must be at least 3 characters" }),
+  date: z.date({ required_error: "Date is required" }),
+  time: z.string().min(1, { message: "Time is required" }),
+  pitchName: z.string().min(1, { message: "Pitch is required" }),
+  maxPlayers: z.number().min(2, { message: "At least 2 players required" }).max(22, { message: "Maximum 22 players allowed" }),
+  price: z.number().nonnegative({ message: "Price cannot be negative" }),
+  description: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -280,20 +272,21 @@ const AddReservationDialog = () => {
                 control={form.control}
                 name="maxPlayers"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Max Players</FormLabel>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Maximum Number of Players</FormLabel>
                     <FormControl>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={field.value}
-                        onChange={field.onChange}
-                      >
-                        <option value="" disabled>Select size</option>
-                        <option value="10">5v5 (10 players)</option>
-                        <option value="14">7v7 (14 players)</option>
-                        <option value="22">11v11 (22 players)</option>
-                      </select>
+                      <Input 
+                        type="number"
+                        min={2}
+                        max={22}
+                        placeholder="Enter max players"
+                        {...field}
+                        onChange={e => field.onChange(parseInt(e.target.value) || 10)}
+                      />
                     </FormControl>
+                    <FormDescription>
+                      This is the total number of players allowed in the game
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

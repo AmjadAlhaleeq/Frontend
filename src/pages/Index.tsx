@@ -10,7 +10,6 @@ import AboutPage from "./AboutPage";
 import Faq from "./Faq";
 import Rules from "./Rules";
 import NotFound from "./NotFound";
-import PlayerLineup from "./PlayerLineup";
 import AddPitch from "./admin/AddPitch";
 import EditPitch from "./admin/EditPitch";
 import Layout from "@/components/layout/Layout";
@@ -56,13 +55,6 @@ const Index = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/rules" element={<Rules />} />
-        <Route path="/lineup" element={
-          <PlayerLineup 
-            maxPlayers={10} 
-            currentPlayers={0} 
-            onSelect={() => {}} 
-            onCancel={() => {}} 
-          />} />
         <Route path="/admin/add-pitch" element={<AddPitch />} />
         <Route path="/admin/edit-pitch/:id" element={<EditPitch />} />
         <Route path="*" element={<NotFound />} />

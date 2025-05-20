@@ -121,6 +121,8 @@ interface ReservationContextType {
   // Add new functions for highlight management
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
+  // Add new function to delete a reservation
+  deleteReservation: (id: number) => void;
 }
 
 // Create the context
@@ -628,30 +630,38 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }));
   };
 
+  // Delete a reservation (for admins)
+  const deleteReservation = (id: number) => {
+    setReservations(prev => prev.filter(reservation => reservation.id !== id));
+  };
+
   // Return provider with context value
+  const value = {
+    reservations, 
+    addReservation, 
+    joinGame,
+    cancelReservation,
+    updateReservationStatus,
+    isUserJoined,
+    joinWaitingList,
+    leaveWaitingList,
+    hasUserJoinedOnDate,
+    getReservationsForDate,
+    editReservation,
+    navigateToReservation,
+    pitches,
+    deletePitch,
+    addPitch,
+    updatePitch,
+    getUserStats,
+    suspendPlayer,
+    addHighlight,
+    deleteHighlight,
+    deleteReservation
+  };
+
   return (
-    <ReservationContext.Provider value={{ 
-      reservations, 
-      addReservation, 
-      joinGame,
-      cancelReservation,
-      updateReservationStatus,
-      isUserJoined,
-      joinWaitingList,
-      leaveWaitingList,
-      hasUserJoinedOnDate,
-      getReservationsForDate,
-      editReservation,
-      navigateToReservation,
-      pitches,
-      deletePitch,
-      addPitch,
-      updatePitch,
-      getUserStats,
-      suspendPlayer,
-      addHighlight,
-      deleteHighlight
-    }}>
+    <ReservationContext.Provider value={value}>
       {children}
     </ReservationContext.Provider>
   );

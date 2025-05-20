@@ -1,9 +1,9 @@
-
 import React, { useEffect } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { useLanguage } from '@/context/LanguageContext';
+import PageTransition from "../shared/PageTransition";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,9 +38,18 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   }, [language]);
   
   return (
-    <div className={`flex flex-col min-h-screen ${language === 'ar' ? 'font-arabic' : 'font-sans'}`}>
+    <div className="flex flex-col min-h-screen">
+      {/* Navbar */}
       <Navbar />
-      <main className="flex-grow">{children}</main>
+
+      {/* Main content */}
+      <main className="flex-grow container mx-auto px-4 py-6 md:px-6">
+        <PageTransition>
+          {children}
+        </PageTransition>
+      </main>
+
+      {/* Footer */}
       <Footer />
     </div>
   );
