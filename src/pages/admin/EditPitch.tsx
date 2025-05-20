@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,6 @@ const EditPitch = () => {
     description: "",
     price: "",
     facilities: [] as string[],
-    openingHours: "",
     highlights: []
   });
   
@@ -87,7 +85,6 @@ const EditPitch = () => {
           description: pitch.description || "",
           price: pitch.price?.toString() || "",
           facilities: pitch.facilities || [],
-          openingHours: pitch.openingHours || "",
           highlights: pitch.highlights || []
         });
       } else {
@@ -138,7 +135,7 @@ const EditPitch = () => {
           description: pitchData.description,
           price: Number(pitchData.price),
           facilities: pitchData.facilities,
-          openingHours: pitchData.openingHours || "9:00 AM - 10:00 PM",
+          openingHours: "9:00 AM - 10:00 PM", // Default value instead of from form
           highlights: pitchData.highlights || []
         });
         
@@ -285,7 +282,7 @@ const EditPitch = () => {
     description: pitchData.description || "Pitch description...",
     price: Number(pitchData.price) || 0,
     facilities: pitchData.facilities,
-    openingHours: pitchData.openingHours || "9:00 AM - 10:00 PM",
+    openingHours: "9:00 AM - 10:00 PM", // Default value
     highlights: pitchData.highlights || []
   };
 
@@ -429,17 +426,6 @@ const EditPitch = () => {
                     onChange={handleChange}
                     required
                     placeholder="e.g., 20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="openingHours" className="text-sm font-medium">Opening Hours</label>
-                  <Input
-                    id="openingHours"
-                    name="openingHours"
-                    value={pitchData.openingHours}
-                    onChange={handleChange}
-                    placeholder="e.g., 9:00 AM - 10:00 PM"
                   />
                 </div>
               </div>

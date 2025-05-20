@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Calendar, CalendarCheck, Loader } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Loader } from "lucide-react";
 import { useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
 import PlayerReservations from "@/components/profile/PlayerReservations";
@@ -13,15 +12,13 @@ import PlayerReservations from "@/components/profile/PlayerReservations";
  * 
  * Features:
  * - List of upcoming games the player has joined
- * - Cancel reservation functionality
+ * - Cancel reservation functionality with penalty warnings
  * - Integration with user profile data
  */
 const MyBookings = () => {
-  const [activeTab, setActiveTab] = useState("upcoming");
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
-  const { reservations } = useReservation();
 
   useEffect(() => {
     // Load user data from localStorage
@@ -82,40 +79,9 @@ const MyBookings = () => {
         <p className="text-muted-foreground">Manage your upcoming games and reservations</p>
       </header>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6 w-full sm:w-auto">
-          <TabsTrigger value="upcoming" className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2" />
-            <span>Upcoming Games</span>
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center">
-            <CalendarCheck className="h-4 w-4 mr-2" />
-            <span>Past Games</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upcoming" className="space-y-6">
-          <PlayerReservations userId={currentUser?.id || ""} />
-        </TabsContent>
-        
-        <TabsContent value="past">
-          <Card>
-            <CardHeader>
-              <CardTitle>Game History</CardTitle>
-              <CardDescription>Previous games you've participated in</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <CalendarCheck className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
-                <p className="text-muted-foreground">
-                  Game history feature will be available in the next update.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-6">
+        <PlayerReservations userId={currentUser?.id || ""} />
+      </div>
     </div>
   );
 };

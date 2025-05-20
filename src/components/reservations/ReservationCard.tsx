@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
-import { format, parseISO } from 'date-fns';
-import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
+import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban, Image } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ import { Reservation } from "@/context/ReservationContext";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 import SuspendPlayerDialog from "@/components/reservations/SuspendPlayerDialog";
 import { sendGameCancellationNotification, sendWaitingListNotification } from "@/utils/emailNotifications";
+import JoinGameConfirmationDialog from "./JoinGameConfirmationDialog";
+import LeaveGameDialog from "./LeaveGameDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -57,6 +60,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>("");
   const [selectedPlayerEmail, setSelectedPlayerEmail] = useState<string>("");
+  
+  // Dialog states
+  const [showJoinGameDialog, setShowJoinGameDialog] = useState(false);
+  const [showLeaveGameDialog, setShowLeaveGameDialog] = useState(false);
+  const [showJoinWaitlistDialog, setShowJoinWaitlistDialog] = useState(false);
+  const [showLeaveWaitlistDialog, setShowLeaveWaitlistDialog] = useState(false);
 
   // Format date with error handling
   const formatDate = (dateString: string) => {
@@ -65,6 +74,48 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     } catch (error) {
       console.error("Error parsing date:", error);
       return dateString;
+    }
+  };
+  
+  // Calculate if leaving game incurs a penalty (within 2 hours of start)
+  const isPenalty = () => {
+    try {
+      // Parse date and time
+      const gameDate = parseISO(reservation.date);
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
+      const now = new Date();
+      const hoursDifference = differenceInHours(gameDate, now);
+      
+      return hoursDifference < 2 && hoursDifference >= 0;
+    } catch (error) {
+      console.error("Error calculating penalty:", error);
+      return false;
+    }
+  };
+  
+  // Calculate time remaining until game
+  const getTimeToGame = () => {
+    try {
+      // Parse date and time
+      const gameDate = parseISO(reservation.date);
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
+      const now = new Date();
+      return formatDistanceToNow(gameDate);
+    } catch (error) {
+      console.error("Error calculating time to game:", error);
+      return "unknown time";
     }
   };
 
@@ -79,7 +130,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       return;
     }
 
+    // Show confirmation dialog
+    setShowJoinGameDialog(true);
+  };
+  
+  // Confirm joining game
+  const confirmJoinGame = async () => {
     setIsJoining(true);
+    setShowJoinGameDialog(false);
+    
     try {
       await onJoinGame();
       toast({
@@ -100,7 +159,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle leaving a game
   const handleCancelReservation = async () => {
+    // Show confirmation dialog with penalty warning if applicable
+    setShowLeaveGameDialog(true);
+  };
+  
+  // Confirm leaving game
+  const confirmLeaveGame = async () => {
     setIsLeaving(true);
+    setShowLeaveGameDialog(false);
+    
     try {
       await onCancelReservation();
       
@@ -148,7 +215,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle joining waiting list
   const handleJoinWaitingList = async () => {
+    // Show confirmation dialog
+    setShowJoinWaitlistDialog(true);
+  };
+  
+  // Confirm joining waitlist
+  const confirmJoinWaitlist = async () => {
     setIsWaitlistJoining(true);
+    setShowJoinWaitlistDialog(false);
+    
     try {
       await onJoinWaitingList();
       toast({
@@ -169,7 +244,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle leaving waiting list
   const handleLeaveWaitingList = async () => {
+    // Show confirmation dialog
+    setShowLeaveWaitlistDialog(true);
+  };
+  
+  // Confirm leaving waitlist
+  const confirmLeaveWaitlist = async () => {
     setIsWaitlistLeaving(true);
+    setShowLeaveWaitlistDialog(false);
+    
     try {
       await onLeaveWaitingList();
       toast({
@@ -190,6 +273,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Handle deleting a reservation (admin only)
   const handleDeleteReservation = async () => {
+    if (!onDeleteReservation) return;
+    
+    setShowDeleteDialog(true);
+  };
+  
+  // Confirm deleting reservation
+  const confirmDeleteReservation = async () => {
     if (!onDeleteReservation) return;
     
     setIsDeleting(true);
@@ -281,6 +371,17 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       
       <CardContent className="pb-2">
         <div className="space-y-3">
+          {/* Pitch image - added */}
+          {reservation.image && (
+            <div className="aspect-video w-full rounded-md overflow-hidden mb-3">
+              <img 
+                src={reservation.image} 
+                alt={reservation.title || reservation.pitchName}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
           <div className="flex items-center text-sm">
             <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
             <span>{reservation.time}</span>
@@ -453,24 +554,64 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </>
         )}
         
-        {isAdmin && onDeleteReservation && (
-          <Button 
-            variant="outline" 
-            className="w-full text-red-600 hover:text-red-700"
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Reservation
-          </Button>
+        {/* Admin actions button - added delete button */}
+        {isAdmin && (
+          <div className="flex gap-2 w-full">
+            <Button 
+              variant="default" 
+              className="flex-1 bg-teal-600 hover:bg-teal-700"
+              onClick={() => {
+                // Action for admin to view/manage game
+                // Implementation depends on your app's requirements
+              }}
+            >
+              Manage
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+              onClick={handleDeleteReservation}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
         )}
       </CardFooter>
+      
+      {/* Dialogs */}
+      <JoinGameConfirmationDialog 
+        isOpen={showJoinGameDialog}
+        onClose={() => setShowJoinGameDialog(false)}
+        onConfirm={confirmJoinGame}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
+      />
+      
+      <LeaveGameDialog 
+        isOpen={showLeaveGameDialog}
+        onClose={() => setShowLeaveGameDialog(false)}
+        onConfirm={confirmLeaveGame}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
+        isPenalty={isPenalty()}
+        timeToGame={getTimeToGame()}
+      />
       
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
         <DeleteConfirmationDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          onConfirm={handleDeleteReservation}
+          onConfirm={confirmDeleteReservation}
           itemName={reservation.title || reservation.pitchName}
           itemType="reservation"
         />

@@ -132,7 +132,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="mr-6 flex items-center space-x-2">
               <Logo />
-              <span className="font-bold inline-block">FootballApp</span>
+              <span className="font-bold inline-block sr-only">FootballApp</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -149,11 +149,7 @@ const Navbar = () => {
               <NavLink to="/leaderboards" className={getNavClassName}>
                 Leaderboards
               </NavLink>
-              {userRole === "admin" && (
-                <NavLink to="/admin/add-pitch" className={getNavClassName}>
-                  Add Pitch
-                </NavLink>
-              )}
+              {/* Only show Add Pitch in mobile menu for admin */}
             </nav>
           </div>
 
@@ -189,18 +185,30 @@ const Navbar = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer flex w-full items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/my-bookings" className="cursor-pointer flex w-full items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>My Bookings</span>
-                    </Link>
-                  </DropdownMenuItem>
+                  {userRole !== "admin" && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="cursor-pointer flex w-full items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-bookings" className="cursor-pointer flex w-full items-center">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          <span>My Bookings</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {userRole === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/add-pitch" className="cursor-pointer flex w-full items-center">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Add Pitch</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-red-600 focus:text-red-600"
@@ -275,7 +283,7 @@ const Navbar = () => {
                   >
                     Leaderboards
                   </NavLink>
-                  {isLoggedIn && (
+                  {isLoggedIn && userRole !== "admin" && (
                     <>
                       <NavLink
                         to="/profile"

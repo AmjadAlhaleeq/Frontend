@@ -1,12 +1,14 @@
+
 import React, { useState } from 'react';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
+import LeaveGameDialog from '../reservations/LeaveGameDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface PlayerReservationsProps {
   userId: string;
@@ -14,6 +16,9 @@ interface PlayerReservationsProps {
 
 const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   const { reservations, cancelReservation } = useReservation();
+  const { toast } = useToast();
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
   // Get user's reservations
   const userReservations = reservations.filter(res => 
@@ -39,9 +44,83 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
     }
   };
 
-  const handleCancelReservation = (reservationId: number) => {
-    if (window.confirm("Are you sure you want to leave this game?")) {
-      cancelReservation(reservationId, userId);
+  // Check if leaving game incurs a penalty (within 2 hours of start)
+  const isPenalty = (reservation: Reservation) => {
+    try {
+      // Parse date and time
+      const gameDate = parseISO(reservation.date);
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
+      const now = new Date();
+      const hoursDifference = differenceInHours(gameDate, now);
+      
+      return hoursDifference < 2 && hoursDifference >= 0;
+    } catch (error) {
+      console.error("Error calculating penalty:", error);
+      return false;
+    }
+  };
+  
+  // Calculate time remaining until game
+  const getTimeToGame = (reservation: Reservation) => {
+    try {
+      // Parse date and time
+      const gameDate = parseISO(reservation.date);
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
+      const now = new Date();
+      return formatDistanceToNow(gameDate);
+    } catch (error) {
+      console.error("Error calculating time to game:", error);
+      return "unknown time";
+    }
+  };
+
+  // Open leave game dialog
+  const handleCancelReservation = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setShowLeaveDialog(true);
+  };
+  
+  // Confirm leave game
+  const confirmLeaveGame = async () => {
+    if (!selectedReservation) return;
+    
+    try {
+      await cancelReservation(selectedReservation.id, userId);
+      setShowLeaveDialog(false);
+      
+      toast({
+        title: "Game cancelled",
+        description: "You've left the game successfully",
+      });
+      
+      // If there was a penalty, show additional warning
+      if (isPenalty(selectedReservation)) {
+        toast({
+          title: "Penalty Warning",
+          description: "Leaving a game less than 2 hours before start time may result in penalties.",
+          variant: "destructive",
+          duration: 6000,
+        });
+      }
+    } catch (error) {
+      console.error("Error leaving game:", error);
+      toast({
+        title: "Failed to leave",
+        description: "There was a problem cancelling your reservation",
+        variant: "destructive",
+      });
     }
   };
 
@@ -66,6 +145,17 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         </Badge>
       </div>
       
+      {/* Pitch image - added */}
+      {reservation.image && (
+        <div className="aspect-video w-full rounded-md overflow-hidden mb-3">
+          <img 
+            src={reservation.image} 
+            alt={reservation.title || reservation.pitchName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
       <div className="space-y-2 text-sm">
         <div className="flex items-center text-gray-600 dark:text-gray-400">
           <Calendar className="h-4 w-4 mr-2" />
@@ -83,14 +173,24 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
           <Users className="h-4 w-4 mr-2" />
           {reservation.playersJoined}/{reservation.maxPlayers} players
         </div>
+        
+        {isPenalty(reservation) && (
+          <div className="flex items-center text-amber-600 text-xs mt-1">
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+            <span>Leaving now will incur a penalty</span>
+          </div>
+        )}
       </div>
       
       <div className="mt-4 flex justify-end">
         <Button 
           variant="outline" 
           size="sm"
-          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-          onClick={() => handleCancelReservation(reservation.id)}
+          className={cn(
+            "text-red-500 hover:text-red-600 hover:bg-red-50",
+            isPenalty(reservation) && "border-amber-300 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+          )}
+          onClick={() => handleCancelReservation(reservation)}
         >
           Leave Game
         </Button>
@@ -132,6 +232,20 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
           </div>
         )}
       </CardContent>
+      
+      {/* Leave game confirmation dialog */}
+      {selectedReservation && (
+        <LeaveGameDialog
+          isOpen={showLeaveDialog}
+          onClose={() => setShowLeaveDialog(false)}
+          onConfirm={confirmLeaveGame}
+          gameName={selectedReservation.title || selectedReservation.pitchName}
+          gameDate={formatDate(selectedReservation.date)}
+          gameTime={selectedReservation.time}
+          isPenalty={isPenalty(selectedReservation)}
+          timeToGame={getTimeToGame(selectedReservation)}
+        />
+      )}
     </Card>
   );
 };
