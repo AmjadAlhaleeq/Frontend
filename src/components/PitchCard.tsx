@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, MapPin, Star, Users } from "lucide-react";
 import { useReservation } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
+// Separator removed as past reservations are removed
+// import { Separator } from "@/components/ui/separator";
 
 interface PitchCardProps {
   id: number;
@@ -30,15 +31,15 @@ const PitchCard: React.FC<PitchCardProps> = ({
   availability
 }) => {
   const [showReservations, setShowReservations] = useState(false);
-  const { reservations, navigateToReservation } = useReservation();
+  const { reservations } = useReservation(); // navigateToReservation removed if not used
   const navigate = useNavigate();
 
   // Filter reservations for this pitch
   const pitchReservations = reservations.filter(res => res.pitchName === name);
   const upcomingReservations = pitchReservations.filter(res => res.status === "open" || res.status === "full");
-  const pastReservations = pitchReservations.filter(res => res.status === "completed").slice(0, 3); // Only the last 3
+  // pastReservations removed
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => { // Added type for dateString
     return new Date(dateString).toLocaleDateString("en-US", {
       weekday: "short",
       month: "short", 
@@ -147,23 +148,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
               <p className="text-xs text-gray-500 italic p-2">No upcoming games at this pitch</p>
             )}
 
-            {pastReservations.length > 0 && (
-              <>
-                <Separator className="my-3" />
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Games</h4>
-                <div className="space-y-1">
-                  {pastReservations.map((res) => (
-                    <div 
-                      key={res.id} 
-                      className="flex justify-between items-center p-1.5 text-xs text-gray-500"
-                    >
-                      <div>{formatDate(res.date)}</div>
-                      <div>{res.playersJoined} players</div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            {/* PastReservations section removed */}
           </div>
         )}
       </CardContent>

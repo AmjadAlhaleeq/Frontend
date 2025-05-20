@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,14 +14,13 @@ interface PlayerReservationsProps {
 
 const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   const { reservations, cancelReservation } = useReservation();
-  const [activeTab, setActiveTab] = useState('upcoming');
-
+  
   // Get user's reservations
   const userReservations = reservations.filter(res => 
     res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined')
   );
 
-  // Split into upcoming and past
+  // Keep only upcoming
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -30,11 +28,6 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
     (res.status === 'open' || res.status === 'full') && 
     new Date(res.date) >= today
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const pastReservations = userReservations.filter(res => 
-    res.status === 'completed' || 
-    (new Date(res.date) < today && res.status !== 'cancelled')
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Format date for display
   const formatDate = (dateString: string): string => {
@@ -53,7 +46,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   };
 
   // Component for reservation card
-  const ReservationCard = ({ reservation }: { reservation: Reservation }) => (
+  const ReservationCardItem = ({ reservation }: { reservation: Reservation }) => (
     <div className="p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-medium text-teal-700 dark:text-teal-400">
@@ -66,9 +59,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
               ? "bg-green-500" 
               : reservation.status === 'full' 
               ? "bg-orange-500" 
-              : reservation.status === 'completed' 
-              ? "bg-blue-500" 
-              : "bg-gray-500"
+              : "bg-gray-500" // Simplified as past games are removed
           )}
         >
           {reservation.status}
@@ -94,41 +85,29 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         </div>
       </div>
       
-      {activeTab === 'upcoming' && (
-        <div className="mt-4 flex justify-end">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            onClick={() => handleCancelReservation(reservation.id)}
-          >
-            Leave Game
-          </Button>
-        </div>
-      )}
-      
-      {activeTab === 'past' && reservation.finalScore && (
-        <div className="mt-3 pt-3 border-t">
-          <p className="text-center font-medium">
-            Final Score: <span className="text-teal-600 dark:text-teal-400">{reservation.finalScore}</span>
-          </p>
-        </div>
-      )}
+      <div className="mt-4 flex justify-end">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+          onClick={() => handleCancelReservation(reservation.id)}
+        >
+          Leave Game
+        </Button>
+      </div>
     </div>
   );
 
-  const NoReservationsMessage = ({ type }: { type: string }) => (
+  const NoReservationsMessage = () => (
     <div className="p-8 text-center">
       <div className="inline-flex justify-center items-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 mb-4">
-        {type === 'upcoming' ? <Calendar className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
+        <Calendar className="h-6 w-6" />
       </div>
       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-        No {type} games
+        No upcoming games
       </h3>
       <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-        {type === 'upcoming' 
-          ? "You haven't joined any upcoming games. Check out available games in the Reservations page." 
-          : "You haven't played any games yet. After your first game, your history will appear here."}
+        You haven't joined any upcoming games. Check out available games in the Reservations page.
       </p>
     </div>
   );
@@ -136,48 +115,22 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl text-teal-700 dark:text-teal-400">My Games</CardTitle>
+        <CardTitle className="text-xl text-teal-700 dark:text-teal-400">My Upcoming Games</CardTitle>
         <CardDescription>
-          Your upcoming and past game reservations
+          Your upcoming game reservations
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <Tabs 
-          defaultValue="upcoming" 
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="upcoming">Upcoming Games</TabsTrigger>
-            <TabsTrigger value="past">Game History</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="upcoming">
-            {upcomingReservations.length === 0 ? (
-              <NoReservationsMessage type="upcoming" />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {upcomingReservations.map(reservation => (
-                  <ReservationCard key={reservation.id} reservation={reservation} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="past">
-            {pastReservations.length === 0 ? (
-              <NoReservationsMessage type="past" />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {pastReservations.map(reservation => (
-                  <ReservationCard key={reservation.id} reservation={reservation} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        {upcomingReservations.length === 0 ? (
+          <NoReservationsMessage />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {upcomingReservations.map(reservation => (
+              <ReservationCardItem key={reservation.id} reservation={reservation} />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

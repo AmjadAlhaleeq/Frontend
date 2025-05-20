@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { MapPin, Users, Trash2, Edit3, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { MapPin, Users, Trash2, Edit3, ChevronLeft, ChevronRight, X, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -11,7 +10,7 @@ interface PitchCardProps {
   pitch: Pitch;
   isAdmin: boolean;
   onViewDetails: () => void;
-  onBookPitch: () => void;
+  onBookPitch: () => void; // This prop remains but button is removed
   onEditClick: () => void;
   onDeleteClick: () => void;
 }
@@ -21,7 +20,7 @@ interface PitchCardProps {
  * @param pitch - Pitch data object
  * @param isAdmin - Boolean indicating if current user is admin
  * @param onViewDetails - Function to handle view details click
- * @param onBookPitch - Function to handle book pitch click
+ * @param onBookPitch - Function to handle book pitch click (button removed)
  * @param onEditClick - Function to handle edit click
  * @param onDeleteClick - Function to handle delete click
  */
@@ -29,7 +28,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
   isAdmin,
   onViewDetails,
-  onBookPitch,
+  onBookPitch, // Prop kept for potential future use or if other logic depends on it
   onEditClick,
   onDeleteClick,
 }) => {
@@ -46,7 +45,8 @@ const PitchCard: React.FC<PitchCardProps> = ({
   ];
   
   const getFeatureIcon = (feature: string) => {
-    switch (feature.toLowerCase()) {
+    const lowerFeature = feature.toLowerCase();
+    switch (lowerFeature) {
       case "indoor":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
@@ -72,7 +72,14 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </Badge>
         );
       default:
-        return <Badge variant="outline">{feature}</Badge>;
+        return (
+          <Badge variant="outline" className="flex items-center gap-1">
+             <span className="rounded-full bg-gray-100 dark:bg-gray-700 p-1">
+               <Tag size={12} className="text-gray-600 dark:text-gray-300" />
+             </span>
+            <span>{feature}</span>
+          </Badge>
+        );
     }
   };
   
@@ -84,7 +91,6 @@ const PitchCard: React.FC<PitchCardProps> = ({
     setCurrentPhotoIndex((prev) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length);
   };
   
-  // Make sure to handle potential undefined details
   const address = pitch.details?.address || pitch.location;
   const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 
@@ -176,15 +182,10 @@ const PitchCard: React.FC<PitchCardProps> = ({
 
         <CardFooter className="flex flex-col gap-2 pt-0 mt-auto">
           <div className="flex gap-2 w-full">
-            <Button variant="outline" onClick={onViewDetails} className="flex-1">
+            <Button variant="outline" onClick={onViewDetails} className="w-full">
               View Details
             </Button>
-            <Button
-              onClick={onBookPitch}
-              className="flex-1 bg-[#0F766E] hover:bg-[#0d6d66]"
-            >
-              Book Now
-            </Button>
+            {/* "Book Now" button removed */}
           </div>
           {isAdmin && (
             <div className="flex gap-2 w-full mt-2">

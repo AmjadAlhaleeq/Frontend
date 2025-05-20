@@ -69,19 +69,19 @@ const Footer = () => {
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
                 <span className="text-gray-600 dark:text-gray-400">
-                  info@bokit.com
+                  bookitandkickit@gmail.com
                 </span>
               </div>
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
                 <span className="text-gray-600 dark:text-gray-400">
-                  +1 (555) 123-4567
+                  00962795016133
                 </span>
               </div>
               <div className="flex items-start">
                 <MapPin className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
                 <span className="text-gray-600 dark:text-gray-400">
-                  123 Sports Lane, Football City
+                  Amman, Jordan
                 </span>
               </div>
             </div>
