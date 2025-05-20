@@ -23,10 +23,10 @@ import LoginDialog from "../auth/LoginDialog";
 import LogoutConfirmationDialog from "../shared/LogoutConfirmationDialog";
 import Logo from "../shared/Logo";
 import { useToast } from "@/hooks/use-toast";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
