@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 
 // Define HighlightType enum
 export type HighlightType = "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other";
@@ -333,17 +332,14 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // State to track suspended players
   const [suspendedPlayers, setSuspendedPlayers] = useState<{userId: string, until: Date, reason: string}[]>([]);
   
-  const navigate = useNavigate();
-
-  // Get stored user information on component mount
-  useEffect(() => {
-    // Check if user is logged in from localStorage
-    const userRole = localStorage.getItem('userRole');
-    if (userRole) {
-      // Auto navigate to home page if user is logged in
-      navigate('/');
-    }
-  }, [navigate]);
+  // Remove the useNavigate hook from here as it needs to be inside Router context
+  const navigateToReservation = (pitchName: string) => {
+    // Instead of using navigate, we'll create a function that can be used
+    // to pass the state when needed
+    window.history.pushState({ pitchFilter: pitchName }, '', '/reservations');
+    // Force navigation by changing the window location
+    window.location.href = '/reservations';
+  };
 
   // Add a new reservation
   const addReservation = (data: NewReservationData) => {
@@ -510,15 +506,6 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         ...data
       };
     }));
-  };
-
-  // Navigate to reservation page with pitch filter
-  const navigateToReservation = (pitchName: string) => {
-    navigate('/reservations', { 
-      state: { 
-        pitchFilter: pitchName 
-      } 
-    });
   };
   
   // Add a new pitch

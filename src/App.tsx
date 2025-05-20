@@ -8,6 +8,7 @@ import "@/lib/theme";
 
 import Index from "./pages/Index";
 import ScrollToTop from "./components/shared/ScrollToTop";
+import { ReservationProvider } from "./context/ReservationContext";
 
 // Initialize QueryClient for data fetching
 const queryClient = new QueryClient({
@@ -27,12 +28,14 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <BrowserRouter>
-        <ScrollToTop /> {/* Scroll to top on page change */}
-        <Toaster />
-        <Sonner />
-        <Index />
-      </BrowserRouter>
+      <ReservationProvider>
+        <BrowserRouter>
+          <ScrollToTop /> {/* Scroll to top on page change */}
+          <Toaster />
+          <Sonner />
+          <Index />
+        </BrowserRouter>
+      </ReservationProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
