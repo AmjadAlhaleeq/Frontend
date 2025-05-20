@@ -436,8 +436,8 @@ const Reservations = () => {
       {selectedGameForDetails && (
         <GameDetailsDialog
           reservation={selectedGameForDetails}
-          isOpen={isGameDetailsDialogOpen}
-          onClose={() => setIsGameDetailsDialogOpen(false)}
+          open={isGameDetailsDialogOpen}
+          onOpenChange={setIsGameDetailsDialogOpen}
           isAdmin={userRole === 'admin'}
           onStatusChange={(status) => {
             if (userRole === 'admin' && selectedGameForDetails) {

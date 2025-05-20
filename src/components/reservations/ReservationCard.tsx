@@ -535,8 +535,8 @@ const ReservationCard = ({
 
       <GameDetailsDialog 
         reservation={reservation}
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         isAdmin={isAdmin}
         onStatusChange={handleStatusChange}
         currentUserId={currentUserId}

@@ -1,52 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { demoReservations, demoPitches } from './demoData';
-import { toast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { games, pitches, generateRandomLineup, generateRandomHighlights } from './demoData';
 
-// Types
-export type Highlight = {
-  id: number;
-  type: HighlightType;
-  minute: number;
-  playerId: string;
-  playerName: string;
-  description?: string;
-  assistPlayerId?: string;
-  assistPlayerName?: string;
-  isPenalty?: boolean;
-};
-
-export type HighlightType = 'goal' | 'assist' | 'yellowCard' | 'redCard' | 'save' | 'other';
-
-export type LineupPlayer = {
-  userId: string;
-  playerName?: string;
-  status: 'joined' | 'left' | 'invited';
-};
-
-export type Reservation = {
-  id: number;
-  pitchName: string;
-  title?: string;
-  date: string;
-  time: string;
-  location: string;
-  status: 'open' | 'full' | 'completed' | 'cancelled';
-  maxPlayers: number;
-  playersJoined: number;
-  waitingList: string[];
-  price?: number;
-  finalScore?: string;
-  mvpPlayerId?: string;
-  lineup: LineupPlayer[];
-  highlights: Highlight[];
-  imageUrl?: string;
-};
-
-export type Pitch = {
+// Define types
+export interface Pitch {
   id: number;
   name: string;
   location: string;
-  image: string; // Added to fix PitchCard.tsx errors
   imageUrl?: string;
   availability?: string;
   hours?: string;
@@ -54,427 +13,366 @@ export type Pitch = {
   price?: number;
   description?: string;
   amenities?: string[];
-  playersPerSide?: number; // Added to fix PitchCard.tsx errors
-  features?: string[]; // Added to fix PitchCard.tsx errors
-  details?: { // Added to fix PitchCard.tsx errors
-    address?: string;
-  };
-  openingHours?: string;
-  surfaceType?: string;
-  pitchSize?: string;
-};
+  image?: string; // Added for compatibility
+}
 
-export type UserStats = {
+export interface Player {
+  userId: string;
+  playerName?: string;
+  position?: string;
+  avatarUrl?: string;
+}
+
+export interface Highlight {
+  id: string;
+  type: 'goal' | 'assist' | 'yellowCard' | 'redCard';
+  minute: number;
+  playerId: string;
+  assistPlayerId?: string;
+  description?: string;
+  isPenalty?: boolean;
+  timestamp?: string;
+  reservationId?: number;
+}
+
+export interface Reservation {
+  id: number;
+  date: string;
+  time: string;
+  pitchName: string;
+  location: string;
+  maxPlayers: number;
+  playersJoined: number;
+  status: 'open' | 'full' | 'completed' | 'cancelled';
+  price?: number;
+  title?: string;
+  lineup: Player[];
+  waitingList: string[];
+  imageUrl?: string;
+  highlights: Highlight[];
+  finalScore?: {
+    home: number;
+    away: number;
+  };
+  mvp?: string;
+}
+
+export interface UserStats {
   gamesPlayed: number;
-  goalsScored: number;
+  goals: number;
+  goalsScored?: number;
   assists: number;
   cleansheets: number;
   mvps: number;
-  yellowCards: number;
-  redCards: number;
-  matches?: number;
-  wins?: number;
-  goals?: number;
-  tackles?: number;
-};
-
-export type NewReservationData = Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>;
-
-interface ReservationContextType {
-  reservations: Reservation[];
-  pitches: Pitch[];
-  addReservation: (reservation: NewReservationData) => void;
-  joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
-  cancelReservation: (reservationId: number, userId: string) => void;
-  deleteReservation: (reservationId: number) => void;
-  updateReservationStatus: (reservationId: number, status: 'open' | 'full' | 'completed' | 'cancelled') => void;
-  addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
-  deleteHighlight: (reservationId: number, highlightId: number) => void;
-  editReservation: (reservationId: number, updates: Partial<Reservation>) => void;
-  isUserJoined: (reservationId: number, userId: string) => boolean;
-  hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
-  getReservationsForDate: (date: Date) => Reservation[];
-  joinWaitingList: (reservationId: number, userId: string) => void;
-  leaveWaitingList: (reservationId: number, userId: string) => void;
-  addPitch: (pitch: Omit<Pitch, 'id'>) => void;
-  editPitch: (pitchId: number, updates: Partial<Pitch>) => void;
-  deletePitch: (pitchId: number) => void;
-  navigateToReservation: (pitchName: string) => void;
-  removePlayerFromReservation: (reservationId: number, userId: string) => void;
-  notifyWaitingListPlayers: (reservationId: number) => void;
-  getUserStats: (userId: string) => UserStats; // Added to fix Profile.tsx error
+  yellowCards?: number;
+  redCards?: number;
 }
 
+export interface ReservationContextType {
+  reservations: Reservation[];
+  pitches: Pitch[];
+  addReservation: (newReservation: Omit<Reservation, 'id' | 'lineup' | 'waitingList' | 'highlights'>) => void;
+  joinGame: (reservationId: number, player?: Player, userId?: string) => void;
+  cancelReservation: (reservationId: number, userId: string) => void;
+  deleteReservation: (reservationId: number) => void;
+  updateReservation: (updatedReservation: Reservation) => void;
+  updateReservationStatus: (reservationId: number, status: 'open' | 'full' | 'completed' | 'cancelled') => void;
+  isUserJoined: (reservationId: number, userId: string) => boolean;
+  joinWaitingList: (reservationId: number, userId: string) => void;
+  leaveWaitingList: (reservationId: number, userId: string) => void;
+  addPitch: (newPitch: Omit<Pitch, 'id'>) => void;
+  updatePitch: (updatedPitch: Pitch) => void;
+  deletePitch: (pitchId: number) => void;
+  hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
+  getReservationsForDate: (date: Date) => Reservation[];
+  navigateToReservation: (pitchName: string) => void;
+  getUserStats: (userId: string) => UserStats; // Add this function
+}
+
+// Create context
 const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
 
-export const ReservationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [reservations, setReservations] = useState<Reservation[]>(demoReservations);
-  const [pitches, setPitches] = useState<Pitch[]>(demoPitches);
+// Provider component
+export const ReservationProvider: React.FC<{children: ReactNode}> = ({ children }) => {
+  const [reservations, setReservations] = useState<Reservation[]>(games);
+  const [availablePitches, setAvailablePitches] = useState<Pitch[]>(pitches);
 
   // Add a new reservation
-  const addReservation = (reservation: Omit<Reservation, 'id' | 'status' | 'playersJoined' | 'waitingList' | 'lineup' | 'highlights'>) => {
-    const newReservation: Reservation = {
-      ...reservation,
-      id: Date.now(),
-      status: 'open',
-      playersJoined: 0,
-      waitingList: [],
+  const addReservation = (newReservation: Omit<Reservation, 'id' | 'lineup' | 'waitingList' | 'highlights'>) => {
+    const newId = Math.max(0, ...reservations.map(r => r.id)) + 1;
+    const reservation: Reservation = {
+      ...newReservation,
+      id: newId,
       lineup: [],
-      highlights: []
+      waitingList: [],
+      highlights: [],
+      playersJoined: 0
     };
-    
-    setReservations(prevReservations => [...prevReservations, newReservation]);
+    setReservations([...reservations, reservation]);
   };
 
   // Join a game
-  const joinGame = (reservationId: number, playerName?: string, userId?: string) => {
-    const currentUserId = userId || 'user1'; // Default to 'user1' if no userId provided
-    const currentPlayerName = playerName || 'John Smith'; // Default name if not provided
-    
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          // Check if user is already in the lineup
-          const isUserAlreadyJoined = reservation.lineup.some(player => player.userId === currentUserId);
-          
-          if (isUserAlreadyJoined) {
-            return reservation; // User already joined, no change
+  const joinGame = (reservationId: number, player?: Player, userId?: string) => {
+    setReservations(prevReservations => 
+      prevReservations.map(res => {
+        if (res.id === reservationId) {
+          // If userId is provided but no player object, create a basic player
+          let newPlayer = player;
+          if (!player && userId) {
+            newPlayer = {
+              userId,
+              playerName: `Player ${Math.floor(Math.random() * 1000)}`,
+            };
+          } else if (!player && !userId) {
+            return res; // No player or userId provided, don't modify
           }
           
-          // Add user to lineup
-          const updatedLineup = [
-            ...reservation.lineup,
-            { userId: currentUserId, playerName: currentPlayerName, status: 'joined' as const }
-          ];
+          // Add player to lineup
+          const updatedLineup = [...res.lineup, newPlayer!];
           
-          const updatedPlayersJoined = reservation.playersJoined + 1;
-          
-          // Update status to 'full' if maximum players reached
-          let updatedStatus = reservation.status;
-          if (updatedPlayersJoined >= reservation.maxPlayers && updatedStatus === 'open') {
-            updatedStatus = 'full';
+          // Update status if now full
+          let newStatus = res.status;
+          if (updatedLineup.length >= res.maxPlayers) {
+            newStatus = 'full';
           }
           
           return {
-            ...reservation,
+            ...res,
             lineup: updatedLineup,
-            playersJoined: updatedPlayersJoined,
-            status: updatedStatus
+            playersJoined: updatedLineup.length,
+            status: newStatus
           };
         }
-        return reservation;
-      });
-    });
+        return res;
+      })
+    );
   };
 
-  // Cancel a reservation (leave a game)
+  // Cancel a reservation (player leaves)
   const cancelReservation = (reservationId: number, userId: string) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          // Find user in lineup
-          const updatedLineup = reservation.lineup.map(player => {
-            if (player.userId === userId) {
-              return { ...player, status: 'left' as const };
-            }
-            return player;
-          });
+    setReservations(prevReservations => 
+      prevReservations.map(res => {
+        if (res.id === reservationId) {
+          const updatedLineup = res.lineup.filter(player => player.userId !== userId);
           
-          // Decrease players joined count
-          const updatedPlayersJoined = reservation.playersJoined - 1;
-          
-          // Update status back to 'open' if it was 'full'
-          let updatedStatus = reservation.status;
-          if (updatedStatus === 'full' && updatedPlayersJoined < reservation.maxPlayers) {
-            updatedStatus = 'open';
-          }
-          
-          // Notify first person in waiting list if there is one
-          if (reservation.waitingList.length > 0) {
-            toast({
-              title: "Waiting List Notification",
-              description: `A spot has opened up! First player on the waiting list has been notified.`,
-            });
-            // In a real app, we would send an email notification here
+          // If game was full but now has space, update status
+          let newStatus = res.status;
+          if (res.status === 'full' && updatedLineup.length < res.maxPlayers) {
+            newStatus = 'open';
           }
           
           return {
-            ...reservation,
+            ...res,
             lineup: updatedLineup,
-            playersJoined: updatedPlayersJoined,
-            status: updatedStatus
+            playersJoined: updatedLineup.length,
+            status: newStatus
           };
         }
-        return reservation;
-      });
-    });
+        return res;
+      })
+    );
   };
 
   // Delete a reservation
   const deleteReservation = (reservationId: number) => {
     setReservations(prevReservations => 
-      prevReservations.filter(reservation => reservation.id !== reservationId)
+      prevReservations.filter(res => res.id !== reservationId)
+    );
+  };
+
+  // Update a reservation
+  const updateReservation = (updatedReservation: Reservation) => {
+    setReservations(prevReservations => 
+      prevReservations.map(res => 
+        res.id === updatedReservation.id ? updatedReservation : res
+      )
     );
   };
 
   // Update reservation status
   const updateReservationStatus = (reservationId: number, status: 'open' | 'full' | 'completed' | 'cancelled') => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          return { ...reservation, status };
-        }
-        return reservation;
-      });
-    });
+    setReservations(prevReservations => 
+      prevReservations.map(res => 
+        res.id === reservationId ? {...res, status} : res
+      )
+    );
   };
 
-  // Add highlight to a reservation
-  const addHighlight = (reservationId: number, highlight: Omit<Highlight, 'id'>) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          const newHighlight: Highlight = {
-            ...highlight,
-            id: Date.now()
-          };
-          
-          return {
-            ...reservation,
-            highlights: [...reservation.highlights, newHighlight]
-          };
-        }
-        return reservation;
-      });
-    });
+  // Check if user has joined a game
+  const isUserJoined = (reservationId: number, userId: string) => {
+    const reservation = reservations.find(res => res.id === reservationId);
+    return reservation?.lineup.some(player => player.userId === userId) || false;
   };
 
-  // Delete highlight from a reservation
-  const deleteHighlight = (reservationId: number, highlightId: number) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          return {
-            ...reservation,
-            highlights: reservation.highlights.filter(h => h.id !== highlightId)
-          };
-        }
-        return reservation;
-      });
-    });
-  };
-
-  // Edit reservation
-  const editReservation = (reservationId: number, updates: Partial<Reservation>) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          return { ...reservation, ...updates };
-        }
-        return reservation;
-      });
-    });
-  };
-
-  // Check if a user has joined a specific reservation
-  const isUserJoined = (reservationId: number, userId: string): boolean => {
-    const reservation = reservations.find(r => r.id === reservationId);
-    if (!reservation) return false;
-    
-    return reservation.lineup.some(player => player.userId === userId && player.status === 'joined');
-  };
-
-  // Check if a user has joined any reservation on a given date
-  const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
-    const dateString = date.toISOString().split('T')[0];
-    
-    return reservations.some(reservation => {
-      return (
-        reservation.date === dateString &&
-        (reservation.status === 'open' || reservation.status === 'full') &&
-        reservation.lineup.some(player => player.userId === userId && player.status === 'joined')
-      );
-    });
-  };
-
-  // Get all reservations for a specific date
-  const getReservationsForDate = (date: Date): Reservation[] => {
-    const dateString = date.toISOString().split('T')[0];
-    return reservations.filter(reservation => reservation.date === dateString);
-  };
-
-  // Join waiting list for a reservation
+  // Join waiting list
   const joinWaitingList = (reservationId: number, userId: string) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          // Check if user is already in the waiting list
-          if (reservation.waitingList.includes(userId)) {
-            return reservation; // User already in waiting list, no change
-          }
-          
-          // Add user to waiting list
+    setReservations(prevReservations => 
+      prevReservations.map(res => {
+        if (res.id === reservationId && !res.waitingList.includes(userId)) {
           return {
-            ...reservation,
-            waitingList: [...reservation.waitingList, userId]
+            ...res,
+            waitingList: [...res.waitingList, userId]
           };
         }
-        return reservation;
-      });
-    });
+        return res;
+      })
+    );
   };
 
-  // Leave waiting list for a reservation
+  // Leave waiting list
   const leaveWaitingList = (reservationId: number, userId: string) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          // Remove user from waiting list
+    setReservations(prevReservations => 
+      prevReservations.map(res => {
+        if (res.id === reservationId) {
           return {
-            ...reservation,
-            waitingList: reservation.waitingList.filter(id => id !== userId)
+            ...res,
+            waitingList: res.waitingList.filter(id => id !== userId)
           };
         }
-        return reservation;
-      });
-    });
+        return res;
+      })
+    );
   };
 
   // Add a new pitch
-  const addPitch = (pitch: Omit<Pitch, 'id'>) => {
-    const newPitch: Pitch = {
-      ...pitch,
-      id: Date.now()
+  const addPitch = (newPitch: Omit<Pitch, 'id'>) => {
+    const newId = Math.max(0, ...availablePitches.map(p => p.id)) + 1;
+    const pitch: Pitch = {
+      ...newPitch,
+      id: newId,
+      image: newPitch.imageUrl // Set image field to be compatible
     };
-    
-    setPitches(prevPitches => [...prevPitches, newPitch]);
+    setAvailablePitches([...availablePitches, pitch]);
   };
 
-  // Edit a pitch
-  const editPitch = (pitchId: number, updates: Partial<Pitch>) => {
-    setPitches(prevPitches => {
-      return prevPitches.map(pitch => {
-        if (pitch.id === pitchId) {
-          return { ...pitch, ...updates };
-        }
-        return pitch;
-      });
-    });
+  // Update a pitch
+  const updatePitch = (updatedPitch: Pitch) => {
+    const pitchWithImage = {
+      ...updatedPitch,
+      image: updatedPitch.imageUrl // Ensure image is set from imageUrl
+    };
+    
+    setAvailablePitches(prevPitches => 
+      prevPitches.map(pitch => 
+        pitch.id === updatedPitch.id ? pitchWithImage : pitch
+      )
+    );
   };
 
   // Delete a pitch
   const deletePitch = (pitchId: number) => {
-    setPitches(prevPitches => 
+    setAvailablePitches(prevPitches => 
       prevPitches.filter(pitch => pitch.id !== pitchId)
     );
   };
 
-  // Navigate to a reservation for a specific pitch (mock function)
-  const navigateToReservation = (pitchName: string) => {
-    // This would typically be handled by a router, but for now just show a toast
-    toast({
-      title: "Navigating to Reservations",
-      description: `You're being redirected to book ${pitchName}`,
-    });
+  // Check if user has joined a game on a specific date
+  const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
+    const dateStr = date.toISOString().split('T')[0];
+    return reservations.some(res => 
+      res.date.startsWith(dateStr) && 
+      res.lineup.some(player => player.userId === userId) &&
+      res.status !== 'cancelled'
+    );
   };
 
-  // Remove a player from a reservation and update stats
-  const removePlayerFromReservation = (reservationId: number, userId: string) => {
-    setReservations(prevReservations => {
-      return prevReservations.map(reservation => {
-        if (reservation.id === reservationId) {
-          // Remove user from lineup
-          const updatedLineup = reservation.lineup.filter(player => player.userId !== userId);
-          
-          const updatedPlayersJoined = reservation.playersJoined - 1;
-          
-          // Update status back to 'open' if it was 'full'
-          let updatedStatus = reservation.status;
-          if (updatedStatus === 'full' && updatedPlayersJoined < reservation.maxPlayers) {
-            updatedStatus = 'open';
-          }
-          
-          return {
-            ...reservation,
-            lineup: updatedLineup,
-            playersJoined: updatedPlayersJoined,
-            status: updatedStatus
-          };
-        }
-        return reservation;
-      });
+  // Get all reservations for a specific date
+  const getReservationsForDate = (date: Date): Reservation[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    return reservations.filter(res => res.date.startsWith(dateStr));
+  };
+
+  // Navigate to reservation (used for booking from pitch page)
+  const navigateToReservation = (pitchName: string) => {
+    // In a real app, this would navigate to the booking form
+    console.log(`Navigating to book pitch: ${pitchName}`);
+    // This would typically use router navigation
+  };
+
+  // Get user stats from played games
+  const getUserStats = (userId: string): UserStats => {
+    // Get all completed games the user has played in
+    const userGames = reservations.filter(
+      game => game.status === 'completed' && game.lineup.some(player => player.userId === userId)
+    );
+    
+    // Count stats from games and highlights
+    const stats: UserStats = {
+      gamesPlayed: userGames.length,
+      goals: 0,
+      goalsScored: 0,
+      assists: 0,
+      cleansheets: 0,
+      mvps: 0,
+      yellowCards: 0,
+      redCards: 0
+    };
+    
+    userGames.forEach(game => {
+      // Count goals scored by this user
+      const userGoals = game.highlights.filter(
+        h => h.type === 'goal' && h.playerId === userId
+      ).length;
+      stats.goals += userGoals;
+      stats.goalsScored = stats.goals; // Alias for compatibility
+      
+      // Count assists by this user
+      stats.assists += game.highlights.filter(
+        h => h.type === 'assist' && h.playerId === userId
+      ).length;
+      
+      // Count yellow cards
+      stats.yellowCards = (stats.yellowCards || 0) + game.highlights.filter(
+        h => h.type === 'yellowCard' && h.playerId === userId
+      ).length;
+      
+      // Count red cards
+      stats.redCards = (stats.redCards || 0) + game.highlights.filter(
+        h => h.type === 'redCard' && h.playerId === userId
+      ).length;
+      
+      // Count MVPs
+      if (game.mvp === userId) {
+        stats.mvps++;
+      }
+      
+      // Cleansheets (for goalkeepers)
+      // This would need game position data to really determine
     });
     
-    toast({
-      title: "Player Removed",
-      description: `The player has been removed from the reservation.`,
-    });
-  };
-
-  // Notify players on the waiting list
-  const notifyWaitingListPlayers = (reservationId: number) => {
-    // In a real app, this would send an email notification
-    // For now, just display a toast message
-    const reservation = reservations.find(r => r.id === reservationId);
-    if (reservation && reservation.waitingList.length > 0) {
-      toast({
-        title: "Waiting List Notified",
-        description: `${reservation.waitingList.length} players have been notified about an open spot.`,
-      });
-    }
-  };
-
-  // Add getUserStats implementation
-  const getUserStats = (userId: string): UserStats => {
-    // This is a mock implementation - in a real app, this would calculate stats from reservations
-    return {
-      gamesPlayed: 12,
-      goalsScored: 8,
-      assists: 5,
-      cleansheets: 3,
-      mvps: 2,
-      yellowCards: 1,
-      redCards: 0,
-      matches: 12,
-      wins: 7,
-      goals: 8,
-      tackles: 15
-    };
-  };
-
-  const value = {
-    reservations,
-    pitches,
-    addReservation,
-    joinGame,
-    cancelReservation,
-    deleteReservation,
-    updateReservationStatus,
-    addHighlight,
-    deleteHighlight,
-    editReservation,
-    isUserJoined,
-    hasUserJoinedOnDate,
-    getReservationsForDate,
-    joinWaitingList,
-    leaveWaitingList,
-    addPitch,
-    editPitch,
-    deletePitch,
-    navigateToReservation,
-    removePlayerFromReservation,
-    notifyWaitingListPlayers,
-    getUserStats // Added to fix Profile.tsx error
+    return stats;
   };
 
   return (
-    <ReservationContext.Provider value={value}>
+    <ReservationContext.Provider
+      value={{
+        reservations,
+        pitches: availablePitches,
+        addReservation,
+        joinGame,
+        cancelReservation,
+        deleteReservation,
+        updateReservation,
+        updateReservationStatus,
+        isUserJoined,
+        joinWaitingList,
+        leaveWaitingList,
+        addPitch,
+        updatePitch,
+        deletePitch,
+        hasUserJoinedOnDate,
+        getReservationsForDate,
+        navigateToReservation,
+        getUserStats
+      }}
+    >
       {children}
     </ReservationContext.Provider>
   );
 };
 
-export const useReservation = () => {
+// Custom hook to use the reservation context
+export const useReservation = (): ReservationContextType => {
   const context = useContext(ReservationContext);
   if (context === undefined) {
     throw new Error('useReservation must be used within a ReservationProvider');
