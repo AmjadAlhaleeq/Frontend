@@ -48,7 +48,7 @@ const ReservationCard = ({
   const formattedDate = format(parseISO(reservation.date), 'EEE, MMM d');
   const fullFormattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
   
-  // Calculate actual players total (10 for 5v5 format)
+  // Calculate actual players total
   const actualMaxPlayers = reservation.maxPlayers;
   
   // Maximum waiting list size
@@ -57,8 +57,16 @@ const ReservationCard = ({
   // Determine if the waiting list is full
   const isWaitingListFull = reservation.waitingList.length >= maxWaitingList;
   
-  // Handle join game confirmation
+  // Handle join game confirmation - check if user is logged in
   const handleJoinGameClick = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to join a game.",
+        variant: "destructive"
+      });
+      return;
+    }
     setIsJoinConfirmOpen(true);
   };
   
@@ -80,8 +88,17 @@ const ReservationCard = ({
     }
   };
   
-  // Handle cancel reservation with loading state
+  // Handle cancel reservation with login check
   const handleCancelReservation = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to leave a game.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     if (onCancelReservation) {
@@ -98,8 +115,17 @@ const ReservationCard = ({
     }
   };
   
-  // Handle waiting list actions with loading state
+  // Handle waiting list actions with login check
   const handleJoinWaitingList = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to join the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     if (onJoinWaitingList) {
@@ -117,6 +143,15 @@ const ReservationCard = ({
   };
   
   const handleLeaveWaitingList = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to leave the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     if (onLeaveWaitingList) {
@@ -149,7 +184,7 @@ const ReservationCard = ({
       );
     }
     
-    // If the user is suspended, don't allow them to join games
+    // Check if user is suspended
     const isSuspended = false; // This would come from user context in a real implementation
     
     if (isSuspended) {
