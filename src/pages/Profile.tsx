@@ -3,32 +3,31 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, BadgePlus, CalendarIcon, Edit, Trophy, User } from "lucide-react";
+import { Award, BadgePlus, Edit, Trophy, User, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
+import { useNavigate } from "react-router-dom";
 import PlayerStats from "@/components/profile/PlayerStats";
 import ProfileEditor from "@/components/profile/ProfileEditor";
-import PlayerGameCards from "@/components/profile/PlayerGameCards";
-import PlayerReservations from "@/components/profile/PlayerReservations";
 
 /**
  * Player Profile Page Component
- * Displays user information, statistics, and game history
+ * Displays user information, statistics, and achievements
  * 
  * Includes:
  * - Basic user information
  * - Player statistics
- * - Game history
  * - Badges and achievements
  * - Profile editing functionality
  */
 const Profile = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { getUserStats, reservations } = useReservation();
+  const { getUserStats } = useReservation();
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -85,6 +84,11 @@ const Profile = () => {
     }
   };
 
+  // Navigate to My Bookings page
+  const handleViewBookings = () => {
+    navigate("/my-bookings");
+  };
+
   // Get user stats from ReservationContext
   const userStats = getUserStats(currentUser?.id || "");
   
@@ -114,7 +118,8 @@ const Profile = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin h-8 w-8 border-4 border-teal-500 rounded-full border-t-transparent"></div>
+        <Loader className="animate-spin h-8 w-8 text-teal-500 mr-3" />
+        <span className="text-lg text-muted-foreground">Loading profile...</span>
       </div>
     );
   }
@@ -131,7 +136,7 @@ const Profile = () => {
   }
   
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Player Profile</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -164,10 +169,22 @@ const Profile = () => {
                 />
               ) : (
                 <div className="space-y-4">
-                  <div className="w-24 h-24 mx-auto bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-3xl font-bold text-teal-700 dark:text-teal-300">
-                      {currentUser.firstName?.[0]}{currentUser.lastName?.[0]}
-                    </span>
+                  <div className="flex justify-center mb-4">
+                    <div className="relative">
+                      <div className="w-24 h-24 bg-teal-100 dark:bg-teal-900/30 rounded-full overflow-hidden flex items-center justify-center">
+                        {currentUser.avatarUrl ? (
+                          <img 
+                            src={currentUser.avatarUrl} 
+                            alt={`${currentUser.firstName} ${currentUser.lastName}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-3xl font-bold text-teal-700 dark:text-teal-300">
+                            {currentUser.firstName?.[0]}{currentUser.lastName?.[0]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="text-center mb-4">
@@ -184,21 +201,31 @@ const Profile = () => {
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Username:</span>
-                      <span className="font-medium">{currentUser.username}</span>
+                      <span className="text-muted-foreground">Age:</span>
+                      <span className="font-medium">{currentUser.age || "Not specified"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Player since:</span>
-                      <span className="font-medium">May 2023</span>
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span className="font-medium">{currentUser.phoneNumber || "Not specified"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">City:</span>
+                      <span className="font-medium">{currentUser.city || "Not specified"}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Preferred position:</span>
-                      <span className="font-medium">{currentUser.position || "Forward"}</span>
+                      <span className="font-medium">{currentUser.position || "Not specified"}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Skill level:</span>
-                      <span className="font-medium">{currentUser.skillLevel || "Intermediate"}</span>
-                    </div>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button 
+                      onClick={handleViewBookings} 
+                      variant="outline" 
+                      className="w-full"
+                    >
+                      My Bookings
+                    </Button>
                   </div>
                 </div>
               )}
@@ -211,67 +238,78 @@ const Profile = () => {
           </div>
         </div>
         
-        {/* Right Column: Tabs for Games, Reservations, Achievements */}
+        {/* Right Column: Achievements */}
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-6">
+            <TabsList className="grid grid-cols-1 mb-6">
               <TabsTrigger value="info">
-                <User className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Game History</span>
-                <span className="sm:hidden">Games</span>
-              </TabsTrigger>
-              <TabsTrigger value="reservations">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Reservations</span>
-                <span className="sm:hidden">Bookings</span>
-              </TabsTrigger>
-              <TabsTrigger value="achievements">
                 <Trophy className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Achievements</span>
-                <span className="sm:hidden">Awards</span>
+                <span>Achievements</span>
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="info" className="space-y-4">
-              <h3 className="text-xl font-semibold mb-4">Recent Games</h3>
-              <PlayerGameCards userId={currentUser.id} reservations={reservations} />
-            </TabsContent>
-            
-            <TabsContent value="reservations">
-              <h3 className="text-xl font-semibold mb-4">My Reservations</h3>
-              <PlayerReservations userId={currentUser.id} />
-            </TabsContent>
-            
-            <TabsContent value="achievements">
+            <TabsContent value="info">
               <h3 className="text-xl font-semibold mb-4">Badges & Achievements</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {achievements.map((achievement) => (
-                  <Card 
-                    key={achievement.title}
-                    className={`border ${achievement.earned ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/20' : 'opacity-60'}`}
-                  >
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <div className="mx-auto rounded-full p-3 w-14 h-14 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 mb-3">
-                          {achievement.icon}
+                  achievement.earned && (
+                    <Card 
+                      key={achievement.title}
+                      className="border border-amber-300 bg-amber-50 dark:bg-amber-950/20"
+                    >
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <div className="mx-auto rounded-full p-3 w-14 h-14 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 mb-3">
+                            {achievement.icon}
+                          </div>
+                          <h4 className="font-semibold">{achievement.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
+                          <div className="mt-3 text-xs font-medium text-amber-600 dark:text-amber-400">
+                            EARNED!
+                          </div>
                         </div>
-                        <h4 className="font-semibold">{achievement.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
-                        <div className={`mt-3 text-xs font-medium ${achievement.earned ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`}>
-                          {achievement.earned ? 'EARNED!' : 'Not yet earned'}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )
                 ))}
               </div>
               
+              {!achievements.some(a => a.earned) && (
+                <div className="text-center py-10 bg-muted/40 rounded-lg">
+                  <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Achievements Yet</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    Play more games to unlock achievements and collect badges!
+                  </p>
+                </div>
+              )}
+              
               <div className="mt-8">
                 <h4 className="text-lg font-medium mb-3">Upcoming Achievements</h4>
-                <p className="text-sm text-muted-foreground">
-                  Keep playing to unlock more achievements and badges. Track your progress and earn special rewards!
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                  {achievements.map((achievement) => (
+                    !achievement.earned && (
+                      <Card 
+                        key={achievement.title}
+                        className="border opacity-60"
+                      >
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <div className="mx-auto rounded-full p-3 w-14 h-14 flex items-center justify-center bg-gray-100 dark:bg-gray-800 mb-3">
+                              {achievement.icon}
+                            </div>
+                            <h4 className="font-semibold">{achievement.title}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
+                            <div className="mt-3 text-xs font-medium text-gray-500">
+                              Not yet earned
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </Tabs>

@@ -12,6 +12,7 @@ import Rules from "./Rules";
 import NotFound from "./NotFound";
 import AddPitch from "./admin/AddPitch";
 import EditPitch from "./admin/EditPitch";
+import MyBookings from "./MyBookings";
 import Layout from "@/components/layout/Layout";
 
 /**
@@ -49,6 +50,7 @@ const Index = () => {
       <Routes>
         <Route path="/" element={<Home isFirstTimeLogin={isFirstTimeLogin} />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/pitches" element={<Pitches />} />
         <Route path="/reservations" element={<Reservations />} />
         <Route path="/leaderboards" element={<Leaderboards />} />

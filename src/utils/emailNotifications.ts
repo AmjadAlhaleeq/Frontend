@@ -1,94 +1,191 @@
 
-/**
- * Email notification utility functions
- * These functions would normally use a backend API to send actual emails
- * For now, they just simulate the email sending process
- */
+import { toast } from "@/hooks/use-toast";
 
 /**
- * Send a notification email to players about a game update
- * @param playerEmails - Array of player email addresses
- * @param subject - Email subject line
- * @param message - Email message body
- * @returns Promise resolving to success/failure status
+ * Email notification service
+ * Provides functions for sending various types of email notifications
  */
-export const sendNotificationToPlayers = async (
-  playerEmails: string[],
-  subject: string,
-  message: string
-): Promise<{ success: boolean; message: string }> => {
-  // In a real implementation, this would connect to a backend API
-  // or email service to send actual emails
-  
-  console.log("Sending notification emails:");
-  console.log("To:", playerEmails);
-  console.log("Subject:", subject);
-  console.log("Message:", message);
-  
-  // Simulate API call with a slight delay
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: true,
-        message: `Email notification sent to ${playerEmails.length} players`
-      });
-    }, 1000);
-  });
+
+// Define email template interfaces
+interface EmailTemplate {
+  subject: string;
+  body: string;
+  buttonText?: string;
+  buttonUrl?: string;
+}
+
+/**
+ * Send email notification
+ * @param {string} to - Recipient email address
+ * @param {EmailTemplate} template - Email template with subject and body
+ * @returns {Promise<boolean>} - Success status of the email send operation
+ */
+export const sendEmail = async (to: string, template: EmailTemplate): Promise<boolean> => {
+  try {
+    console.log(`Sending email to: ${to}`);
+    console.log(`Subject: ${template.subject}`);
+    console.log(`Body: ${template.body}`);
+    
+    // In a real app, this would be an API call to your backend
+    // For demo purposes, we'll simulate a successful email send
+    // This would be replaced with your actual email sending logic
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // For demonstration purposes, we'll just return true
+    // In production, this would check the response from your email API
+    return true;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    toast({
+      title: "Email Notification Failed",
+      description: "Failed to send email notification. Please try again.",
+      variant: "destructive",
+    });
+    return false;
+  }
 };
 
 /**
- * Send a cancellation notice to players about a deleted game
- * @param playerEmails - Array of player email addresses
- * @param gameDetails - Object containing game details (title, date, etc.)
- * @returns Promise resolving to success/failure status
+ * Send game cancellation notification to all players
+ * @param {object} gameDetails - Details about the cancelled game
+ * @param {string[]} playerEmails - Array of player email addresses
  */
-export const sendGameCancellationNotice = async (
-  playerEmails: string[],
-  gameDetails: { title: string; date: string; time: string; location: string }
-): Promise<{ success: boolean; message: string }> => {
-  const subject = `Game Cancellation: ${gameDetails.title}`;
-  const message = `
-    Dear Player,
-    
-    We regret to inform you that the following game has been cancelled:
-    
-    Game: ${gameDetails.title}
-    Date: ${gameDetails.date}
-    Time: ${gameDetails.time}
-    Location: ${gameDetails.location}
-    
-    We apologize for any inconvenience this may cause.
-    
-    Regards,
-    The Admin Team
-  `;
+export const sendGameCancellationNotification = async (
+  gameDetails: { title: string; date: string; time: string; location: string },
+  playerEmails: string[]
+): Promise<void> => {
+  const template: EmailTemplate = {
+    subject: `⚠️ Game Cancelled: ${gameDetails.title}`,
+    body: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 5px;">
+        <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+          <h1 style="color: #0F766E; margin: 0; padding: 0;">Game Cancelled</h1>
+        </div>
+        
+        <div style="padding: 20px 0;">
+          <p style="margin-bottom: 15px;">Dear Player,</p>
+          <p style="margin-bottom: 15px;">We regret to inform you that the following game has been cancelled:</p>
+          
+          <div style="background-color: #f7fafc; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Game:</strong> ${gameDetails.title}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${gameDetails.date}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${gameDetails.time}</p>
+            <p style="margin: 5px 0;"><strong>Location:</strong> ${gameDetails.location}</p>
+          </div>
+          
+          <p style="margin-bottom: 15px;">We apologize for any inconvenience this may cause. Please check our app for other available games.</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="#" style="display: inline-block; background-color: #0F766E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Other Games</a>
+        </div>
+        
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; margin-top: 20px; color: #718096; font-size: 12px;">
+          <p>© 2025 Football Reservations App. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  };
   
-  return sendNotificationToPlayers(playerEmails, subject, message);
+  // Send email to each player
+  for (const email of playerEmails) {
+    await sendEmail(email, template);
+  }
 };
 
 /**
- * Send a suspension notice to a player
- * @param playerEmail - Email address of the suspended player
- * @param reason - Reason for suspension
- * @returns Promise resolving to success/failure status
+ * Send notification to waiting list players
+ * @param {object} gameDetails - Details about the game
+ * @param {string[]} waitingListEmails - Array of waiting list player email addresses
+ * @param {string} joinUrl - URL for players to follow to join the game
  */
-export const sendPlayerSuspensionNotice = async (
+export const sendWaitingListNotification = async (
+  gameDetails: { id: number; title: string; date: string; time: string; location: string },
+  waitingListEmails: string[],
+  joinUrl: string
+): Promise<void> => {
+  const template: EmailTemplate = {
+    subject: `🏆 Spot Available: ${gameDetails.title}`,
+    body: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 5px;">
+        <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+          <h1 style="color: #0F766E; margin: 0; padding: 0;">Spot Available!</h1>
+        </div>
+        
+        <div style="padding: 20px 0;">
+          <p style="margin-bottom: 15px;">Great news! A spot has opened up in the following game:</p>
+          
+          <div style="background-color: #f7fafc; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Game:</strong> ${gameDetails.title}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${gameDetails.date}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${gameDetails.time}</p>
+            <p style="margin: 5px 0;"><strong>Location:</strong> ${gameDetails.location}</p>
+          </div>
+          
+          <p style="margin-bottom: 15px;">The spot is available on a first-come, first-served basis. Click the button below to join now!</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="${joinUrl}" style="display: inline-block; background-color: #0F766E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Game</a>
+        </div>
+        
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; margin-top: 20px; color: #718096; font-size: 12px;">
+          <p>© 2025 Football Reservations App. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+    buttonText: "Join Game",
+    buttonUrl: joinUrl,
+  };
+  
+  // Send email to each player on the waiting list
+  for (const email of waitingListEmails) {
+    await sendEmail(email, template);
+  }
+};
+
+/**
+ * Send player suspension notification
+ * @param {string} playerEmail - Email address of the suspended player
+ * @param {object} suspensionDetails - Details about the suspension
+ */
+export const sendPlayerSuspensionNotification = async (
   playerEmail: string,
-  reason: string
-): Promise<{ success: boolean; message: string }> => {
-  const subject = "Account Suspension Notice";
-  const message = `
-    Dear Player,
-    
-    Your account has been temporarily suspended due to:
-    
-    ${reason}
-    
-    If you believe this is an error, please contact the admin team.
-    
-    Regards,
-    The Admin Team
-  `;
+  suspensionDetails: { duration: number; reason: string; endDate: string }
+): Promise<void> => {
+  const template: EmailTemplate = {
+    subject: "⚠️ Account Suspension Notice",
+    body: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 5px;">
+        <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+          <h1 style="color: #ef4444; margin: 0; padding: 0;">Account Suspended</h1>
+        </div>
+        
+        <div style="padding: 20px 0;">
+          <p style="margin-bottom: 15px;">Dear Player,</p>
+          <p style="margin-bottom: 15px;">We regret to inform you that your account has been suspended.</p>
+          
+          <div style="background-color: #fee2e2; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Duration:</strong> ${suspensionDetails.duration} days</p>
+            <p style="margin: 5px 0;"><strong>Until:</strong> ${suspensionDetails.endDate}</p>
+            <p style="margin: 5px 0;"><strong>Reason:</strong> ${suspensionDetails.reason}</p>
+          </div>
+          
+          <p style="margin-bottom: 15px;">During this period, you will not be able to join or participate in games. If you believe this is in error, please contact our support team.</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="#" style="display: inline-block; background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Contact Support</a>
+        </div>
+        
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; margin-top: 20px; color: #718096; font-size: 12px;">
+          <p>© 2025 Football Reservations App. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  };
   
-  return sendNotificationToPlayers([playerEmail], subject, message);
+  await sendEmail(playerEmail, template);
 };

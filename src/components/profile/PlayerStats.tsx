@@ -4,16 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/context/ReservationContext";
 import {
   Award,
-  Flag,
   Footprints,
   Goal,
-  ShieldAlert,
   ShieldCheck,
-  Swords,
   Trophy,
   User,
   Zap,
-  BadgePlus,  // Using BadgePlus as a replacement for Soccer
+  BadgePlus,  
+  Calendar,
+  Star
 } from "lucide-react";
 
 interface PlayerStatsProps {
@@ -29,7 +28,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="flex items-center space-x-4">
-          <User className="h-5 w-5 text-gray-500" />
+          <Calendar className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Games Played</p>
             <p className="text-lg font-bold">{stats.gamesPlayed}</p>
@@ -57,24 +56,17 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <ShieldAlert className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Yellow Cards</p>
-            <p className="text-lg font-bold">{stats.yellowCards}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Swords className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Red Cards</p>
-            <p className="text-lg font-bold">{stats.redCards}</p>
-          </div>
-        </div>
-         <div className="flex items-center space-x-4">
           <Trophy className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">MVP Awards</p>
             <p className="text-lg font-bold">{stats.mvps}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Star className="h-5 w-5 text-gray-500" />
+          <div>
+            <p className="text-sm font-medium leading-none">Wins</p>
+            <p className="text-lg font-bold">{stats.wins}</p>
           </div>
         </div>
       </CardContent>

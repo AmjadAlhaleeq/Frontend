@@ -17,7 +17,7 @@ interface ProfileEditorProps {
     gender?: string;
     age?: string;
     city?: string;
-    favoritePosition?: string;
+    position?: string;
     phoneNumber?: string;
     email: string;
     avatarUrl?: string;
@@ -39,7 +39,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     gender: currentUserDetails.gender || "",
     age: currentUserDetails.age || "",
     city: currentUserDetails.city || "",
-    favoritePosition: currentUserDetails.favoritePosition || "",
+    position: currentUserDetails.position || "",
     phoneNumber: currentUserDetails.phoneNumber || "",
     avatarUrl: currentUserDetails.avatarUrl || ""
   });
@@ -254,12 +254,12 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="favoritePosition">Favorite Position</Label>
+              <Label htmlFor="position">Preferred Position</Label>
               <Select 
-                value={profile.favoritePosition} 
-                onValueChange={(value) => handleSelectChange("favoritePosition", value)}
+                value={profile.position} 
+                onValueChange={(value) => handleSelectChange("position", value)}
               >
-                <SelectTrigger id="favoritePosition">
+                <SelectTrigger id="position">
                   <SelectValue placeholder="Select position" />
                 </SelectTrigger>
                 <SelectContent>
