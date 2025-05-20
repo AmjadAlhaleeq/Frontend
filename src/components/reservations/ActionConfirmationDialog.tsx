@@ -23,6 +23,9 @@ interface ActionConfirmationDialogProps {
   confirmButtonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
+/**
+ * Reusable confirmation dialog component for actions that need user confirmation
+ */
 const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
   open,
   onOpenChange,

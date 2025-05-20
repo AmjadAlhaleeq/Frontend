@@ -6,15 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -29,16 +22,21 @@ import { useReservation, NewReservationData } from "@/context/ReservationContext
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Slider } from "@/components/ui/slider";
 
+/**
+ * Form schema for reservation data validation
+ */
 const formSchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters"),
   pitchName: z.string().min(2, "Pitch name must be at least 2 characters"),
   date: z.date({
     required_error: "Please select a date",
   }),
-  time: z.string({
-    required_error: "Please select a time slot",
-  }),
+  time: z.string().min(1, "Please enter a time"),
   location: z.string().min(2, "Location must be at least 2 characters"),
+  locationLink: z.string().optional(),
+  city: z.string().min(1, "City is required"),
   price: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Price must be a non-negative number" }),
   maxPlayers: z.string({
     required_error: "Please select number of players",
@@ -48,21 +46,32 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+/**
+ * AddReservationDialog component
+ * Allows admins to create new game reservations
+ */
 const AddReservationDialog = () => {
   const [open, setOpen] = useState(false);
   const { addReservation } = useReservation();
   const { toast } = useToast();
+  
+  // Image upload state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      title: "",
       pitchName: "",
       location: "",
+      locationLink: "",
+      city: "",
       price: "",
       imageUrl: "",
-      // date: new Date(), // Optionally set a default date
-      // time: "17:00 - 18:30", // Optionally set a default time
-      // maxPlayers: "10", // Optionally set a default maxPlayers
+      time: "",
     },
   });
 
@@ -70,13 +79,16 @@ const AddReservationDialog = () => {
     console.log("Submitting reservation data:", data);
     
     const newReservationData: NewReservationData = {
+      title: data.title,
       pitchName: data.pitchName,
       date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
       time: data.time,
       location: data.location,
+      locationLink: data.locationLink,
+      city: data.city,
       price: parseFloat(data.price), // Convert price to number
       maxPlayers: parseInt(data.maxPlayers, 10), // Convert maxPlayers to number
-      imageUrl: data.imageUrl || undefined, // Use undefined if empty
+      imageUrl: imagePreview || undefined, // Use uploaded image
     };
     
     addReservation(newReservationData);
@@ -88,13 +100,64 @@ const AddReservationDialog = () => {
     });
     
     form.reset();
+    setImagePreview(null);
     setOpen(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setImageError(null);
+    
+    if (!file) {
+      return;
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("Image size should be less than 5MB");
+      return;
+    }
+    
+    // Check file type
+    if (!file.type.match('image.*')) {
+      setImageError("Please upload an image file");
+      return;
+    }
+    
+    // Simulate upload with progress
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    // Create a data URL for preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      
+      // Simulate upload progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setUploadProgress(progress);
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          setImagePreview(result);
+          setIsUploading(false);
+          toast({
+            title: "Upload Complete",
+            description: "Image has been uploaded successfully.",
+          });
+        }
+      }, 200);
+    };
+    
+    reader.readAsDataURL(file);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#0F766E] hover:bg-[#0d6d66]">
+        <Button className="bg-[#0F766E] hover:bg-[#0d6d66]" id="add-reservation-dialog-trigger">
           <Plus size={18} className="mr-2" />
           Add Reservation
         </Button>
@@ -105,6 +168,85 @@ const AddReservationDialog = () => {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Image Upload Section */}
+            <div className="space-y-2">
+              <Label htmlFor="imageUpload" className="text-sm font-medium">Reservation Image (optional)</Label>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                {imagePreview ? (
+                  <div className="space-y-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Reservation preview" 
+                      className="max-h-60 mx-auto rounded-md object-cover"
+                    />
+                    {isUploading && (
+                      <div className="w-full space-y-2">
+                        <Slider 
+                          value={[uploadProgress]} 
+                          max={100}
+                          step={1}
+                          className="w-full"
+                          disabled
+                        />
+                        <p className="text-xs text-center text-muted-foreground">{uploadProgress}% uploaded</p>
+                      </div>
+                    )}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="mt-2" 
+                      onClick={() => setImagePreview(null)}
+                    >
+                      Remove Image
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="py-4">
+                    <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      SVG, PNG, JPG or GIF (Max 5MB)
+                    </p>
+                    {imageError && (
+                      <p className="text-xs text-red-500 mt-2">{imageError}</p>
+                    )}
+                    <Input 
+                      id="imageUpload" 
+                      type="file" 
+                      className="hidden" 
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="mt-2"
+                      onClick={() => document.getElementById('imageUpload')?.click()}
+                    >
+                      Select Image
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Title field */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reservation Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E.g., Friday Night Football" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="pitchName"
@@ -118,6 +260,45 @@ const AddReservationDialog = () => {
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter city" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maxPlayers"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Players</FormLabel>
+                    <FormControl>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={field.value}
+                        onChange={field.onChange}
+                      >
+                        <option value="" disabled>Select size</option>
+                        <option value="10">5v5 (10 players)</option>
+                        <option value="14">7v7 (14 players)</option>
+                        <option value="22">11v11 (22 players)</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -166,31 +347,11 @@ const AddReservationDialog = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Time</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time slot" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="17:00 - 18:30">17:00 - 18:30</SelectItem>
-                      <SelectItem value="18:30 - 20:00">18:30 - 20:00</SelectItem>
-                      <SelectItem value="20:00 - 21:30">20:00 - 21:30</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter location" {...field} />
+                    <Input 
+                      placeholder="e.g., 18:00 - 19:30" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -198,6 +359,20 @@ const AddReservationDialog = () => {
             />
 
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter location" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="price"
@@ -211,39 +386,16 @@ const AddReservationDialog = () => {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="maxPlayers"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Max Players</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="10">5v5 (10 players)</SelectItem>
-                        <SelectItem value="14">7v7 (14 players)</SelectItem>
-                        <SelectItem value="22">11v11 (22 players)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField
               control={form.control}
-              name="imageUrl"
+              name="locationLink"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL (optional)</FormLabel>
+                  <FormLabel>Google Maps Link (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter image URL" {...field} />
+                    <Input placeholder="https://maps.google.com/?q=..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

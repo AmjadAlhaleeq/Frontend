@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from 'date-fns';
-import { MapPin, Users, Calendar, Clock, Info, AlertTriangle, UserPlus, UserMinus, Image as ImageIcon } from "lucide-react";
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import ActionConfirmationDialog from "./ActionConfirmationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
-  type: "upcoming" | "past"; // "past" type will effectively just show details via card click
+  type: "upcoming" | "past"; 
   onJoinGame?: () => void;
   onCancelReservation?: () => void;
   onJoinWaitingList?: () => void;
@@ -25,6 +26,10 @@ interface ReservationCardProps {
   isAdmin?: boolean;
 }
 
+/**
+ * ReservationCard component
+ * Displays information about a game reservation
+ */
 const ReservationCard = ({
   reservation,
   type,
@@ -39,7 +44,7 @@ const ReservationCard = ({
   isAdmin = false
 }: ReservationCardProps) => {
   const { toast } = useToast();
-  const { updateReservationStatus } = useReservation(); // Assuming this is for admin
+  const { updateReservationStatus } = useReservation();
   const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
   const [isJoinConfirmOpen, setIsJoinConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,8 +65,8 @@ const ReservationCard = ({
   const maxWaitingList = 3;
   const isWaitingListFull = reservation.waitingList.length >= maxWaitingList;
 
-  // Placeholder image - replace with actual logic if pitch images become available
-  const reservationImage = reservation.pitchImage || `https://source.unsplash.com/400x200/?soccer,football,${reservation.pitchName.split(" ").join(",")}`;
+  // Get image for reservation
+  const reservationImage = reservation.imageUrl || `https://source.unsplash.com/400x200/?soccer,football,${reservation.pitchName.split(" ").join(",")}`;
 
   const handleMainCardClick = () => {
     setIsGameDetailsOpen(true);
@@ -157,18 +162,6 @@ const ReservationCard = ({
         return null; 
     }
 
-    const isSuspended = false; // Placeholder
-    if (isSuspended) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild><div className="w-full"><Button variant="outline" size="sm" disabled className="w-full opacity-70 cursor-not-allowed"><AlertTriangle className="h-4 w-4 mr-1.5" />Account Suspended</Button></div></TooltipTrigger>
-            <TooltipContent><p>Your account has been suspended. Contact an admin.</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
     if (isUserJoined) {
       return <Button variant="outline" size="sm" onClick={handleCancelReservationAction} disabled={isLoading} className="w-full text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600">{isLoading ? "Processing..." : <><UserMinus className="h-4 w-4 mr-1.5" />Leave Game</>}</Button>;
     }
@@ -188,7 +181,7 @@ const ReservationCard = ({
       return (
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild><div className="w-full"><Button variant="outline" size="sm" disabled className="w-full opacity-70 cursor-not-allowed"><Info className="h-4 w-4 mr-1.5" />Already Booked</Button></div></TooltipTrigger>
+            <TooltipTrigger asChild><div className="w-full"><Button variant="outline" size="sm" disabled className="w-full opacity-70 cursor-not-allowed"><AlertTriangle className="h-4 w-4 mr-1.5" />Already Booked</Button></div></TooltipTrigger>
             <TooltipContent><p>You already have a game booked on this date.</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -198,13 +191,6 @@ const ReservationCard = ({
     return <Button variant="default" size="sm" onClick={handleJoinGameClick} disabled={isLoading} className="w-full bg-teal-600 hover:bg-teal-700 text-white">{isLoading ? "Processing..." : <><UserPlus className="h-4 w-4 mr-1.5" />Join Game</>}</Button>;
   };
 
-  const handleStatusChange = (newStatus: 'open' | 'full' | 'completed' | 'cancelled') => {
-    if (isAdmin) {
-      updateReservationStatus(reservation.id, newStatus);
-      toast({ title: "Status Updated", description: `Game status changed to ${newStatus}` });
-    }
-  };
-
   const getStatusBadge = () => {
     switch (reservation.status) {
       case 'open':
@@ -212,7 +198,7 @@ const ReservationCard = ({
       case 'full':
         return <Badge className="bg-amber-500">Full</Badge>;
       case 'completed':
-        return <Badge className="bg-blue-500">Completed</Badge>; // Will not be shown if Past games are removed from main view
+        return <Badge className="bg-blue-500">Completed</Badge>;
       case 'cancelled':
         return <Badge className="bg-red-500">Cancelled</Badge>;
       default:
@@ -246,7 +232,24 @@ const ReservationCard = ({
           >
             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
               <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <span className="truncate">{reservation.location}</span>
+              {reservation.location ? (
+                <div className="flex flex-col">
+                  <span className="truncate">{reservation.city || "Unknown location"}</span>
+                  {reservation.locationLink && (
+                    <a 
+                      href={reservation.locationLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline flex items-center text-xs"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      View on Maps <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <span className="truncate">{reservation.location || "Not specified"}</span>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
               <div className="flex items-center">
@@ -275,7 +278,6 @@ const ReservationCard = ({
           )}
 
           {type === "upcoming" && renderActionButton()}
-          {/* Past game button removed as card click handles details */}
         </div>
       </Card>
 
@@ -284,9 +286,10 @@ const ReservationCard = ({
         isOpen={isGameDetailsOpen}
         onClose={() => setIsGameDetailsOpen(false)}
         isAdmin={isAdmin}
-        onStatusChange={handleStatusChange}
+        onStatusChange={() => {}} // Removed status change functionality
         currentUserId={currentUserId}
         actualMaxPlayers={actualMaxPlayers}
+        showAdminControls={false} // Disable admin controls
       />
       
       <JoinGameConfirmationDialog

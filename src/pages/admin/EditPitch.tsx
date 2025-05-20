@@ -1,10 +1,10 @@
 
-import { useState, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "react-router-dom";
-import { Plus, Upload } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Save, Upload, Trash2 } from "lucide-react";
 import { useReservation, Pitch } from "@/context/ReservationContext";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -21,10 +21,15 @@ const AVAILABLE_FACILITIES = [
   { id: "wifi", label: "WiFi" },
 ];
 
-const AddPitch = () => {
+/**
+ * EditPitch component
+ * Allows admins to edit existing pitch details
+ */
+const EditPitch = () => {
+  const { pitchId } = useParams();
   const [pitchData, setPitchData] = useState({
     name: "",
-    location: "", // Google Maps link
+    location: "",
     city: "",
     image: "",
     images: ["", "", "", ""], // Array to store up to 4 images
@@ -34,16 +39,61 @@ const AddPitch = () => {
     facilities: [] as string[],
   });
   
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  
   // For image preview and slider functionality
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track which image is being uploaded
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const navigate = useNavigate();
-  const { addPitch } = useReservation();
+  const { pitches, updatePitch } = useReservation();
   const { toast } = useToast();
+
+  // Load pitch data on component mount
+  useEffect(() => {
+    if (pitchId) {
+      const id = parseInt(pitchId);
+      const pitch = pitches.find(p => p.id === id);
+      
+      if (pitch) {
+        // Initialize the images array with the main image and any additional images
+        const images = ["", "", "", ""];
+        images[0] = pitch.image || "";
+        
+        if (pitch.additionalImages && pitch.additionalImages.length > 0) {
+          pitch.additionalImages.forEach((img, i) => {
+            if (i < 3) { // Limit to 3 additional images (4 total)
+              images[i + 1] = img;
+            }
+          });
+        }
+        
+        setPitchData({
+          name: pitch.name || "",
+          location: pitch.location || "",
+          city: pitch.city || "",
+          images,
+          playersPerSide: pitch.playersPerSide?.toString() || "",
+          description: pitch.description || "",
+          price: pitch.price?.toString() || "",
+          facilities: pitch.facilities || [],
+        });
+      } else {
+        setNotFound(true);
+        toast({
+          title: "Pitch Not Found",
+          description: "The pitch you're trying to edit could not be found.",
+          variant: "destructive"
+        });
+      }
+    }
+    
+    setIsLoading(false);
+  }, [pitchId, pitches, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +115,9 @@ const AddPitch = () => {
       });
       return;
     }
-
-    addPitch({
+    
+    if (pitchId) {
+      updatePitch(parseInt(pitchId), {
         name: pitchData.name,
         location: pitchData.location,
         city: pitchData.city,
@@ -76,14 +127,15 @@ const AddPitch = () => {
         description: pitchData.description,
         price: Number(pitchData.price),
         facilities: pitchData.facilities,
-    });
-    
-    toast({
-      title: "Success!",
-      description: "Pitch has been added successfully.",
-    });
-    
-    navigate('/pitches');
+      });
+      
+      toast({
+        title: "Success!",
+        description: "Pitch has been updated successfully.",
+      });
+      
+      navigate('/pitches');
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -182,10 +234,30 @@ const AddPitch = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p>Loading pitch data...</p>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Pitch Not Found</h2>
+        <p className="mb-4">The pitch you're trying to edit could not be found.</p>
+        <Button onClick={() => navigate('/pitches')}>
+          Return to Pitches
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Add New Pitch</h1>
+        <h1 className="text-3xl font-bold mb-6">Edit Pitch</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Multiple Image Upload Section */}
@@ -359,8 +431,8 @@ const AddPitch = () => {
               Cancel
             </Button>
             <Button type="submit" className="bg-bokit-500 hover:bg-bokit-600">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Pitch
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </Button>
           </div>
         </form>
@@ -369,4 +441,4 @@ const AddPitch = () => {
   );
 };
 
-export default AddPitch;
+export default EditPitch;
