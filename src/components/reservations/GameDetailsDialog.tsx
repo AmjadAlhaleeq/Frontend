@@ -21,7 +21,8 @@ import {
   Edit,
   Check,
   Trophy,
-  ArrowRight as Zap // Using ArrowRight as an alias for Zap since it's not available in lucide-react
+  ArrowRight,
+  Zap // Import Zap directly from lucide-react
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,26 @@ import TransferReservationDialog from "./TransferReservationDialog";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+
+// Define a Goal component since it's not available in lucide-react
+const Goal = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v12" />
+    <path d="M8 10h8" />
+  </svg>
+);
 
 interface GameDetailsDialogProps {
   open: boolean;

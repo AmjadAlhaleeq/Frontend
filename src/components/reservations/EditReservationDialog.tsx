@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -69,6 +68,8 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   const { editReservation } = useReservation(); // Context function to save changes
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details"); // For tabs in past game admin view
+  const [highlightState, setHighlightState] = useState<Highlight[]>([]);
+  const [showHighlightForm, setShowHighlightForm] = useState(false);
   const isPastGame = new Date(reservation.date) < new Date(new Date().setHours(0,0,0,0)) || reservation.status === "completed";
 
   // Initialize react-hook-form
@@ -117,6 +118,17 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   // Handle canceling highlight addition
   const handleCancelHighlight = () => {
     // Just close the form or reset state if needed
+  };
+
+  // Update the handleDeleteHighlight and handleAddHighlight functions:
+  const handleDeleteHighlight = (highlightId: string) => {
+    const updatedHighlights = highlightState.filter(h => h.id !== highlightId);
+    setHighlightState(updatedHighlights);
+  };
+
+  const handleAddHighlight = (highlight: Highlight) => {
+    setHighlightState(prev => [...prev, highlight]);
+    setShowHighlightForm(false);
   };
 
   /**
@@ -331,11 +343,13 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 <div>
                   <h3 className="text-lg font-medium mb-2 dark:text-gray-100">Add New Highlight</h3>
                   {/* Component form to add a new highlight */}
-                  <HighlightForm 
-                    reservationId={reservation.id}
-                    onSave={handleSaveHighlight}
-                    onCancel={handleCancelHighlight}
-                  />
+                  {showHighlightForm && (
+                    <HighlightForm
+                      reservationId={reservation.id}
+                      onSubmit={handleAddHighlight}
+                      onClose={() => setShowHighlightForm(false)}
+                    />
+                  )}
                 </div>
               </div>
             </TabsContent>

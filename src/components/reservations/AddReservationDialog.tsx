@@ -1,263 +1,216 @@
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { Calendar, Clock, MapPin, Users, Banknote, Image } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useReservation, NewReservationData } from "@/context/ReservationContext";
-import { useToast } from "@/components/ui/use-toast";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useReservation } from "@/context/ReservationContext";
 
-const formSchema = z.object({
-  pitchName: z.string().min(2, "Pitch name must be at least 2 characters"),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  time: z.string({
-    required_error: "Please select a time slot",
-  }),
-  location: z.string().min(2, "Location must be at least 2 characters"),
-  price: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Price must be a non-negative number" }),
-  maxPlayers: z.string({
-    required_error: "Please select number of players",
-  }),
-  imageUrl: z.string().optional(),
-});
+interface AddReservationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
-type FormValues = z.infer<typeof formSchema>;
-
-const AddReservationDialog = () => {
-  const [open, setOpen] = useState(false);
-  const { addReservation } = useReservation();
+const AddReservationDialog: React.FC<AddReservationDialogProps> = ({
+  open,
+  onOpenChange,
+}) => {
   const { toast } = useToast();
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      pitchName: "",
-      location: "",
-      price: "",
-      imageUrl: "",
-      // date: new Date(), // Optionally set a default date
-      // time: "17:00 - 18:30", // Optionally set a default time
-      // maxPlayers: "10", // Optionally set a default maxPlayers
-    },
+  const { addReservation } = useReservation();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [formState, setFormState] = useState({
+    pitchName: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: "18:00",
+    location: "",
+    maxPlayers: 10,
+    price: 0,
+    imageUrl: "",
   });
 
-  const onSubmit = (data: FormValues) => {
-    console.log("Submitting reservation data:", data);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormState((prev) => ({
+      ...prev,
+      [name]: name === "maxPlayers" || name === "price" ? Number(value) : value,
+    }));
+  };
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      setFormState((prev) => ({
+        ...prev,
+        date: format(newDate, "yyyy-MM-dd"),
+      }));
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const newReservationData: NewReservationData = {
-      pitchName: data.pitchName,
-      date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
-      time: data.time,
-      location: data.location,
-      price: parseFloat(data.price), // Convert price to number
-      maxPlayers: parseInt(data.maxPlayers, 10), // Convert maxPlayers to number
-      imageUrl: data.imageUrl || undefined, // Use undefined if empty
+    const newReservation = {
+      pitchName: formState.pitchName,
+      date: formState.date,
+      time: formState.time,
+      location: formState.location,
+      price: formState.price,
+      maxPlayers: formState.maxPlayers,
+      imageUrl: formState.imageUrl,
+      status: 'open' as const,  // Add the missing status property
+      playersJoined: 0,  // Add the missing playersJoined property
     };
     
-    addReservation(newReservationData);
-    
+    addReservation(newReservation);
+    onOpenChange(false);
     toast({
-      title: "Reservation Added",
-      description: `New reservation for ${data.pitchName} has been created.`,
-      duration: 3000,
+      title: "Reservation Created",
+      description: `Your reservation for ${formState.pitchName} on ${formState.date} at ${formState.time} has been created.`,
     });
-    
-    form.reset();
-    setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-[#0F766E] hover:bg-[#0d6d66]">
-          <Plus size={18} className="mr-2" />
-          Add Reservation
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add New Reservation</DialogTitle>
+          <DialogTitle>Create New Reservation</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="pitchName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pitch Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter pitch name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))} // Disable past dates
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time slot" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="17:00 - 18:30">17:00 - 18:30</SelectItem>
-                      <SelectItem value="18:30 - 20:00">18:30 - 20:00</SelectItem>
-                      <SelectItem value="20:00 - 21:30">20:00 - 21:30</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter location" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price per Player</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(e.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="pitchName">Pitch Name</Label>
+            <div className="relative">
+              <Input
+                id="pitchName"
+                name="pitchName"
+                value={formState.pitchName}
+                onChange={handleInputChange}
+                placeholder="Enter pitch name"
+                className="pl-10"
+                required
               />
+              <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
 
-              <FormField
-                control={form.control}
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <div className="relative">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal pl-10",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={date}
+                    onSelect={handleDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="time">Time</Label>
+            <div className="relative">
+              <Input
+                id="time"
+                name="time"
+                type="time"
+                value={formState.time}
+                onChange={handleInputChange}
+                className="pl-10"
+                required
+              />
+              <Clock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <div className="relative">
+              <Input
+                id="location"
+                name="location"
+                value={formState.location}
+                onChange={handleInputChange}
+                placeholder="Enter location"
+                className="pl-10"
+                required
+              />
+              <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxPlayers">Maximum Players</Label>
+            <div className="relative">
+              <Input
+                id="maxPlayers"
                 name="maxPlayers"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Max Players</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="10">5v5 (10 players)</SelectItem>
-                        <SelectItem value="14">7v7 (14 players)</SelectItem>
-                        <SelectItem value="22">11v11 (22 players)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                type="number"
+                value={formState.maxPlayers}
+                onChange={handleInputChange}
+                min={2}
+                max={22}
+                className="pl-10"
+                required
               />
+              <Users className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter image URL" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => { form.reset(); setOpen(false); }}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-[#0F766E] hover:bg-[#0d6d66]">Create Reservation</Button>
+          <div className="space-y-2">
+            <Label htmlFor="price">Price (optional)</Label>
+            <div className="relative">
+              <Input
+                id="price"
+                name="price"
+                type="number"
+                value={formState.price}
+                onChange={handleInputChange}
+                min={0}
+                placeholder="0"
+                className="pl-10"
+              />
+              <Banknote className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
-          </form>
-        </Form>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl">Image URL (optional)</Label>
+            <div className="relative">
+              <Input
+                id="imageUrl"
+                name="imageUrl"
+                value={formState.imageUrl}
+                onChange={handleInputChange}
+                placeholder="Enter image URL"
+                className="pl-10"
+              />
+              <Image className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button type="submit">Create Reservation</Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

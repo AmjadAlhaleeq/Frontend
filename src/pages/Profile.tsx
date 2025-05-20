@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   ArrowRight,
@@ -92,8 +91,8 @@ const Profile = () => {
     e.preventDefault();
     setEditMode(false);
     toast({
-      title: "Profile updated",
-      description: "Your profile has been updated successfully.",
+      title: "Profile updated", 
+      description: "Your profile has been updated successfully."
     });
   };
 

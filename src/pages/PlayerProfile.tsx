@@ -41,7 +41,10 @@ const PlayerProfile = () => {
     cleansheets: stats.cleansheets,
     mvps: stats.mvps,
     yellowCards: stats.yellowCards || 0,
-    redCards: stats.redCards || 0
+    redCards: stats.redCards || 0,
+    matches: stats.matches || stats.gamesPlayed,
+    wins: stats.wins || 0,
+    tackles: stats.tackles || 0
   };
 
   return (
