@@ -39,7 +39,7 @@ const SuspendPlayerForm: React.FC<SuspendPlayerFormProps> = ({
       const players = reservation.lineup
         .filter(player => player.status === 'joined' && player.playerName)
         .map(player => ({
-          id: player.userId,
+          id: player.userId || `player-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is never empty
           name: player.playerName || `Player ${player.userId}`
         }));
       
@@ -85,7 +85,12 @@ const SuspendPlayerForm: React.FC<SuspendPlayerFormProps> = ({
       return;
     }
     
-    onSuspend(selectedPlayerId, selectedPlayerName, durationNum, reason);
+    onSuspend(
+      selectedPlayerId || `player-${Date.now()}`, // Ensure ID is never empty
+      selectedPlayerName, 
+      durationNum, 
+      reason
+    );
   };
 
   return (
@@ -112,7 +117,9 @@ const SuspendPlayerForm: React.FC<SuspendPlayerFormProps> = ({
             </SelectTrigger>
             <SelectContent>
               {availablePlayers.map((player) => (
-                <SelectItem key={player.id} value={player.id}>{player.name}</SelectItem>
+                <SelectItem key={player.id} value={player.id || `player-${Math.random().toString(36).substring(2, 9)}`}>
+                  {player.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

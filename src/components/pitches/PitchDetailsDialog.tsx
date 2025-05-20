@@ -1,306 +1,282 @@
 
-import React, { useState } from "react";
-import { MapPin, Clock, Calendar, Users, Star, CheckCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter 
-} from "@/components/ui/dialog";
-import { Pitch } from "@/context/ReservationContext";
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  MapPin,
+  Calendar,
+  Clock,
+  User,
+  Check,
+  Banknote,
+  CheckCircle,
+  Trash,
+  Edit,
+  ArrowRight,
+  Image,
+  Landmark
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Pitch } from '@/context/ReservationContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface PitchDetailsDialogProps {
   pitch: Pitch;
-  onClose: () => void;
   onBookPitch: () => void;
+  onClose: () => void;
   userRole: 'admin' | 'player' | null;
 }
 
 /**
- * PitchDetailsDialog component to display detailed information about a pitch
- * Shows a modal with comprehensive pitch details, including facilities and location
+ * PitchDetailsDialog component
+ * Displays detailed information about a pitch and allows users to book it
+ * Admins can see additional options to edit or delete the pitch
  */
 const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   pitch,
-  onClose,
   onBookPitch,
-  userRole
+  onClose,
+  userRole,
 }) => {
-  // State for the photo gallery
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showFullGallery, setShowFullGallery] = useState(false);
-  
-  // Sample gallery photos (would come from pitch.galleryImages in production)
-  const galleryPhotos = [
-    pitch.image,
-    // These would be populated from actual gallery images in a real implementation
-    "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    "https://images.unsplash.com/photo-1518604666860-9ed391f76460?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=876&q=80"
-  ];
-  
-  const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % galleryPhotos.length);
-  };
-  
-  const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length);
-  };
-  
-  // Make sure to handle potential undefined details
-  const address = pitch.details?.address || pitch.location;
-  const description = pitch.details?.description || pitch.description;
-  const priceDisplay = pitch.details?.price || `$${pitch.price} per hour`;
-  const facilities = pitch.details?.facilities || [];
-  
-  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('details');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Helper function to render facility icons
-  const getFacilityIcon = (facilityName: string): JSX.Element => {
-    const lowerFacilityName = facilityName.toLowerCase();
-    
-    // Return appropriate SVG icon based on facility name
-    return (
-      <span className="rounded-full bg-teal-100 dark:bg-teal-900 p-1 mr-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-teal-600 dark:text-teal-400">
-          <path d="M12 2L3 8V21H21V8L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </span>
+  // Get available pitch images (in a real app, these would come from the database)
+  const images = [
+    pitch.imageUrl || 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68',
+    'https://images.unsplash.com/photo-1508098682722-e99c643e7f0b',
+    'https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f',
+    'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d'
+  ].filter(Boolean);
+
+  const handleEditPitch = () => {
+    onClose();
+    // In a real application, this would navigate to the edit page
+    toast({
+      title: 'Edit Pitch',
+      description: 'Navigating to edit page for this pitch.',
+    });
+  };
+
+  const handleDeletePitch = () => {
+    // In a real application, this would show a confirmation dialog
+    toast({
+      title: 'Delete Pitch',
+      description: 'This would delete the pitch after confirmation.',
+      variant: 'destructive',
+    });
+  };
+
+  // Navigate to the previous image
+  const showPrevImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === 0 ? images.length - 1 : prevIndex - 1
+    );
+  };
+
+  // Navigate to the next image
+  const showNextImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === images.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   return (
-    <>
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{pitch.name}</DialogTitle>
-            <DialogDescription>
-              <div className="flex items-center mt-1 mb-4">
-                <MapPin className="h-4 w-4 text-gray-500 mr-1" />
-                <a 
-                  href={googleMapsUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                  aria-label={`View ${address} on Google Maps`}
-                >
-                  {pitch.location}
-                </a>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{pitch.name}</DialogTitle>
+          <DialogDescription className="flex items-center mt-2">
+            <MapPin className="h-4 w-4 mr-1.5 text-gray-500" />
+            {pitch.location}
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-4">
-            {/* Main image and gallery thumbnails */}
-            <div className="relative">
+        <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="details">
+              <Landmark className="h-4 w-4 mr-2" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="gallery">
+              <Image className="h-4 w-4 mr-2" />
+              Gallery
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="space-y-4">
+            {/* Main pitch image */}
+            <div className="aspect-video rounded-md overflow-hidden">
               <img
-                src={galleryPhotos[currentPhotoIndex]}
+                src={pitch.imageUrl || 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68'}
                 alt={pitch.name}
-                className="w-full h-60 object-cover rounded-md mb-2 cursor-pointer"
-                onClick={() => setShowFullGallery(true)}
+                className="w-full h-full object-cover"
               />
-              
-              {galleryPhotos.length > 1 && (
-                <>
-                  {/* Navigation buttons */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      prevPhoto();
-                    }}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-white bg-black/50 hover:bg-black/70 rounded-full"
-                  >
-                    <ChevronLeft size={20} />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      nextPhoto();
-                    }}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-white bg-black/50 hover:bg-black/70 rounded-full"
-                  >
-                    <ChevronRight size={20} />
-                  </Button>
-                  
-                  {/* Gallery thumbnails */}
-                  <div className="flex justify-center mt-2 space-x-2">
-                    {galleryPhotos.map((photo, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`w-12 h-12 rounded-md overflow-hidden cursor-pointer transition-all ${idx === currentPhotoIndex ? 'ring-2 ring-teal-500 ring-offset-2' : 'opacity-70 hover:opacity-100'}`}
-                        onClick={() => setCurrentPhotoIndex(idx)}
-                      >
-                        <img 
-                          src={photo} 
-                          alt={`Thumbnail ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-1 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2 text-[#0F766E]" />
-                About this Pitch
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {description}
+            {/* Pitch details */}
+            <div className="grid grid-cols-2 gap-4 py-2">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                <div className="text-sm">
+                  <span className="font-medium">Availability</span>
+                  <p className="text-gray-600">{pitch.availability || '7 days a week'}</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                <div className="text-sm">
+                  <span className="font-medium">Hours</span>
+                  <p className="text-gray-600">{pitch.hours || '08:00 - 22:00'}</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <User className="h-4 w-4 mr-2 text-gray-500" />
+                <div className="text-sm">
+                  <span className="font-medium">Capacity</span>
+                  <p className="text-gray-600">{pitch.capacity || '5v5, 7v7'}</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Banknote className="h-4 w-4 mr-2 text-gray-500" />
+                <div className="text-sm">
+                  <span className="font-medium">Price</span>
+                  <p className="text-gray-600">{pitch.price ? `$${pitch.price}/hour` : '$60/hour'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Amenities */}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Amenities</h4>
+              <div className="flex flex-wrap gap-2">
+                {(pitch.amenities || ['Changing Rooms', 'Showers', 'Free Parking', 'Floodlights', 'Equipment Rental']).map((amenity, i) => (
+                  <Badge key={i} variant="outline" className="flex items-center">
+                    <Check className="h-3 w-3 mr-1 text-green-500" />
+                    {amenity}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Description</h4>
+              <p className="text-sm text-gray-600">
+                {pitch.description || 
+                  'This state-of-the-art football pitch features high-quality synthetic turf ' +
+                  'designed to provide excellent ball control and player comfort. ' +
+                  'The pitch is fully equipped with modern facilities including changing rooms, ' +
+                  'showers, and floodlights for evening games.'}
               </p>
             </div>
+          </TabsContent>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <Users className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                  <div>
-                    <h4 className="text-sm font-medium">Players Format</h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {pitch.playersPerSide} vs {pitch.playersPerSide}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                  <div>
-                    <h4 className="text-sm font-medium">Address</h4>
-                    <a 
-                      href={googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
-                      aria-label={`View ${address} on Google Maps`}
-                    >
-                      {address}
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                  <div>
-                    <h4 className="text-sm font-medium">Price</h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {priceDisplay}
-                    </p>
-                  </div>
-                </div>
-                
-                {pitch.openingHours && (
-                  <div className="flex items-start">
-                    <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                    <div>
-                      <h4 className="text-sm font-medium">Opening Hours</h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">
-                        {pitch.openingHours}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {facilities && facilities.length > 0 && (
-              <div>
-                <h3 className="text-md font-semibold mb-2">Facilities</h3>
-                <div className="flex flex-wrap gap-3">
-                  {facilities.map((facility, idx) => (
-                    <Badge
-                      key={idx}
-                      variant="outline"
-                      className="bg-gray-100 dark:bg-gray-700 p-2 flex items-center gap-2"
-                    >
-                      {getFacilityIcon(facility)}
-                      <span className="text-xs">{facility}</span>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button
-              className="bg-[#0F766E] hover:bg-[#0d6d66]"
-              onClick={onBookPitch}
-            >
-              Book Now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Full-screen gallery */}
-      <Dialog open={showFullGallery} onOpenChange={setShowFullGallery}>
-        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0">
-          <div className="relative h-full w-full flex items-center justify-center">
-            {/* Close button */}
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowFullGallery(false)}
-              className="absolute top-4 right-4 h-8 w-8 text-white bg-black/50 hover:bg-black/70 z-10"
-            >
-              <X size={20} />
-            </Button>
-            
-            {/* Main image */}
-            <div className="w-full h-full flex items-center justify-center p-4">
-              <img 
-                src={galleryPhotos[currentPhotoIndex]} 
-                alt={`${pitch.name} - Photo ${currentPhotoIndex + 1}`}
-                className="max-h-[80vh] max-w-full object-contain"
+          <TabsContent value="gallery">
+            {/* Image gallery with navigation */}
+            <div className="relative aspect-video rounded-md overflow-hidden">
+              <img
+                src={images[currentImageIndex]}
+                alt={`${pitch.name} view ${currentImageIndex + 1}`}
+                className="w-full h-full object-cover"
               />
+              
+              {/* Navigation arrows */}
+              <div className="absolute inset-y-0 left-0 flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50"
+                  onClick={showPrevImage}
+                >
+                  <ArrowRight className="h-4 w-4 rotate-180" />
+                  <span className="sr-only">Previous image</span>
+                </Button>
+              </div>
+              <div className="absolute inset-y-0 right-0 flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50"
+                  onClick={showNextImage}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Next image</span>
+                </Button>
+              </div>
+              
+              {/* Image counter */}
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
+                <div className="px-2 py-1 bg-black/50 rounded-full text-white text-xs">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </div>
             </div>
             
-            {/* Navigation buttons */}
-            {galleryPhotos.length > 1 && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={prevPhoto}
-                  className="absolute left-4 h-10 w-10 text-white bg-black/50 hover:bg-black/70 rounded-full"
+            {/* Thumbnails */}
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {images.map((image, index) => (
+                <div 
+                  key={index}
+                  className={`aspect-video rounded-md overflow-hidden cursor-pointer ${
+                    index === currentImageIndex ? 'ring-2 ring-teal-500' : ''
+                  }`}
+                  onClick={() => setCurrentImageIndex(index)}
                 >
-                  <ChevronLeft size={24} />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={nextPhoto}
-                  className="absolute right-4 h-10 w-10 text-white bg-black/50 hover:bg-black/70 rounded-full"
-                >
-                  <ChevronRight size={24} />
-                </Button>
-                
-                {/* Photo counter */}
-                <div className="absolute bottom-4 left-0 right-0 text-center text-white text-sm">
-                  {currentPhotoIndex + 1} / {galleryPhotos.length}
+                  <img
+                    src={image}
+                    alt={`${pitch.name} thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter>
+          {userRole === 'admin' ? (
+            <div className="flex space-x-2 w-full">
+              <Button
+                variant="outline"
+                onClick={handleDeletePitch}
+                className="flex-1 text-red-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <Trash className="h-4 w-4 mr-1.5" />
+                Delete
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleEditPitch}
+                className="flex-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+              >
+                <Edit className="h-4 w-4 mr-1.5" />
+                Edit
+              </Button>
+            </div>
+          ) : (
+            <div className="w-full flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+              <Button onClick={onBookPitch} className="bg-teal-600 hover:bg-teal-700 mb-2 sm:mb-0">
+                <CheckCircle className="h-4 w-4 mr-1.5" />
+                Book This Pitch
+              </Button>
+            </div>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

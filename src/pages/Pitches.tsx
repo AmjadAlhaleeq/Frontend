@@ -1,6 +1,3 @@
-
-// This is the Pitches.tsx page. It handles UI and logic for Pitches.
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
