@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
@@ -469,12 +468,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
         <DeleteConfirmationDialog
-          isOpen={showDeleteDialog}
-          onClose={() => setShowDeleteDialog(false)}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
           onConfirm={handleDeleteReservation}
-          title="Delete Reservation"
-          description="Are you sure you want to delete this reservation? All players will be notified and this action cannot be undone."
-          isDeleting={isDeleting}
+          itemName={reservation.title || reservation.pitchName}
+          itemType="reservation"
         />
       )}
       

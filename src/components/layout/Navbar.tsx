@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const location = useLocation();
 
@@ -111,6 +113,17 @@ const Navbar = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
+
+  // Handle successful login
+  const handleLoginSuccess = (role: 'admin' | 'player', userDetails?: any) => {
+    setIsLoggedIn(true);
+    setCurrentUser(userDetails);
+    setUserRole(role);
+    setIsLoginDialogOpen(false);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event("loginStatusChanged"));
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -199,7 +212,13 @@ const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <LoginDialog />
+              <Button 
+                variant="outline" 
+                className="text-sm"
+                onClick={() => setIsLoginDialogOpen(true)}
+              >
+                Login / Sign up
+              </Button>
             )}
 
             {/* Mobile menu button */}
@@ -295,6 +314,13 @@ const Navbar = () => {
         isOpen={isLogoutDialogOpen}
         onClose={() => setIsLogoutDialogOpen(false)}
         onConfirm={handleLogout}
+      />
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={isLoginDialogOpen}
+        onClose={() => setIsLoginDialogOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
     </header>
   );

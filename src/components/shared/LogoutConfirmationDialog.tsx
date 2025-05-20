@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button"; // For styling the action button
+import { LogOut } from "lucide-react";
 
 interface LogoutConfirmationDialogProps {
   isOpen: boolean;
@@ -25,21 +25,24 @@ const LogoutConfirmationDialog: React.FC<LogoutConfirmationDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="dark:bg-gray-800">
+      <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="dark:text-white">Are you sure you want to log out?</AlertDialogTitle>
-          <AlertDialogDescription className="dark:text-gray-400">
-            You will be returned to the home page and will need to log in again to access your profile and reservations.
+          <AlertDialogTitle className="text-center">
+            Confirm Logout
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-center">
+            Are you sure you want to log out of your account?
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose} className="dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-            Cancel
-          </AlertDialogCancel>
-          {/* Apply Button variant styling for consistency */}
-          <Button onClick={onConfirm} variant="destructive"> 
-            Log Out
-          </Button>
+        <AlertDialogFooter className="sm:justify-center">
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Log out
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
