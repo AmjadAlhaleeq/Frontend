@@ -11,7 +11,6 @@ import {
   Trophy,
   User,
   Zap,
-  BadgePlus,
 } from "lucide-react";
 
 interface PlayerStatsProps {
@@ -41,7 +40,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           <Goal className="h-5 w-5 text-green-500" />
           <div>
             <p className="text-sm font-medium leading-none">Goals Scored</p>
-            <p className="text-lg font-bold">{stats.goalsScored}</p>
+            <p className="text-lg font-bold">{stats.goalsScored || stats.goals || 0}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
