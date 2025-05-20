@@ -9,15 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
 import LeaveGameDialog from '../reservations/LeaveGameDialog';
 import { useToast } from '@/hooks/use-toast';
+import WaitlistConfirmationDialog from '../reservations/WaitlistConfirmationDialog';
 
 interface PlayerReservationsProps {
   userId: string;
 }
 
 const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
-  const { reservations, cancelReservation } = useReservation();
+  const { reservations, cancelReservation, joinWaitingList, leaveWaitingList } = useReservation();
   const { toast } = useToast();
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showJoinWaitlistDialog, setShowJoinWaitlistDialog] = useState(false);
+  const [showLeaveWaitlistDialog, setShowLeaveWaitlistDialog] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
   // Get user's reservations
@@ -86,6 +89,62 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
     }
   };
 
+  // Handle joining waiting list
+  const handleJoinWaitingList = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setShowJoinWaitlistDialog(true);
+  };
+
+  // Confirm joining waitlist
+  const confirmJoinWaitlist = async () => {
+    if (!selectedReservation) return;
+    
+    try {
+      await joinWaitingList(selectedReservation.id, userId);
+      setShowJoinWaitlistDialog(false);
+      
+      toast({
+        title: "Added to waiting list",
+        description: "You've been added to the waiting list",
+      });
+    } catch (error) {
+      console.error("Error joining waiting list:", error);
+      toast({
+        title: "Failed to join",
+        description: "There was a problem joining the waiting list",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle leaving waiting list
+  const handleLeaveWaitingList = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setShowLeaveWaitlistDialog(true);
+  };
+
+  // Confirm leaving waitlist
+  const confirmLeaveWaitlist = async () => {
+    if (!selectedReservation) return;
+    
+    try {
+      await leaveWaitingList(selectedReservation.id, userId);
+      setShowLeaveWaitlistDialog(false);
+      
+      toast({
+        title: "Removed from waiting list",
+        description: "You've been removed from the waiting list",
+      });
+    } catch (error) {
+      console.error("Error leaving waiting list:", error);
+      toast({
+        title: "Failed to leave",
+        description: "There was a problem leaving the waiting list",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Open leave game dialog
   const handleCancelReservation = (reservation: Reservation) => {
     setSelectedReservation(reservation);
@@ -145,11 +204,11 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         </Badge>
       </div>
       
-      {/* Pitch image - added */}
-      {reservation.image && (
+      {/* Pitch image - fixed property name from image to imageUrl */}
+      {reservation.imageUrl && (
         <div className="aspect-video w-full rounded-md overflow-hidden mb-3">
           <img 
-            src={reservation.image} 
+            src={reservation.imageUrl} 
             alt={reservation.title || reservation.pitchName}
             className="w-full h-full object-cover"
           />
@@ -235,16 +294,38 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
       
       {/* Leave game confirmation dialog */}
       {selectedReservation && (
-        <LeaveGameDialog
-          isOpen={showLeaveDialog}
-          onClose={() => setShowLeaveDialog(false)}
-          onConfirm={confirmLeaveGame}
-          gameName={selectedReservation.title || selectedReservation.pitchName}
-          gameDate={formatDate(selectedReservation.date)}
-          gameTime={selectedReservation.time}
-          isPenalty={isPenalty(selectedReservation)}
-          timeToGame={getTimeToGame(selectedReservation)}
-        />
+        <>
+          <LeaveGameDialog
+            isOpen={showLeaveDialog}
+            onClose={() => setShowLeaveDialog(false)}
+            onConfirm={confirmLeaveGame}
+            gameName={selectedReservation.title || selectedReservation.pitchName}
+            gameDate={formatDate(selectedReservation.date)}
+            gameTime={selectedReservation.time}
+            isPenalty={isPenalty(selectedReservation)}
+            timeToGame={getTimeToGame(selectedReservation)}
+          />
+          
+          <WaitlistConfirmationDialog
+            isOpen={showJoinWaitlistDialog}
+            onClose={() => setShowJoinWaitlistDialog(false)}
+            onConfirm={confirmJoinWaitlist}
+            gameName={selectedReservation.title || selectedReservation.pitchName}
+            gameDate={formatDate(selectedReservation.date)}
+            gameTime={selectedReservation.time}
+            isJoining={true}
+          />
+          
+          <WaitlistConfirmationDialog
+            isOpen={showLeaveWaitlistDialog}
+            onClose={() => setShowLeaveWaitlistDialog(false)}
+            onConfirm={confirmLeaveWaitlist}
+            gameName={selectedReservation.title || selectedReservation.pitchName}
+            gameDate={formatDate(selectedReservation.date)}
+            gameTime={selectedReservation.time}
+            isJoining={false}
+          />
+        </>
       )}
     </Card>
   );

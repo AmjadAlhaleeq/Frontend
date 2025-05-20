@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban, Image } from "lucide-react";
@@ -371,11 +370,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       
       <CardContent className="pb-2">
         <div className="space-y-3">
-          {/* Pitch image - added */}
-          {reservation.image && (
+          {/* Pitch image - fixed property from image to imageUrl */}
+          {reservation.imageUrl && (
             <div className="aspect-video w-full rounded-md overflow-hidden mb-3">
               <img 
-                src={reservation.image} 
+                src={reservation.imageUrl} 
                 alt={reservation.title || reservation.pitchName}
                 className="w-full h-full object-cover"
               />
