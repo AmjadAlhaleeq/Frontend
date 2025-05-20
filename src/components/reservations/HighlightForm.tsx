@@ -10,17 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Award, Goal, Star, Zap } from "lucide-react";
+import { X, Award, Star, ArrowRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import { Highlight, HighlightType } from "@/context/ReservationContext";
 
 interface HighlightFormProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Highlight) => void;
   reservationId?: number; // Optional prop for reservation ID
 }
 

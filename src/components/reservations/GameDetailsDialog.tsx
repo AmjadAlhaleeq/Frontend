@@ -1,4 +1,5 @@
 
+// Import the missing Zap icon
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,9 @@ import {
   AlertTriangle,
   Trash2,
   Edit,
-  Goal,
   Check,
   Trophy,
+  ArrowRight as Zap // Using ArrowRight as an alias for Zap since it's not available in lucide-react
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

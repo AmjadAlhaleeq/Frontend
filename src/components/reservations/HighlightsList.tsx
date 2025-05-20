@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Trash2, Trophy, Edit, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext"; // Update import to include HighlightType
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,9 @@ interface HighlightsListProps {
 }
 
 // Define the structure for a new highlight, matching Omit<Highlight, 'id'>
-type NewHighlightInput = Omit<Highlight, 'id'>;
+type NewHighlightInput = Omit<Highlight, 'id'> & {
+  playerName?: string;
+};
 
 const HighlightsList: React.FC<HighlightsListProps> = ({ 
   reservationId,
@@ -27,7 +29,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   
   const initialNewHighlightState: NewHighlightInput = {
     minute: 1,
-    type: "goal", // Default type
+    type: "goal" as HighlightType, // Default type
     playerId: `player-temp-${Date.now()}`, // Temporary, can be refined
     playerName: "",
     description: ""
@@ -40,7 +42,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const { highlights } = reservation;
   
   const handleAddHighlight = () => {
-    if (!newHighlight.playerName.trim()) {
+    if (!newHighlight.playerName?.trim()) {
       toast({
         title: "Player name required",
         description: "Please enter a player name for the highlight.",
@@ -61,7 +63,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
     const highlightToAdd: Omit<Highlight, 'id'> = {
       ...newHighlight,
       playerId: `player-${Date.now()}-${newHighlight.playerName.replace(/\s+/g, '-')}`, // Example of a more unique ID
-      description: newHighlight.description?.trim() || undefined
+      description: newHighlight.description?.trim() || undefined,
+      playerName: newHighlight.playerName
     };
 
     addHighlight(reservationId, highlightToAdd);
@@ -125,7 +128,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const assistCount = highlights.filter(h => h.type === 'assist').length;
   const yellowCardCount = highlights.filter(h => h.type === 'yellowCard').length;
   const redCardCount = highlights.filter(h => h.type === 'redCard').length;
-  // Add counts for 'save' and 'other' if they become relevant
+  const saveCount = highlights.filter(h => h.type === 'save').length;
+  const otherCount = highlights.filter(h => h.type === 'other').length;
 
   return (
     <div className="space-y-4">
@@ -189,7 +193,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
             <div className="space-y-1 md:col-span-1"> {/* Ensure player name is not full width if description is too */}
               <label className="text-xs font-medium text-gray-700">Player Name</label>
               <Input 
-                value={newHighlight.playerName}
+                value={newHighlight.playerName || ''}
                 onChange={(e) => setNewHighlight({...newHighlight, playerName: e.target.value})}
                 className="h-8 text-sm"
                 placeholder="Enter player name"
@@ -270,7 +274,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
               <div className="flex-1 flex items-start"> {/* items-start */}
                 <div className="mr-2 pt-0.5">{getEventIcon(highlight.type)}</div>
                 <div className="flex-grow"> {/* flex-grow to take available space */}
-                  <span className="font-medium mr-2">{highlight.playerName}</span>
+                  <span className="font-medium mr-2">{highlight.playerName || highlight.playerId}</span>
                   {highlight.type === 'goal' && <span className="text-green-600 font-semibold">GOAL!</span>}
                   {highlight.type === 'assist' && <span className="text-blue-600 font-semibold">Assist</span>}
                   {highlight.type === 'yellowCard' && <span className="text-yellow-600 font-semibold">Yellow Card</span>}
