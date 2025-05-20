@@ -36,100 +36,6 @@ const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
 };
 
 /**
- * Helper function to generate sample reservations for testing
- * @returns Array of sample reservations
- */
-const generateSampleReservations = (): Reservation[] => {
-  // Current date for creating relative dates
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-  const nextWeek = new Date(today);
-  nextWeek.setDate(nextWeek.getDate() + 7);
-
-  // Sample image URLs
-  const sampleImages = [
-    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1000",
-    "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?q=80&w=1000",
-    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1000",
-    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1000"
-  ];
-
-  // Generate sample reservations
-  return [
-    {
-      id: 1001,
-      title: "Evening 5-a-side",
-      pitchName: "Central Stadium",
-      date: today.toISOString().split('T')[0],
-      time: "19:00",
-      location: "Central Park, Downtown",
-      city: "New York",
-      status: "open",
-      playersJoined: 7,
-      maxPlayers: 10,
-      waitingList: ["user4", "user5"],
-      imageUrl: sampleImages[0],
-      lineup: [
-        { userId: "user1", playerName: "John Doe", status: "joined" },
-        { userId: "user2", playerName: "Jane Smith", status: "joined" },
-        { userId: "user3", playerName: "Mike Johnson", status: "joined" }
-      ]
-    },
-    {
-      id: 1002,
-      title: "Weekend Football Tournament",
-      pitchName: "Riverside Pitches",
-      date: tomorrow.toISOString().split('T')[0],
-      time: "10:30",
-      location: "Riverside Park, East Side",
-      city: "Chicago",
-      status: "full",
-      playersJoined: 12,
-      maxPlayers: 12,
-      waitingList: ["user7", "user8", "user9"],
-      imageUrl: sampleImages[1],
-      lineup: [
-        { userId: "user1", playerName: "John Doe", status: "joined" },
-        { userId: "user6", playerName: "Sarah Williams", status: "joined" }
-      ]
-    },
-    {
-      id: 1003,
-      title: "Morning Football Session",
-      pitchName: "Greenfield Arena",
-      date: dayAfterTomorrow.toISOString().split('T')[0],
-      time: "08:00",
-      location: "Greenfield Park, West End",
-      city: "Boston",
-      status: "open",
-      playersJoined: 5,
-      maxPlayers: 10,
-      waitingList: [],
-      imageUrl: sampleImages[2],
-      lineup: []
-    },
-    {
-      id: 1004,
-      title: "Corporate Football League",
-      pitchName: "Business Park Grounds",
-      date: nextWeek.toISOString().split('T')[0],
-      time: "15:00",
-      location: "Financial District",
-      city: "San Francisco",
-      status: "open",
-      playersJoined: 8,
-      maxPlayers: 12,
-      waitingList: [],
-      imageUrl: sampleImages[3],
-      lineup: []
-    }
-  ];
-};
-
-/**
  * Reservations Page Component
  * Displays and manages game reservations
  * 
@@ -148,9 +54,6 @@ const Reservations = () => {
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
-  
-  // Add sample reservations for testing
-  const [sampleData] = useState(generateSampleReservations());
   
   useEffect(() => {
     // Get user role and ID from localStorage
@@ -211,32 +114,29 @@ const Reservations = () => {
     return maxPlayers + 2;
   };
 
-  // Combine real reservations with sample data for testing
-  const allReservations = [...reservations, ...sampleData];
-
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
     const today = new Date(new Date().setHours(0, 0, 0, 0)); 
 
     if (currentDate) {
-      // For current date, use the sample data too
+      // For current date
       const dateString = format(currentDate, 'yyyy-MM-dd');
-      const filtered = allReservations.filter(
+      const filtered = reservations.filter(
         res => res.date === dateString && (res.status === "open" || res.status === "full")
       );
       gamesToShow = filtered;
     } else {
-      gamesToShow = allReservations.filter(
+      gamesToShow = reservations.filter(
         (res) => (res.status === "open" || res.status === "full") && 
                  new Date(res.date) >= today
       );
     }
     return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
-  }, [allReservations, currentDate]);
+  }, [reservations, currentDate]);
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
-    return allReservations.some(res => res.date === dateString);
+    return reservations.some(res => res.date === dateString);
   };
 
   const handleJoinGame = (reservationId: number) => {
@@ -294,7 +194,7 @@ const Reservations = () => {
     }
     
     // Only allow joining waiting list for full games
-    const reservation = allReservations.find(r => r.id === reservationId);
+    const reservation = reservations.find(r => r.id === reservationId);
     if (reservation && reservation.status !== 'full') {
       toast({
         title: "Game not full",

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +43,6 @@ const EditPitch = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   
   // For image preview and slider functionality
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -101,7 +99,7 @@ const EditPitch = () => {
     setIsLoading(false);
   }, [pitchId, pitches, toast]);
 
-  // Fixed: Handle submit function to avoid infinite loop
+  // Handle submit function - Fixed to avoid infinite loop
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -128,6 +126,7 @@ const EditPitch = () => {
     try {
       if (pitchId) {
         const id = parseInt(pitchId);
+        
         // Fix: Create a completely new object to avoid reference issues
         const pitchToUpdate = {
           id: id,
@@ -143,8 +142,8 @@ const EditPitch = () => {
           highlights: [...pitchData.highlights]
         };
         
-        // Call updatePitch with the new object
-        await updatePitch(id, pitchToUpdate);
+        // Update the pitch in context
+        updatePitch(id, pitchToUpdate);
         
         // Show success toast
         toast({
@@ -304,17 +303,6 @@ const EditPitch = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Edit Pitch</h1>
-        
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-lg border border-green-200 flex items-center justify-center">
-            <div className="mr-3 flex-shrink-0">
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-              </svg>
-            </div>
-            {successMessage}
-          </div>
-        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
