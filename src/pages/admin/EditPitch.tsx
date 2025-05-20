@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,7 @@ const EditPitch = () => {
     description: "",
     price: "",
     facilities: [] as string[],
-    highlights: []
+    highlights: [] as string[]
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -125,7 +126,8 @@ const EditPitch = () => {
     
     try {
       if (pitchId) {
-        updatePitch(parseInt(pitchId), {
+        // Fix: Clone the object to avoid reference issues
+        const pitchToUpdate = {
           name: pitchData.name,
           location: pitchData.location,
           city: pitchData.city,
@@ -134,9 +136,11 @@ const EditPitch = () => {
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
           price: Number(pitchData.price),
-          facilities: pitchData.facilities,
-          highlights: pitchData.highlights || []
-        });
+          facilities: [...pitchData.facilities],
+          highlights: [...pitchData.highlights]
+        };
+        
+        updatePitch(parseInt(pitchId), pitchToUpdate);
         
         // Show success message
         toast({
@@ -145,7 +149,9 @@ const EditPitch = () => {
         });
         
         // Navigate away after success
-        navigate('/pitches');
+        setTimeout(() => {
+          navigate('/pitches');
+        }, 1000);
       }
     } catch (error) {
       console.error("Error updating pitch:", error);
@@ -288,8 +294,6 @@ const EditPitch = () => {
     description: pitchData.description || "Pitch description...",
     price: Number(pitchData.price) || 0,
     facilities: pitchData.facilities,
-    openingHours: "9:00 AM - 10:00 PM", // Default value instead of from form
-    highlights: pitchData.highlights || []
   };
 
   return (
@@ -565,10 +569,6 @@ const EditPitch = () => {
                   <div className="text-gray-600">
                     {previewPitch.playersPerSide}v{previewPitch.playersPerSide}
                   </div>
-                </div>
-                
-                <div className="mb-2 text-xs text-gray-500">
-                  {previewPitch.openingHours}
                 </div>
                 
                 {/* Description preview */}

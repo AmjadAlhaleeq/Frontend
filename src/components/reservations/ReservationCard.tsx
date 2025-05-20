@@ -121,7 +121,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   // Handle joining a game
-  const handleJoinGame = async () => {
+  const handleJoinGame = () => {
     if (!currentUserId) {
       toast({
         title: "Login Required",
@@ -168,7 +168,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   // Handle leaving a game
-  const handleCancelReservation = async () => {
+  const handleCancelReservation = () => {
     if (!currentUserId) {
       toast({
         title: "Login Required",
@@ -191,7 +191,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       await onCancelReservation();
       
       // If there are people on the waiting list, send notification
-      if (reservation.waitingList.length > 0) {
+      if (reservation.waitingList && reservation.waitingList.length > 0) {
         // In a real app, you'd get the emails from user profiles
         // For demo, we'll create dummy emails from user IDs
         const waitingListEmails = reservation.waitingList.map(userId => {
@@ -233,7 +233,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   // Handle joining waiting list
-  const handleJoinWaitingList = async () => {
+  const handleJoinWaitingList = () => {
     if (!currentUserId) {
       toast({
         title: "Login Required",
@@ -243,8 +243,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       return;
     }
     
+    // Only allow joining waitlist if the game is full
+    if (reservation.status !== 'full') {
+      toast({
+        title: "Game not full",
+        description: "You can only join the waiting list when the game is full.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Max waiting list of 3 people
-    if (reservation.waitingList.length >= 3) {
+    if (reservation.waitingList && reservation.waitingList.length >= 3) {
       toast({
         title: "Waiting List Full",
         description: "The waiting list is limited to 3 players.",
@@ -281,7 +291,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   // Handle leaving waiting list
-  const handleLeaveWaitingList = async () => {
+  const handleLeaveWaitingList = () => {
     if (!currentUserId) {
       toast({
         title: "Login Required",
@@ -319,7 +329,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   // Handle deleting a reservation (admin only)
-  const handleDeleteReservation = async () => {
+  const handleDeleteReservation = () => {
     if (!onDeleteReservation) return;
     
     setShowDeleteDialog(true);
@@ -332,7 +342,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     setIsDeleting(true);
     try {
       // Get emails for all players in the lineup
-      const playerEmails = reservation.lineup.map(player => {
+      const playerEmails = reservation.lineup && reservation.lineup.map(player => {
         // This is a dummy implementation - in real app, get actual emails
         return `player-${player.userId}@example.com`;
       });
@@ -372,7 +382,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   // Open suspend player dialog
   const openSuspendDialog = (userId: string, playerName: string) => {
     setSelectedPlayerId(userId);
-    setSelectedPlayerName(playerName);
+    setSelectedPlayerName(playerName || "Player");
     // In a real app, get the actual email from user profile
     setSelectedPlayerEmail(`player-${userId}@example.com`);
     setShowSuspendDialog(true);
@@ -420,7 +430,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         <div className="space-y-3">
           {/* Pitch image - smaller size for better UX */}
           {reservation.imageUrl && (
-            <div className="aspect-video h-32 w-full rounded-md overflow-hidden mb-3">
+            <div className="aspect-video h-28 w-full rounded-md overflow-hidden mb-2">
               <img 
                 src={reservation.imageUrl} 
                 alt={reservation.title || reservation.pitchName}
@@ -472,12 +482,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               <Progress 
                 value={playerCountPercentage} 
                 className="h-1.5"
-                indicatorColor={playerCountPercentage < 50 ? "green" : playerCountPercentage < 75 ? "amber" : "red"}
               />
             </div>
           </div>
           
-          {reservation.waitingList && reservation.waitingList.length > 0 && (
+          {/* Only show waiting list for full games */}
+          {reservation.status === 'full' && reservation.waitingList && reservation.waitingList.length > 0 && (
             <div className="flex items-center text-xs text-muted-foreground">
               <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" />
               <span>{reservation.waitingList.length} on waiting list</span>
@@ -601,7 +611,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </>
         )}
         
-        {/* Admin action button - only delete button, removed Manage */}
+        {/* Admin delete button */}
         {isAdmin && (
           <Button 
             variant="outline" 

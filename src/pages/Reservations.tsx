@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -294,9 +293,19 @@ const Reservations = () => {
       return;
     }
     
-    // Restrict waiting list to max 3 people
+    // Only allow joining waiting list for full games
     const reservation = allReservations.find(r => r.id === reservationId);
-    if (reservation && reservation.waitingList.length >= 3) {
+    if (reservation && reservation.status !== 'full') {
+      toast({
+        title: "Game not full",
+        description: "You can only join the waiting list when the game is full.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Restrict waiting list to max 3 people
+    if (reservation && reservation.waitingList && reservation.waitingList.length >= 3) {
       toast({
         title: "Waiting List Full",
         description: "The waiting list is limited to 3 players",
@@ -458,7 +467,7 @@ const Reservations = () => {
                   onJoinWaitingList={() => handleJoinWaitingList(reservation.id)}
                   onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
                   isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
-                  isUserOnWaitingList={currentUserId ? reservation.waitingList.includes(currentUserId) : false}
+                  isUserOnWaitingList={currentUserId ? reservation.waitingList?.includes(currentUserId) || false : false}
                   hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
                   currentUserId={currentUserId || ""} 
                   isAdmin={userRole === 'admin'}

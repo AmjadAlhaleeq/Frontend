@@ -204,9 +204,9 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         </Badge>
       </div>
       
-      {/* Pitch image - using imageUrl */}
+      {/* Pitch image - using imageUrl with smaller height */}
       {reservation.imageUrl && (
-        <div className="h-32 w-full rounded-md overflow-hidden mb-3">
+        <div className="h-28 w-full rounded-md overflow-hidden mb-3">
           <img 
             src={reservation.imageUrl} 
             alt={reservation.title || reservation.pitchName}
