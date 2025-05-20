@@ -19,5 +19,7 @@ export function useIsMobile() {
   return !!isMobile
 }
 
-// Add alias export for compatibility with existing imports
-export const useMobile = { isMobile: useIsMobile() }
+// Create a proper hook alias that follows React rules
+export function useMobile() {
+  return { isMobile: useIsMobile() }
+}

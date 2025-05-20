@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -119,7 +118,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center">
             <Link to="/" className="mr-6 flex items-center space-x-2">
-              <Logo className="h-8 w-8" />
+              <Logo />
               <span className="font-bold inline-block">FootballApp</span>
             </Link>
 
@@ -295,7 +294,7 @@ const Navbar = () => {
       <LogoutConfirmationDialog
         isOpen={isLogoutDialogOpen}
         onClose={() => setIsLogoutDialogOpen(false)}
-        onLogout={handleLogout}
+        onConfirm={handleLogout}
       />
     </header>
   );
