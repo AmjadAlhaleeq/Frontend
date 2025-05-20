@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,6 @@ const Profile = () => {
     id: string;
     firstName: string;
     lastName: string;
-    gender?: string;
     age?: string;
     city?: string;
     favoritePosition?: string;
@@ -85,13 +85,16 @@ const Profile = () => {
           title: "Welcome Admin!",
           description: "You have successfully logged in as an admin.",
         });
+        
+        // Set first-time login flag and redirect to home page
+        localStorage.setItem("firstTimeLogin", "true");
+        navigate('/');
       } else if (data.email === "player@example.com" && data.password === "player123") {
         const userData = {
           id: "user1",
           firstName: "John",
           lastName: "Player",
           email: data.email,
-          gender: "male",
           age: "28",
           city: "New York",
           favoritePosition: "midfielder",
@@ -108,6 +111,10 @@ const Profile = () => {
           title: "Welcome Back!",
           description: "You have successfully logged in.",
         });
+        
+        // Set first-time login flag and redirect to home page
+        localStorage.setItem("firstTimeLogin", "true");
+        navigate('/');
       } else {
         toast({
           title: "Login Failed",
@@ -154,6 +161,10 @@ const Profile = () => {
         title: "Account Created",
         description: "Your account has been successfully created.",
       });
+      
+      // Set first-time login flag and redirect to home page
+      localStorage.setItem("firstTimeLogin", "true");
+      navigate('/');
       
       setIsLoading(false);
     }, 1500);

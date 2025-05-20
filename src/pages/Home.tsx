@@ -4,9 +4,41 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Star, Users, Shield, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  
+  // Check for first-time login flag
+  useEffect(() => {
+    const firstTimeLogin = localStorage.getItem("firstTimeLogin");
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const userRole = localStorage.getItem("userRole");
+    
+    if (firstTimeLogin === "true" && isLoggedIn === "true") {
+      // Remove the flag so it only happens once
+      localStorage.removeItem("firstTimeLogin");
+      
+      // Show welcome toast based on role
+      if (userRole === "admin") {
+        toast({
+          title: "Welcome, Admin!",
+          description: "You now have access to all admin features.",
+        });
+      } else {
+        toast({
+          title: "Welcome to Football Pitch Booking!",
+          description: "You can now book pitches and join games.",
+        });
+      }
+      
+      // Refresh the page to load all functionality based on role
+      // This ensures all components recognize the user's role
+      window.location.reload();
+    }
+  }, [toast]);
 
   return (
     <div className="flex flex-col">

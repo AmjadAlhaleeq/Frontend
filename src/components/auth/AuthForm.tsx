@@ -23,7 +23,12 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+
+/**
+ * Schema definitions for form validation
+ * These will be used with MongoDB & Node.js backend
+ */
 
 // Define the schema for login
 const loginSchema = z.object({
@@ -66,6 +71,10 @@ interface AuthFormProps {
 /**
  * AuthForm component provides a unified interface for both login and registration.
  * It switches between the two forms and handles validation.
+ * 
+ * @remarks
+ * This form is designed to work with a Node.js/MongoDB backend.
+ * Form fields match expected backend schema.
  */
 const AuthForm: React.FC<AuthFormProps> = ({
   onLogin,
@@ -99,7 +108,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
   const handleLoginSubmit = (data: LoginFormData) => {
     try {
       console.info("Attempting login with:", data);
-      // Fix: Ensure we're passing the required email and password properties
+      // For API integration: This would connect to a Node.js backend
+      // with MongoDB for user authentication
       onLogin({
         email: data.email,
         password: data.password,
@@ -117,6 +127,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
   // Handle registration submission
   const handleRegisterSubmit = (data: RegisterFormData) => {
     try {
+      // For API integration: This would connect to a Node.js backend
+      // with MongoDB for user registration
       onRegister({
         name: data.name,
         email: data.email,

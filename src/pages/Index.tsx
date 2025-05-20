@@ -1,6 +1,6 @@
 
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import Home from "./Home";
 import Profile from "./Profile";
 import Pitches from "./Pitches";
@@ -17,8 +17,25 @@ import Layout from "@/components/layout/Layout";
 /**
  * Main routing component for the application
  * Defines all available routes and their corresponding components
+ * 
+ * @remarks
+ * Routes are designed to work with the MongoDB/Node.js backend API endpoints
  */
 const Index = () => {
+  const navigate = useNavigate();
+  
+  // Check for first-time login redirect
+  useEffect(() => {
+    const firstTimeLogin = localStorage.getItem("firstTimeLogin");
+    if (firstTimeLogin === "true") {
+      // The redirect will be handled by Home.tsx, we just need to make sure
+      // we're on the home page for the firstTimeLogin effect to trigger
+      if (window.location.pathname !== "/") {
+        navigate("/");
+      }
+    }
+  }, [navigate]);
+  
   return (
     <Layout>
       <Routes>

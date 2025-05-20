@@ -7,20 +7,19 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  // DialogClose, // No longer explicitly used for a button
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { LogIn, UserPlus, KeyRound, UserCircle2, AtSign, Phone, MapPin, CalendarDays, Shirt, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Define a type for the user's profile data
 interface UserProfileData {
   id: string; // Usually email or a unique ID from backend
   firstName: string;
   lastName: string;
-  gender: string;
   age: string;
   city: string;
   favoritePosition: string;
@@ -36,9 +35,17 @@ interface LoginDialogProps {
   onLoginSuccess: (role: 'admin' | 'player', userDetails?: UserProfileData) => void;
 }
 
+/**
+ * LoginDialog component for user authentication
+ * 
+ * @remarks
+ * This component is designed to work with a Node.js/MongoDB backend.
+ * Form fields match expected MongoDB schema.
+ */
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [formType, setFormType] = useState<'login' | 'signup'>('login');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Login states
   const [loginEmail, setLoginEmail] = useState("");
@@ -47,7 +54,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
   // Sign-up states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [gender, setGender] = useState("");
   const [age, setAge] = useState("");
   const [city, setCity] = useState("");
   const [favoritePosition, setFavoritePosition] = useState("");
@@ -60,6 +66,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
    * Handles the login form submission.
    * Validates input fields and simulates a login attempt.
    * Stores role and basic user info in localStorage.
+   * 
+   * @remarks
+   * In production, this would connect to a Node.js/MongoDB backend
+   * 
    * @param e - The form event.
    */
   const handleLogin = (e: React.FormEvent) => {
@@ -83,13 +93,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
       firstName: role === 'admin' ? 'Admin' : 'Player', // Placeholder name
       lastName: "User", // Placeholder name
       // Fill other fields with placeholders or fetch them if login returns more data
-      gender: "", age: "", city: "", favoritePosition: "", phoneNumber: "",
+      age: "", city: "", favoritePosition: "", phoneNumber: "",
     };
     
     // Store role and user details in localStorage
     localStorage.setItem('userRole', role);
     localStorage.setItem('currentUser', JSON.stringify(loggedInUserDetails));
     localStorage.setItem('isLoggedIn', 'true');
+    
+    // Set first-time login flag for home page redirect
+    localStorage.setItem("firstTimeLogin", "true");
 
     toast({
       title: "Login Successful",
@@ -98,17 +111,24 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
     onLoginSuccess(role, loggedInUserDetails);
     onClose();
     resetForms();
+    
+    // Navigate to home page
+    navigate('/');
   };
 
   /**
    * Handles the sign-up form submission.
    * Validates input fields, simulates a sign-up attempt, and then logs the user in.
    * Stores new user details and role ('player') in localStorage.
+   * 
+   * @remarks
+   * In production, this would connect to a Node.js/MongoDB backend
+   * 
    * @param e - The form event.
    */
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
-    const allFieldsFilled = firstName && lastName && gender && age && city && favoritePosition && phoneNumber && signUpEmail && signUpPassword && confirmPassword;
+    const allFieldsFilled = firstName && lastName && age && city && favoritePosition && phoneNumber && signUpEmail && signUpPassword && confirmPassword;
     if (!allFieldsFilled) {
       toast({
         title: "Missing fields",
@@ -126,14 +146,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
       return;
     }
     
-    // In a real app, you'd call a sign-up API here
+    // In a real app, you'd call a MongoDB/Node.js sign-up API here
     console.log("Attempting sign-up with:", { firstName, lastName, email: signUpEmail /* other fields */ });
 
     const newUserDetails: UserProfileData = {
       id: signUpEmail, // Use email as ID for simplicity
       firstName,
       lastName,
-      gender,
       age,
       city,
       favoritePosition,
@@ -145,6 +164,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
     localStorage.setItem('userRole', 'player'); // New sign-ups are players
     localStorage.setItem('currentUser', JSON.stringify(newUserDetails));
     localStorage.setItem('isLoggedIn', 'true');
+    
+    // Set first-time login flag for home page redirect
+    localStorage.setItem("firstTimeLogin", "true");
 
     toast({
       title: "Sign Up Successful!",
@@ -156,6 +178,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
     onLoginSuccess('player', newUserDetails);
     onClose(); 
     resetForms();
+    
+    // Navigate to home page
+    navigate('/');
   };
   
   /**
@@ -172,7 +197,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
     setLoginPassword("");
     setFirstName("");
     setLastName("");
-    setGender("");
     setAge("");
     setCity("");
     setFavoritePosition("");
@@ -238,7 +262,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
     </form>
   );
 
-  // Render sign-up form (ensure all fields are present and styled with dark mode considerations)
+  // Render sign-up form (without gender field)
   const renderSignUpForm = () => (
     <form onSubmit={handleSignUp}>
       <DialogHeader className="mb-4">
@@ -260,10 +284,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
           <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"/>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="gender" className="flex items-center dark:text-gray-300"><Users className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Gender</Label>
-          <Input id="gender" value={gender} onChange={(e) => setGender(e.target.value)} placeholder="Male/Female/Other" className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"/>
-        </div>
-        <div className="space-y-1">
           <Label htmlFor="age" className="flex items-center dark:text-gray-300"><CalendarDays className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Age</Label>
           <Input id="age" type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="25" className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"/>
         </div>
@@ -275,8 +295,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSucce
           <Label htmlFor="favoritePosition" className="flex items-center dark:text-gray-300"><Shirt className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Favorite Position</Label>
           <Input id="favoritePosition" value={favoritePosition} onChange={(e) => setFavoritePosition(e.target.value)} placeholder="Forward" className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"/>
         </div>
-        <div className="space-y-1 md:col-span-2">
-          <Label htmlFor="phoneNumber" className="flex items-center dark:text-gray-300"><Phone className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Phone Number (Jordan)</Label>
+        <div className="space-y-1">
+          <Label htmlFor="phoneNumber" className="flex items-center dark:text-gray-300"><Phone className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Phone Number</Label>
           <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="07X XXX XXXX" className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"/>
         </div>
         <div className="space-y-1 md:col-span-2">
