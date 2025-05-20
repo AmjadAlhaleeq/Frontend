@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader } from "lucide-react";
@@ -336,7 +335,7 @@ const ReservationCard = ({
               <Progress 
                 value={playerCountPercentage} 
                 className="h-1.5" 
-                indicatorClassName={`${playerCountPercentage < 50 ? 'bg-teal-500' : playerCountPercentage < 75 ? 'bg-amber-500' : 'bg-red-500'}`}
+                indicatorColor={playerCountPercentage < 50 ? "green" : playerCountPercentage < 75 ? "amber" : "red"}
               />
             </div>
           </div>

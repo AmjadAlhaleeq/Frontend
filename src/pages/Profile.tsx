@@ -158,7 +158,7 @@ const Profile = () => {
             <CardContent>
               {isEditing ? (
                 <ProfileEditor 
-                  userData={currentUser} 
+                  currentUserDetails={currentUser} 
                   onSave={handleProfileUpdate} 
                   onCancel={() => setIsEditing(false)} 
                 />
