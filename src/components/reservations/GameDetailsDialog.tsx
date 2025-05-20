@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format, parseISO } from 'date-fns';
 import { 
@@ -31,7 +30,15 @@ import {
   Trash,
   Send,
   CheckCircle,
-  XCircle
+  XCircle,
+  Goal,
+  User,
+  ShieldAlert,
+  ShieldX,
+  Whistle,
+  MessageCircle,
+  Zap,
+  HandMetal
 } from "lucide-react";
 import { Reservation, LineupPlayer, Highlight, useReservation } from "@/context/ReservationContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -50,6 +57,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import HighlightForm from "./HighlightForm";
 
 interface GameDetailsDialogProps {
   reservation: Reservation;
@@ -61,8 +69,12 @@ interface GameDetailsDialogProps {
   actualMaxPlayers: number;
 }
 
-type HighlightType = 'goal' | 'assist' | 'yellowCard' | 'redCard' | 'save' | 'other';
-
+/**
+ * GameDetailsDialog component
+ * Shows detailed information about a game reservation
+ * Allows admins to manage the game, add highlights, and update status
+ * Players can view their status and game details
+ */
 const GameDetailsDialog = ({
   reservation,
   isOpen,
@@ -74,7 +86,15 @@ const GameDetailsDialog = ({
 }: GameDetailsDialogProps) => {
   const [activeTab, setActiveTab] = useState("lineup");
   const { toast } = useToast();
-  const { updateReservationStatus, addHighlight, deleteHighlight, editReservation } = useReservation();
+  const { 
+    updateReservationStatus, 
+    addHighlight, 
+    deleteHighlight, 
+    editReservation,
+    deleteReservation,
+    removePlayerFromReservation,
+    notifyWaitingListPlayers
+  } = useReservation();
   
   // States for delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -87,19 +107,7 @@ const GameDetailsDialog = ({
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [finalScore, setFinalScore] = useState("");
   const [mvpPlayerId, setMvpPlayerId] = useState("");
-  
-  // States for adding highlights
-  const [newHighlight, setNewHighlight] = useState<{
-    type: HighlightType;
-    minute: number;
-    playerId: string;
-    description: string;
-  }>({
-    type: 'goal',
-    minute: 1,
-    playerId: '',
-    description: ''
-  });
+  const [showHighlightForm, setShowHighlightForm] = useState(false);
   
   // Format date for display
   const formattedDate = format(parseISO(reservation.date), 'EEEE, MMMM d, yyyy');
@@ -116,69 +124,38 @@ const GameDetailsDialog = ({
   };
   
   // Handle highlight addition
-  const handleAddHighlight = () => {
-    if (!newHighlight.playerId) {
+  const handleAddHighlight = (highlight: Highlight) => {
+    if (isAdmin) {
+      addHighlight(reservation.id, highlight);
       toast({
-        title: "Player Required",
-        description: "Please select a player for this highlight",
-        variant: "destructive"
+        title: "Highlight Added",
+        description: "New highlight has been added to the game",
       });
-      return;
+      setShowHighlightForm(false);
     }
-    
-    // Find player name from lineup
-    const player = reservation.lineup.find(p => p.userId === newHighlight.playerId);
-    if (!player) {
-      toast({
-        title: "Invalid Player",
-        description: "Selected player not found in lineup",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    addHighlight(reservation.id, {
-      type: newHighlight.type,
-      minute: newHighlight.minute,
-      playerId: newHighlight.playerId,
-      playerName: player.playerName || `Player ${newHighlight.playerId.substring(0, 4)}`,
-      description: newHighlight.description
-    });
-    
-    // Reset form
-    setNewHighlight({
-      type: 'goal',
-      minute: 1,
-      playerId: '',
-      description: ''
-    });
-    
-    toast({
-      title: "Highlight Added",
-      description: "New highlight has been added to the game",
-    });
   };
   
   // Handle reservation deletion (for admins)
   const handleDeleteReservation = () => {
     if (isAdmin) {
-      // Here we would delete the reservation
-      // For now we just close and show a toast
+      deleteReservation(reservation.id);
       setShowDeleteConfirmation(false);
       onClose();
       
       toast({
         title: "Reservation Deleted",
-        description: "Players have been notified by email",
+        description: "The reservation has been permanently deleted",
       });
     }
   };
   
-  // Handle player suspension (for admins)
+  // Handle player suspension and removal (for admins)
   const handleSuspendPlayer = () => {
     if (isAdmin && playerToSuspend) {
-      // In a real application, you would update the player's status in the database
-      // For now we just show a toast notification
+      // Remove player from the reservation
+      removePlayerFromReservation(reservation.id, playerToSuspend.userId);
+      
+      // In a real application, you would also update the player's suspension status
       setShowSuspendConfirmation(false);
       
       toast({
@@ -199,6 +176,17 @@ const GameDetailsDialog = ({
       toast({
         title: "Notification Sent",
         description: "All players have been notified by email",
+      });
+    }
+  };
+
+  // Handle notifying waiting list players when a spot opens
+  const handleNotifyWaitingList = () => {
+    if (isAdmin && reservation.waitingList.length > 0) {
+      notifyWaitingListPlayers(reservation.id);
+      toast({
+        title: "Waiting List Notified",
+        description: `${reservation.waitingList.length} players on the waiting list have been notified of an open spot`,
       });
     }
   };
@@ -232,6 +220,18 @@ const GameDetailsDialog = ({
     }
   };
   
+  // Navigate to edit reservation page
+  const handleNavigateToEditPage = () => {
+    if (isAdmin) {
+      // Close the dialog, navigation would happen in a real implementation
+      onClose();
+      toast({
+        title: "Edit Reservation",
+        description: "Navigating to edit reservation page",
+      });
+    }
+  };
+  
   // Find MVP player name
   const getMvpPlayerName = () => {
     if (!reservation.mvpPlayerId) return 'None selected';
@@ -243,6 +243,26 @@ const GameDetailsDialog = ({
   // Check if a user is the current user
   const isCurrentUser = (userId: string) => {
     return userId === currentUserId;
+  };
+
+  // Get icon for highlight type
+  const getHighlightIcon = (highlight: Highlight) => {
+    switch (highlight.type) {
+      case 'goal':
+        return highlight.isPenalty ? 
+          <Whistle className="h-4 w-4 text-amber-500" /> : 
+          <Goal className="h-4 w-4 text-green-500" />;
+      case 'assist':
+        return <Zap className="h-4 w-4 text-blue-500" />;
+      case 'yellowCard':
+        return <ShieldAlert className="h-4 w-4 text-yellow-500" />;
+      case 'redCard':
+        return <ShieldX className="h-4 w-4 text-red-500" />;
+      case 'save':
+        return <HandMetal className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Star className="h-4 w-4 text-gray-500" />;
+    }
   };
   
   // Admin action buttons
@@ -275,7 +295,7 @@ const GameDetailsDialog = ({
         
         <div className="flex justify-between space-x-2">
           <Button
-            onClick={() => {/* Navigate to edit page */}}
+            onClick={handleNavigateToEditPage}
             variant="outline"
             size="sm"
             className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
@@ -296,6 +316,18 @@ const GameDetailsDialog = ({
             </Button>
           )}
         </div>
+
+        {reservation.waitingList.length > 0 && (
+          <Button
+            onClick={handleNotifyWaitingList}
+            variant="outline"
+            size="sm"
+            className="w-full border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-600"
+          >
+            <MessageCircle className="h-4 w-4 mr-1.5" />
+            Notify Waiting List ({reservation.waitingList.length})
+          </Button>
+        )}
       </div>
     );
   };
@@ -466,13 +498,16 @@ const GameDetailsDialog = ({
                     >
                       <div>
                         <div className="flex items-center">
+                          <span className="mr-2">
+                            {getHighlightIcon(highlight)}
+                          </span>
                           <Badge variant={
                             highlight.type === 'goal' ? "default" : 
                             highlight.type === 'assist' ? "outline" : 
                             highlight.type === 'yellowCard' ? "secondary" : 
                             highlight.type === 'redCard' ? "destructive" : "outline"
                           }>
-                            {highlight.type === 'goal' ? 'Goal' : 
+                            {highlight.type === 'goal' ? (highlight.isPenalty ? 'Penalty Goal' : 'Goal') : 
                              highlight.type === 'assist' ? 'Assist' : 
                              highlight.type === 'yellowCard' ? 'Yellow Card' : 
                              highlight.type === 'redCard' ? 'Red Card' : 
@@ -481,6 +516,12 @@ const GameDetailsDialog = ({
                           <span className="ml-2 text-sm font-medium">{highlight.playerName}</span>
                           <span className="ml-2 text-xs text-gray-500">{highlight.minute}'</span>
                         </div>
+                        {highlight.assistPlayerName && (
+                          <div className="mt-1 text-xs text-blue-600 flex items-center">
+                            <Zap className="h-3 w-3 mr-1" />
+                            Assist: {highlight.assistPlayerName}
+                          </div>
+                        )}
                         {highlight.description && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {highlight.description}
@@ -503,89 +544,37 @@ const GameDetailsDialog = ({
               )}
               
               {/* Add Highlight Form (Admins only) */}
-              {isAdmin && (reservation.status === 'completed' || true) && (
+              {isAdmin && !showHighlightForm && (
+                <div className="mt-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowHighlightForm(true)}
+                    className="w-full"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Add New Highlight
+                  </Button>
+                </div>
+              )}
+              
+              {isAdmin && showHighlightForm && (
                 <div className="mt-4 p-3 border rounded-md">
-                  <h3 className="text-sm font-medium mb-2">Add New Highlight</h3>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Type</label>
-                        <Select 
-                          value={newHighlight.type} 
-                          onValueChange={(value) => setNewHighlight({
-                            ...newHighlight, 
-                            type: value as HighlightType
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="goal">Goal</SelectItem>
-                            <SelectItem value="assist">Assist</SelectItem>
-                            <SelectItem value="yellowCard">Yellow Card</SelectItem>
-                            <SelectItem value="redCard">Red Card</SelectItem>
-                            <SelectItem value="save">Save</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">Minute</label>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="90" 
-                          value={newHighlight.minute} 
-                          onChange={(e) => setNewHighlight({
-                            ...newHighlight, 
-                            minute: parseInt(e.target.value) || 1
-                          })}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Player</label>
-                      <Select 
-                        value={newHighlight.playerId} 
-                        onValueChange={(value) => setNewHighlight({
-                          ...newHighlight, 
-                          playerId: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select player" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {reservation.lineup.map((player) => (
-                            <SelectItem key={player.userId} value={player.userId}>
-                              {player.playerName || `Player ${player.userId.substring(0, 4)}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Description (optional)</label>
-                      <Textarea 
-                        placeholder="Describe the highlight..." 
-                        value={newHighlight.description}
-                        onChange={(e) => setNewHighlight({
-                          ...newHighlight, 
-                          description: e.target.value
-                        })}
-                        className="resize-none"
-                        rows={2}
-                      />
-                    </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium">Add Game Highlight</h3>
                     <Button 
-                      onClick={handleAddHighlight}
-                      size="sm"
-                      className="w-full"
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setShowHighlightForm(false)}
+                      className="h-7 w-7 p-0"
                     >
-                      Add Highlight
+                      <XCircle className="h-4 w-4" />
                     </Button>
                   </div>
+                  <HighlightForm 
+                    reservationId={reservation.id}
+                    onSave={handleAddHighlight}
+                    onCancel={() => setShowHighlightForm(false)}
+                  />
                 </div>
               )}
             </TabsContent>
@@ -700,14 +689,42 @@ const GameDetailsDialog = ({
                   <SelectValue placeholder="Select MVP player" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No MVP selected</SelectItem>
-                  {reservation.lineup.map((player) => (
-                    <SelectItem key={player.userId} value={player.userId}>
-                      {player.playerName || `Player ${player.userId.substring(0, 4)}`}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="no-mvp">No MVP selected</SelectItem>
+                  {reservation.lineup
+                    .filter(player => player.status === 'joined')
+                    .map((player) => (
+                      <SelectItem key={player.userId} value={player.userId || "player-default"}>
+                        {player.playerName || `Player ${player.userId.substring(0, 4)}`}
+                      </SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex justify-between">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  // Save the score and MVP, then show highlight form
+                  if (!finalScore) {
+                    toast({
+                      title: "Final Score Required",
+                      description: "Please enter the final score before adding highlights",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
+                  setShowTransferDialog(false);
+                  setShowHighlightForm(true);
+                }}
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Add Highlights First
+              </Button>
             </div>
           </div>
           <AlertDialogFooter>
