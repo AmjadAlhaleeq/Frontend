@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
 
@@ -479,12 +478,17 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         
         const newLineup = [...res.lineup, newLineupPlayer];
         
+        // Fixed: Explicitly casting to ReservationStatus
+        const newStatus: ReservationStatus = newLineup.filter(p => p.status === 'joined').length >= res.maxPlayers 
+          ? 'full' 
+          : 'open';
+        
         return {
           ...res,
           lineup: newLineup,
           playersJoined: newLineup.filter(p => p.status === 'joined').length,
           waitingList: newWaitingList,
-          status: newLineup.filter(p => p.status === 'joined').length >= res.maxPlayers ? 'full' : 'open'
+          status: newStatus
         };
       });
       
@@ -509,12 +513,14 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const newLineup = res.lineup.filter(p => p.userId !== userId);
         const playersRemaining = newLineup.filter(p => p.status === 'joined').length;
         
+        // Fixed: Explicitly casting to ReservationStatus
+        const newStatus: ReservationStatus = playersRemaining < res.maxPlayers ? 'open' : 'full';
+        
         return {
           ...res,
           lineup: newLineup,
           playersJoined: playersRemaining,
-          // Update status if needed
-          status: playersRemaining < res.maxPlayers ? 'open' : 'full'
+          status: newStatus
         };
       });
       
