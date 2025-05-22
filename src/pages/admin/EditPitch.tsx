@@ -86,6 +86,8 @@ const EditPitch = () => {
           facilities: pitch.facilities || [],
           highlights: pitch.highlights || []
         });
+        
+        console.log("Loaded pitch data:", pitch);
       } else {
         setNotFound(true);
         toast({
@@ -99,7 +101,7 @@ const EditPitch = () => {
     setIsLoading(false);
   }, [pitchId, pitches, toast]);
 
-  // Handle submit function - Fixed to avoid infinite loop
+  // Handle submit function - Fixed to avoid infinite loop and properly update pitch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -127,23 +129,42 @@ const EditPitch = () => {
       if (pitchId) {
         const id = parseInt(pitchId);
         
-        // Fix: Create a completely new object to avoid reference issues
-        const pitchToUpdate = {
+        // Create a completely new pitch object with all updated fields
+        const pitchToUpdate: Pitch = {
           id: id,
           name: pitchData.name,
           location: pitchData.location,
           city: pitchData.city,
           image: pitchData.images[0], // Primary image
-          additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
+          additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images (filtered to remove empty strings)
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
           price: Number(pitchData.price),
           facilities: [...pitchData.facilities],
-          highlights: [...pitchData.highlights]
+          highlights: [...pitchData.highlights],
+          // Preserve any other fields from the original pitch
+          status: pitches.find(p => p.id === id)?.status || "active"
         };
+        
+        console.log("Updating pitch with data:", pitchToUpdate);
         
         // Update the pitch in context
         updatePitch(id, pitchToUpdate);
+        
+        // Save to localStorage to persist updates
+        const storedPitches = localStorage.getItem('pitches');
+        if (storedPitches) {
+          try {
+            const parsedPitches = JSON.parse(storedPitches);
+            const updatedPitches = parsedPitches.map((p: Pitch) => 
+              p.id === id ? pitchToUpdate : p
+            );
+            localStorage.setItem('pitches', JSON.stringify(updatedPitches));
+            console.log("Updated pitches in localStorage:", updatedPitches);
+          } catch (error) {
+            console.error("Error updating pitches in localStorage:", error);
+          }
+        }
         
         // Show success toast
         toast({

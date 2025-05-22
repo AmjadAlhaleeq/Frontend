@@ -23,6 +23,7 @@ import PageTransition from "@/components/shared/PageTransition";
  * 
  * @remarks
  * Routes are designed to work with the MongoDB/Node.js backend API endpoints
+ * and also integrate with localStorage for offline functionality
  */
 const Index = () => {
   const navigate = useNavigate();
@@ -30,7 +31,17 @@ const Index = () => {
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false);
   
   // Check for first-time login redirect only once on component mount
+  // Also handle logout redirection
   useEffect(() => {
+    // Initialize storage if needed
+    if (!localStorage.getItem('pitches')) {
+      localStorage.setItem('pitches', JSON.stringify([]));
+    }
+    if (!localStorage.getItem('reservations')) {
+      localStorage.setItem('reservations', JSON.stringify([]));
+    }
+    
+    // Handle first time login
     const firstTimeLogin = localStorage.getItem("firstTimeLogin");
     
     if (firstTimeLogin === "true") {
@@ -45,6 +56,19 @@ const Index = () => {
       }
       // Else the Home component will handle the welcome messages
     }
+    
+    // Handle logout event listener
+    const handleLogout = () => {
+      // When user logs out, redirect to home page
+      navigate("/");
+    };
+    
+    window.addEventListener('userLoggedOut', handleLogout);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('userLoggedOut', handleLogout);
+    };
   }, [navigate, location.pathname]);
   
   return (

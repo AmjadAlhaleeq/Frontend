@@ -27,17 +27,32 @@ const Pitches = () => {
     pitches,
     navigateToReservation,
     deletePitch,
+    setPitches, // Added to initialize from localStorage
   } = useReservation();
   const navigate = useNavigate();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pitchToDelete, setPitchToDelete] = useState<Pitch | null>(null);
 
-  // Get user role from localStorage on component mount
+  // Get user role from localStorage and initialize pitches on component mount
   useEffect(() => {
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     setUserRole(role);
-  }, []);
+    
+    // Initialize pitches from localStorage
+    try {
+      const storedPitches = localStorage.getItem('pitches');
+      if (storedPitches) {
+        const parsedPitches = JSON.parse(storedPitches);
+        if (Array.isArray(parsedPitches) && parsedPitches.length > 0) {
+          console.log("Loading pitches from localStorage:", parsedPitches);
+          setPitches(parsedPitches);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading pitches from localStorage:", error);
+    }
+  }, [setPitches]);
 
   // Filter pitches based on search term
   const filteredPitches = pitches.filter(
@@ -65,7 +80,22 @@ const Pitches = () => {
 
   const handleConfirmDelete = () => {
     if (pitchToDelete) {
+      // Delete from context
       deletePitch(pitchToDelete.id);
+      
+      // Also update localStorage
+      try {
+        const storedPitches = localStorage.getItem('pitches');
+        if (storedPitches) {
+          const parsedPitches = JSON.parse(storedPitches);
+          const updatedPitches = parsedPitches.filter((p: Pitch) => p.id !== pitchToDelete.id);
+          localStorage.setItem('pitches', JSON.stringify(updatedPitches));
+          console.log("Updated pitches in localStorage after deletion:", updatedPitches);
+        }
+      } catch (error) {
+        console.error("Error updating pitches in localStorage:", error);
+      }
+      
       toast({
         title: "Pitch Deleted",
         description: `The pitch "${pitchToDelete.name}" has been successfully deleted.`,

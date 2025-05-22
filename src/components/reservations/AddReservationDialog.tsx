@@ -20,7 +20,7 @@ import {
 import { useForm } from "react-hook-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useReservation, NewReservationData } from "@/context/ReservationContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Slider } from "@/components/ui/slider";
@@ -45,11 +45,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 /**
  * AddReservationDialog component
- * Allows admins to create new game reservations
+ * Allows admins to create new game reservations and saves them to localStorage
  */
 const AddReservationDialog = () => {
   const [open, setOpen] = useState(false);
-  const { addReservation } = useReservation();
+  const { addReservation, reservations } = useReservation();
   const { toast } = useToast();
   
   // Image upload state
@@ -73,6 +73,7 @@ const AddReservationDialog = () => {
     },
   });
 
+  // Submit handler with localStorage persistence
   const onSubmit = (data: FormValues) => {
     console.log("Submitting reservation data:", data);
     
@@ -81,15 +82,41 @@ const AddReservationDialog = () => {
       pitchName: data.pitchName,
       date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
       time: data.time,
-      location: data.location,
-      locationLink: data.locationLink,
-      city: data.city,
-      price: data.price, // Already a number from the form schema
-      maxPlayers: data.maxPlayers, // Already a number from the form schema
-      imageUrl: imagePreview || undefined, // Use uploaded image
+      location: data.location || "",
+      locationLink: data.locationLink || "",
+      city: data.city || "",
+      price: data.price,
+      maxPlayers: data.maxPlayers,
+      imageUrl: imagePreview || undefined,
+      description: data.description || "",
     };
     
-    addReservation(newReservationData);
+    // Add the reservation using the context function
+    const newReservation = addReservation(newReservationData);
+    
+    // Save to localStorage for persistence
+    try {
+      // First try to get existing reservations
+      const storedReservations = localStorage.getItem('reservations');
+      let updatedReservations = [];
+      
+      if (storedReservations) {
+        updatedReservations = JSON.parse(storedReservations);
+      } else {
+        updatedReservations = [...reservations]; // Use current state if nothing in localStorage
+      }
+      
+      // Add the new reservation
+      if (newReservation) {
+        updatedReservations.push(newReservation);
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      console.log("Updated reservations in localStorage:", updatedReservations);
+    } catch (error) {
+      console.error("Error saving reservation to localStorage:", error);
+    }
     
     toast({
       title: "Reservation Added",
@@ -155,27 +182,27 @@ const AddReservationDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#0F766E] hover:bg-[#0d6d66]" id="add-reservation-dialog-trigger">
+        <Button className="bg-[#0F766E] hover:bg-[#0d6d66] w-full sm:w-auto" id="add-reservation-dialog-trigger">
           <Plus size={18} className="mr-2" />
           Add Reservation
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] w-[95vw] max-w-[95vw] sm:w-full overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Add New Reservation</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Image Upload Section */}
+            {/* Image Upload Section - Made more responsive */}
             <div className="space-y-2">
               <Label htmlFor="imageUpload" className="text-sm font-medium">Reservation Image (optional)</Label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 text-center">
                 {imagePreview ? (
                   <div className="space-y-2">
                     <img 
                       src={imagePreview} 
                       alt="Reservation preview" 
-                      className="max-h-60 mx-auto rounded-md object-cover"
+                      className="max-h-40 sm:max-h-60 mx-auto rounded-md object-cover"
                     />
                     {isUploading && (
                       <div className="w-full space-y-2">
@@ -199,9 +226,9 @@ const AddReservationDialog = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="py-4">
-                    <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  <div className="py-2 sm:py-4">
+                    <Upload className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2">
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-gray-400">
@@ -259,7 +286,7 @@ const AddReservationDialog = () => {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="city"
@@ -279,7 +306,7 @@ const AddReservationDialog = () => {
                 name="maxPlayers"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Maximum Number of Players</FormLabel>
+                    <FormLabel>Maximum Players</FormLabel>
                     <FormControl>
                       <Input 
                         type="number"
@@ -290,8 +317,8 @@ const AddReservationDialog = () => {
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 10)}
                       />
                     </FormControl>
-                    <FormDescription>
-                      This is the total number of players allowed in the game
+                    <FormDescription className="text-xs">
+                      Total number of players allowed
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -357,7 +384,7 @@ const AddReservationDialog = () => {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="location"
@@ -406,11 +433,21 @@ const AddReservationDialog = () => {
               )}
             />
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => { form.reset(); setOpen(false); }}>
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => { form.reset(); setOpen(false); }}
+                className="w-full sm:w-auto"
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-[#0F766E] hover:bg-[#0d6d66]">Create Reservation</Button>
+              <Button 
+                type="submit" 
+                className="bg-[#0F766E] hover:bg-[#0d6d66] w-full sm:w-auto"
+              >
+                Create Reservation
+              </Button>
             </div>
           </form>
         </Form>

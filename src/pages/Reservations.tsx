@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -55,6 +56,21 @@ const Reservations = () => {
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
   
+  // Get access to reservations context
+  const {
+    reservations,
+    joinGame,
+    cancelReservation,
+    joinWaitingList,
+    leaveWaitingList,
+    isUserJoined,
+    hasUserJoinedOnDate,
+    getReservationsForDate,
+    updateReservationStatus,
+    deleteReservation,
+    setReservations, // Added to initialize from localStorage
+  } = useReservation();
+
   useEffect(() => {
     // Get user role and ID from localStorage
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
@@ -68,6 +84,20 @@ const Reservations = () => {
         console.error("Failed to parse currentUser from localStorage", e);
         setCurrentUserId(null);
       }
+    }
+    
+    // Initialize reservations from localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        if (Array.isArray(parsedReservations) && parsedReservations.length > 0) {
+          console.log("Loading reservations from localStorage:", parsedReservations);
+          setReservations(parsedReservations);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading reservations from localStorage:", error);
     }
     
     const handleShowGameDetails = (event: any) => {
@@ -90,19 +120,6 @@ const Reservations = () => {
       window.removeEventListener('showGameDetails', handleShowGameDetails);
     };
   }, []); 
-
-  const {
-    reservations,
-    joinGame,
-    cancelReservation,
-    joinWaitingList,
-    leaveWaitingList,
-    isUserJoined,
-    hasUserJoinedOnDate,
-    getReservationsForDate,
-    updateReservationStatus,
-    deleteReservation,
-  } = useReservation();
 
   /**
    * Calculates the actual maximum players based on the game format.
@@ -139,6 +156,7 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
+  // Handle joining a game and update localStorage
   const handleJoinGame = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -158,9 +176,32 @@ const Reservations = () => {
       return;
     }
     
+    // Join game through context
     joinGame(reservationId, undefined, currentUserId);
+    
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId) {
+            const updatedPlayers = res.players ? [...res.players] : [];
+            if (!updatedPlayers.includes(currentUserId)) {
+              updatedPlayers.push(currentUserId);
+            }
+            return {...res, players: updatedPlayers};
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating reservation in localStorage:", error);
+    }
   };
   
+  // Handle canceling a reservation and update localStorage
   const handleCancelReservation = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -171,9 +212,31 @@ const Reservations = () => {
       return;
     }
     
+    // Cancel reservation through context
     cancelReservation(reservationId, currentUserId);
+    
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId && res.players) {
+            return {
+              ...res, 
+              players: res.players.filter(id => id !== currentUserId)
+            };
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating reservation in localStorage:", error);
+    }
   };
 
+  // Handle joining waiting list and update localStorage
   const handleJoinWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -214,9 +277,32 @@ const Reservations = () => {
       return;
     }
     
+    // Join waiting list through context
     joinWaitingList(reservationId, currentUserId);
+    
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId) {
+            const updatedWaitingList = res.waitingList ? [...res.waitingList] : [];
+            if (!updatedWaitingList.includes(currentUserId)) {
+              updatedWaitingList.push(currentUserId);
+            }
+            return {...res, waitingList: updatedWaitingList};
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating waiting list in localStorage:", error);
+    }
   };
   
+  // Handle leaving waiting list and update localStorage
   const handleLeaveWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -227,9 +313,31 @@ const Reservations = () => {
       return;
     }
     
+    // Leave waiting list through context
     leaveWaitingList(reservationId, currentUserId);
+    
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId && res.waitingList) {
+            return {
+              ...res,
+              waitingList: res.waitingList.filter(id => id !== currentUserId)
+            };
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating waiting list in localStorage:", error);
+    }
   };
   
+  // Handle deleting reservation and update localStorage
   const handleDeleteReservation = (reservationId: number) => {
     if (!currentUserId || userRole !== 'admin') {
       toast({ 
@@ -240,7 +348,21 @@ const Reservations = () => {
       return;
     }
     
+    // Delete reservation through context
     deleteReservation(reservationId);
+    
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.filter((res: Reservation) => res.id !== reservationId);
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error deleting reservation from localStorage:", error);
+    }
+    
     toast({
       title: "Reservation Deleted",
       description: "The reservation has been successfully deleted."
