@@ -27,7 +27,7 @@ const Pitches = () => {
     pitches,
     navigateToReservation,
     deletePitch,
-    setPitches, // Added to initialize from localStorage
+    setPitches, // Now properly defined in context
   } = useReservation();
   const navigate = useNavigate();
 

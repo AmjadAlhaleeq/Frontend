@@ -186,11 +186,17 @@ const Reservations = () => {
         const parsedReservations = JSON.parse(storedReservations);
         const updatedReservations = parsedReservations.map((res: Reservation) => {
           if (res.id === reservationId) {
-            const updatedPlayers = res.players ? [...res.players] : [];
-            if (!updatedPlayers.includes(currentUserId)) {
-              updatedPlayers.push(currentUserId);
+            // Use lineup instead of players
+            const updatedLineup = res.lineup ? [...res.lineup] : [];
+            if (!updatedLineup.some(player => player.userId === currentUserId)) {
+              updatedLineup.push({ 
+                userId: currentUserId, 
+                status: 'joined',
+                joinedAt: new Date().toISOString(),
+                playerName: `Player ${currentUserId.substring(0, 4)}` 
+              });
             }
-            return {...res, players: updatedPlayers};
+            return {...res, lineup: updatedLineup};
           }
           return res;
         });
@@ -221,10 +227,10 @@ const Reservations = () => {
       if (storedReservations) {
         const parsedReservations = JSON.parse(storedReservations);
         const updatedReservations = parsedReservations.map((res: Reservation) => {
-          if (res.id === reservationId && res.players) {
+          if (res.id === reservationId && res.lineup) {
             return {
               ...res, 
-              players: res.players.filter(id => id !== currentUserId)
+              lineup: res.lineup.filter(player => player.userId !== currentUserId)
             };
           }
           return res;

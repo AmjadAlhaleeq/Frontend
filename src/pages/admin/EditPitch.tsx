@@ -142,8 +142,6 @@ const EditPitch = () => {
           price: Number(pitchData.price),
           facilities: [...pitchData.facilities],
           highlights: [...pitchData.highlights],
-          // Preserve any other fields from the original pitch
-          status: pitches.find(p => p.id === id)?.status || "active"
         };
         
         console.log("Updating pitch with data:", pitchToUpdate);

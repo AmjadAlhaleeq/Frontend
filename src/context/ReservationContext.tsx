@@ -60,6 +60,7 @@ export interface NewReservationData {
   maxPlayers: number;
   price?: number;
   imageUrl?: string;
+  description?: string; // Added missing description field
 }
 
 // Pitch interface with updated fields
@@ -102,7 +103,7 @@ export interface UserStats {
 // Context type definition
 interface ReservationContextType {
   reservations: Reservation[];
-  addReservation: (data: NewReservationData) => void;
+  addReservation: (data: NewReservationData) => Reservation | undefined; // Updated return type
   joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
   cancelReservation: (reservationId: number, userId: string) => void;
   updateReservationStatus: (reservationId: number, newStatus: ReservationStatus) => void;
@@ -119,11 +120,11 @@ interface ReservationContextType {
   updatePitch: (pitchId: number, data: Partial<Omit<Pitch, 'id'>>) => void;
   getUserStats: (userId: string) => UserStats;
   suspendPlayer: (userId: string, duration: number, reason: string) => void;
-  // Add new functions for highlight management
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
-  // Add new function to delete a reservation
   deleteReservation: (id: number) => void;
+  setPitches: (pitches: Pitch[]) => void; // Added the setter function
+  setReservations: (reservations: Reservation[]) => void; // Added the setter function
 }
 
 // Create the context
@@ -345,7 +346,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   // Add a new reservation
-  const addReservation = (data: NewReservationData) => {
+  const addReservation = (data: NewReservationData): Reservation | undefined => {
     const newReservation: Reservation = {
       id: Date.now(), // Simple ID generation
       ...data,
@@ -357,7 +358,7 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     setReservations(prev => [...prev, newReservation]);
     
-    return newReservation.id;
+    return newReservation;
   };
 
   // Join a game
@@ -658,7 +659,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     suspendPlayer,
     addHighlight,
     deleteHighlight,
-    deleteReservation
+    deleteReservation,
+    setPitches,  // Added the setter function
+    setReservations  // Added the setter function
   };
 
   return (
