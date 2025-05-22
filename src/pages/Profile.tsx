@@ -9,6 +9,7 @@ import { useReservation } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
 import PlayerStats from "@/components/profile/PlayerStats";
 import ProfileEditor from "@/components/profile/ProfileEditor";
+import axios from "axios";
 
 /**
  * Player Profile Page Component
@@ -31,45 +32,110 @@ const Profile = () => {
 
   // Fetch user data on component mount
   useEffect(() => {
-    // Load user data from localStorage
-    const storedUser = localStorage.getItem("currentUser");
-    
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setCurrentUser(userData);
-      } catch (e) {
-        console.error("Error parsing user data:", e);
+    const fetchUserProfile = async () => {
+      // Load user data from localStorage
+      const storedUser = localStorage.getItem("currentUser");
+      const authToken = localStorage.getItem("authToken");
+      
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setCurrentUser(userData);
+          
+          // If we have an auth token, try to refresh user data from the backend
+          if (authToken) {
+            try {
+              const response = await axios.get(`/users/profile`, {
+                headers: { Authorization: `Bearer ${authToken}` }
+              });
+              
+              if (response.data?.status === "success" && response.data?.data) {
+                const user = response.data.data;
+                
+                // Update local state with fresh data
+                const updatedUserData = {
+                  id: user._id,
+                  email: user.email,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  age: user.age.toString(),
+                  city: user.city,
+                  position: user.preferredPosition || "",
+                  phoneNumber: user.phone,
+                  avatarUrl: user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`
+                };
+                
+                setCurrentUser(updatedUserData);
+                
+                // Update in localStorage
+                localStorage.setItem("currentUser", JSON.stringify(updatedUserData));
+              }
+            } catch (error) {
+              console.error("Error fetching latest user profile:", error);
+              // Continue with stored data if API fails
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing user data:", e);
+          toast({
+            title: "Error",
+            description: "Could not load user profile data",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // If no user data found, redirect to login
         toast({
-          title: "Error",
-          description: "Could not load user profile data",
+          title: "Not logged in",
+          description: "Please login to view your profile",
           variant: "destructive",
         });
+        navigate('/');
       }
-    } else {
-      // If no user data found, redirect to login
-      toast({
-        title: "Not logged in",
-        description: "Please login to view your profile",
-        variant: "destructive",
-      });
-    }
+      
+      // Simulate API loading time for better UX
+      setTimeout(() => setIsLoading(false), 800);
+    };
     
-    // Simulate API loading time for better UX
-    setTimeout(() => setIsLoading(false), 800);
-  }, [toast]);
+    fetchUserProfile();
+  }, [toast, navigate]);
   
   // Handle profile update from editor
-  const handleProfileUpdate = (updatedData: any) => {
+  const handleProfileUpdate = async (updatedData: any) => {
     try {
       // Update local state
       setCurrentUser({ ...currentUser, ...updatedData });
       
-      // Update in localStorage (in a real app, this would be an API call)
+      // Update in localStorage
       localStorage.setItem(
         "currentUser",
         JSON.stringify({ ...currentUser, ...updatedData })
       );
+      
+      // If we have an auth token, update on the backend too
+      const authToken = localStorage.getItem("authToken");
+      if (authToken) {
+        try {
+          // Extract just the fields we want to update
+          const { firstName, lastName, age, city, position, phoneNumber, bio } = updatedData;
+          
+          await axios.put("/users/profile", {
+            firstName,
+            lastName,
+            age: Number(age),
+            city,
+            preferredPosition: position, 
+            phone: phoneNumber,
+            bio: bio || `Football player from ${city}`
+          }, {
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          
+        } catch (error) {
+          console.error("Error updating profile on server:", error);
+          // We'll still update locally even if the server update fails
+        }
+      }
       
       // Exit edit mode and show success message
       setIsEditing(false);

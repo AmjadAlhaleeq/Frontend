@@ -55,7 +55,8 @@ const Index = () => {
     // Handle user login event listener
     const handleLogin = () => {
       console.log("User logged in, refreshing the page");
-      window.location.reload();
+      // When user logs in successfully, we don't need to reload the whole page
+      // The navbar and other components will be updated through the loginStatusChanged event
     };
     
     // Handle logout event listener
