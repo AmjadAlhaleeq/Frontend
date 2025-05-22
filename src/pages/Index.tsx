@@ -20,18 +20,13 @@ import PageTransition from "@/components/shared/PageTransition";
 /**
  * Main routing component for the application
  * Defines all available routes and their corresponding components
- * 
- * @remarks
- * Routes are designed to work with the MongoDB/Node.js backend API endpoints
- * and also integrate with localStorage for offline functionality
  */
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false);
   
-  // Check for first-time login redirect only once on component mount
-  // Also handle logout redirection
+  // Check for first-time login redirect and handle login/logout redirects
   useEffect(() => {
     // Initialize storage if needed
     if (!localStorage.getItem('pitches')) {
@@ -57,16 +52,26 @@ const Index = () => {
       // Else the Home component will handle the welcome messages
     }
     
-    // Handle logout event listener
-    const handleLogout = () => {
-      // When user logs out, redirect to home page
-      navigate("/");
+    // Handle user login event listener
+    const handleLogin = () => {
+      console.log("User logged in, refreshing the page");
+      window.location.reload();
     };
     
+    // Handle logout event listener
+    const handleLogout = () => {
+      console.log("User logged out, redirecting to home page");
+      // When user logs out, redirect to home page and reload 
+      navigate("/");
+      setTimeout(() => window.location.reload(), 100);
+    };
+    
+    window.addEventListener('userLoggedIn', handleLogin);
     window.addEventListener('userLoggedOut', handleLogout);
     
     // Cleanup
     return () => {
+      window.removeEventListener('userLoggedIn', handleLogin);
       window.removeEventListener('userLoggedOut', handleLogout);
     };
   }, [navigate, location.pathname]);

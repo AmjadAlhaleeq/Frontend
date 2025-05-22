@@ -222,14 +222,13 @@ export const sendWaitingListNotification = async (
  * Send player suspension notification
  * @param {string} playerEmail - Email address of the suspended player
  * @param {object} suspensionDetails - Details about the suspension
+ * @returns {Promise<void>}
  */
 export const sendPlayerSuspensionNotification = async (
   playerEmail: string,
   suspensionDetails: { duration: number; reason: string; endDate: string }
 ): Promise<void> => {
   try {
-    // In a real implementation, this would use EmailJS directly
-    
     // For demo, using template approach
     const template: EmailTemplate = {
       subject: "⚠️ Account Suspension Notice",
@@ -250,6 +249,7 @@ export const sendPlayerSuspensionNotification = async (
             </div>
             
             <p style="margin-bottom: 15px;">During this period, you will not be able to join or participate in games. If you believe this is in error, please contact our support team.</p>
+            <p style="margin-bottom: 15px;">Your account will be automatically reinstated after the suspension period ends.</p>
           </div>
           
           <div style="text-align: center; margin-top: 20px;">
@@ -263,8 +263,13 @@ export const sendPlayerSuspensionNotification = async (
       `,
     };
     
+    console.log(`Sending suspension notification to: ${playerEmail}`);
     await sendEmail(playerEmail, template);
     
+    // Log success
+    console.log(`Suspension notification sent to ${playerEmail} for ${suspensionDetails.duration} days`);
+    
+    // Show success toast
     toast({
       title: "Suspension Notice Sent",
       description: `Suspension notification sent to ${playerEmail}.`,

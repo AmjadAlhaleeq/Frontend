@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 // Define HighlightType enum
 export type HighlightType = "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other";
@@ -370,6 +371,38 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
+  // Initialize suspended players from localStorage
+  useEffect(() => {
+    try {
+      const storedSuspensions = localStorage.getItem('suspendedPlayers');
+      if (storedSuspensions) {
+        const parsedSuspensions = JSON.parse(storedSuspensions);
+        if (Array.isArray(parsedSuspensions) && parsedSuspensions.length > 0) {
+          // Convert date strings back to Date objects
+          const validSuspensions = parsedSuspensions.map(suspension => ({
+            ...suspension,
+            until: new Date(suspension.until)
+          }));
+          
+          // Only keep suspensions that haven't expired
+          const activeSuspensions = validSuspensions.filter(
+            suspension => new Date() < suspension.until
+          );
+          
+          if (activeSuspensions.length < validSuspensions.length) {
+            // Some suspensions expired, update localStorage
+            localStorage.setItem('suspendedPlayers', JSON.stringify(activeSuspensions));
+          }
+          
+          setSuspendedPlayers(activeSuspensions);
+          console.log("Loaded active suspensions from localStorage:", activeSuspensions);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading suspended players from localStorage:", error);
+    }
+  }, []);
+
   // Remove the useNavigate hook from here as it needs to be inside Router context
   const navigateToReservation = (pitchName: string) => {
     // Instead of using navigate, we'll create a function that can be used
@@ -442,11 +475,27 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     // Check if player is suspended
     const isSuspended = suspendedPlayers.some(p => 
-      p.userId === userId && new Date() < p.until
+      p.userId === userId && new Date() < new Date(p.until)
     );
     
     if (isSuspended) {
-      console.log("User is suspended and cannot join games");
+      console.log(`User ${userId} is suspended and cannot join games`);
+      
+      // Find suspension details for toast
+      const suspension = suspendedPlayers.find(p => p.userId === userId);
+      if (suspension) {
+        const endDate = new Date(suspension.until);
+        const formattedDate = endDate.toLocaleDateString(undefined, {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+        
+        // Show toast with suspension details
+        toast({
+          title: "Account Suspended",
+          description: `You cannot join games until your suspension ends on ${formattedDate}`,
+          variant: "destructive",
+        });
+      }
       return;
     }
     
@@ -766,6 +815,18 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       { userId, until, reason }
     ]);
     
+    // Store suspended players in localStorage for persistence
+    try {
+      const suspendedPlayersData = [
+        ...suspendedPlayers.filter(p => p.userId !== userId),
+        { userId, until: until.toISOString(), reason }
+      ];
+      localStorage.setItem('suspendedPlayers', JSON.stringify(suspendedPlayersData));
+      console.log(`Player ${userId} suspension stored in localStorage until ${until}`);
+    } catch (error) {
+      console.error("Error storing player suspension in localStorage:", error);
+    }
+    
     // Remove player from all upcoming games
     setReservations(prev => {
       const updated = prev.map(res => {
@@ -778,11 +839,20 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
         
         if (!isInGame && !isInWaitingList) return res;
         
+        // Remove player from lineup and waiting list
+        const newLineup = res.lineup.filter(p => p.userId !== userId);
+        const newWaitingList = res.waitingList.filter(id => id !== userId);
+        const playersJoined = newLineup.filter(p => p.status === 'joined').length;
+        
+        // Update reservation status if needed
+        const newStatus: ReservationStatus = playersJoined < res.maxPlayers ? 'open' : 'full';
+        
         return {
           ...res,
-          lineup: res.lineup.filter(p => p.userId !== userId),
-          waitingList: res.waitingList.filter(id => id !== userId),
-          playersJoined: res.lineup.filter(p => p.userId !== userId && p.status === 'joined').length
+          lineup: newLineup,
+          waitingList: newWaitingList,
+          playersJoined,
+          status: newStatus
         };
       });
       

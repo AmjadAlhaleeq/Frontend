@@ -23,6 +23,7 @@ interface SuspendPlayerDialogProps {
 /**
  * Dialog component for suspending a player
  * Used by admins to suspend players with a reason and duration
+ * Sends a notification email to the suspended player
  */
 const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
   isOpen,
@@ -51,13 +52,13 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Call the context function to suspend player
-      suspendPlayer(playerId, duration, reason);
-      
       // Calculate end date for email notification
       const endDate = format(addDays(new Date(), duration), "MMMM d, yyyy");
       
-      // Send email notification
+      // Call the context function to suspend player
+      suspendPlayer(playerId, duration, reason);
+      
+      // Send email notification to the player
       await sendPlayerSuspensionNotification(
         playerEmail, 
         { duration, reason, endDate }
@@ -65,7 +66,7 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
       
       toast({
         title: "Player suspended",
-        description: `${playerName} has been suspended for ${duration} days`,
+        description: `${playerName} has been suspended for ${duration} days and notified via email.`,
       });
       
       onClose();
@@ -90,14 +91,14 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
             Suspend Player
           </DialogTitle>
           <DialogDescription>
-            This will temporarily block {playerName} from joining games.
+            This will temporarily block {playerName} from joining games for {duration} days.
           </DialogDescription>
         </DialogHeader>
         
         <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md flex items-start space-x-2 mb-4">
           <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
           <div className="text-sm text-red-700 dark:text-red-300">
-            A notification email will be sent to the player explaining the suspension.
+            A notification email will be sent to {playerEmail} explaining the suspension.
           </div>
         </div>
         
