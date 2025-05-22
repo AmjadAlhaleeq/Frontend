@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const Navbar = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -87,6 +88,7 @@ const Navbar = () => {
     // Clear user data from localStorage
     localStorage.removeItem("currentUser");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("isLoggedIn");
     
     // Update state
     setIsLoggedIn(false);
@@ -107,6 +109,9 @@ const Navbar = () => {
     
     // Dispatch custom event to notify other components
     window.dispatchEvent(new Event("loginStatusChanged"));
+    
+    // Navigate to home page
+    navigate('/');
   };
 
   // Close mobile menu when route changes

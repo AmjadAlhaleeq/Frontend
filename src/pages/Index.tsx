@@ -15,6 +15,7 @@ import EditPitch from "./admin/EditPitch";
 import MyBookings from "./MyBookings";
 import Layout from "@/components/layout/Layout";
 import PrivacyPolicy from "./PrivacyPolicy";
+import PageTransition from "@/components/shared/PageTransition";
 
 /**
  * Main routing component for the application
@@ -49,19 +50,19 @@ const Index = () => {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Home isFirstTimeLogin={isFirstTimeLogin} />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/my-bookings" element={<MyBookings />} />
-        <Route path="/pitches" element={<Pitches />} />
-        <Route path="/reservations" element={<Reservations />} />
-        <Route path="/leaderboards" element={<Leaderboards />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/faq" element={<Faq />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/admin/add-pitch" element={<AddPitch />} />
-        <Route path="/admin/edit-pitch/:id" element={<EditPitch />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/" element={<PageTransition><Home isFirstTimeLogin={isFirstTimeLogin} /></PageTransition>} />
+        <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
+        <Route path="/my-bookings" element={<PageTransition><MyBookings /></PageTransition>} />
+        <Route path="/pitches" element={<PageTransition><Pitches /></PageTransition>} />
+        <Route path="/reservations" element={<PageTransition><Reservations /></PageTransition>} />
+        <Route path="/leaderboards" element={<PageTransition><Leaderboards /></PageTransition>} />
+        <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+        <Route path="/faq" element={<PageTransition><Faq /></PageTransition>} />
+        <Route path="/rules" element={<PageTransition><Rules /></PageTransition>} />
+        <Route path="/privacy-policy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+        <Route path="/admin/add-pitch" element={<PageTransition><AddPitch /></PageTransition>} />
+        <Route path="/admin/edit-pitch/:id" element={<PageTransition><EditPitch /></PageTransition>} />
+        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
     </Layout>
   );

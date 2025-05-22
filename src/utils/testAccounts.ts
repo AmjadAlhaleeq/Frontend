@@ -51,14 +51,24 @@ export const loginWithTestAccount = (accountType: 'admin' | 'player'): boolean =
       email: account.email,
       firstName: account.firstName,
       lastName: account.lastName,
-      avatarUrl: account.avatarUrl
+      avatarUrl: account.avatarUrl,
+      age: account.age,
+      city: account.city,
+      favoritePosition: account.position,
+      phoneNumber: account.phone
     }));
     
     // Set user role
     localStorage.setItem('userRole', account.role);
+    localStorage.setItem('isLoggedIn', 'true');
     
     // Set first time login flag
     localStorage.setItem('firstTimeLogin', 'true');
+    
+    // Initialize registered users array if it doesn't exist
+    if (!localStorage.getItem('registeredUsers')) {
+      localStorage.setItem('registeredUsers', JSON.stringify([]));
+    }
     
     // Dispatch login event
     window.dispatchEvent(new Event('loginStatusChanged'));
