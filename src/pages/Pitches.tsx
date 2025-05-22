@@ -1,4 +1,3 @@
-
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
 import React, { useState, useEffect } from "react";
@@ -27,7 +26,7 @@ const Pitches = () => {
     pitches,
     navigateToReservation,
     deletePitch,
-    setPitches, // Now properly defined in context
+    setPitches,
   } = useReservation();
   const navigate = useNavigate();
 
@@ -36,6 +35,7 @@ const Pitches = () => {
 
   // Get user role from localStorage and initialize pitches on component mount
   useEffect(() => {
+    // Get user role
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     setUserRole(role);
     
@@ -83,19 +83,6 @@ const Pitches = () => {
       // Delete from context
       deletePitch(pitchToDelete.id);
       
-      // Also update localStorage
-      try {
-        const storedPitches = localStorage.getItem('pitches');
-        if (storedPitches) {
-          const parsedPitches = JSON.parse(storedPitches);
-          const updatedPitches = parsedPitches.filter((p: Pitch) => p.id !== pitchToDelete.id);
-          localStorage.setItem('pitches', JSON.stringify(updatedPitches));
-          console.log("Updated pitches in localStorage after deletion:", updatedPitches);
-        }
-      } catch (error) {
-        console.error("Error updating pitches in localStorage:", error);
-      }
-      
       toast({
         title: "Pitch Deleted",
         description: `The pitch "${pitchToDelete.name}" has been successfully deleted.`,
@@ -107,11 +94,18 @@ const Pitches = () => {
 
   const handleEditPitch = (pitchId: number) => {
     if (userRole !== 'admin') {
-      toast({ title: "Access Denied", description: "Only admins can edit pitches.", variant: "destructive" });
+      toast({ 
+        title: "Access Denied", 
+        description: "Only admins can edit pitches.", 
+        variant: "destructive" 
+      });
       return;
     }
     navigate(`/admin/edit-pitch/${pitchId}`);
-    toast({ title: "Edit Pitch", description: `Navigating to edit page for pitch ID: ${pitchId}.`});
+    toast({ 
+      title: "Edit Pitch", 
+      description: `Navigating to edit page for pitch ID: ${pitchId}.`
+    });
   };
 
   return (

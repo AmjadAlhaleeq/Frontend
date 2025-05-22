@@ -101,7 +101,7 @@ const EditPitch = () => {
     setIsLoading(false);
   }, [pitchId, pitches, toast]);
 
-  // Handle submit function - Fixed to avoid infinite loop and properly update pitch
+  // Handle submit function - Fixed to properly update pitch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -148,21 +148,6 @@ const EditPitch = () => {
         
         // Update the pitch in context
         updatePitch(id, pitchToUpdate);
-        
-        // Save to localStorage to persist updates
-        const storedPitches = localStorage.getItem('pitches');
-        if (storedPitches) {
-          try {
-            const parsedPitches = JSON.parse(storedPitches);
-            const updatedPitches = parsedPitches.map((p: Pitch) => 
-              p.id === id ? pitchToUpdate : p
-            );
-            localStorage.setItem('pitches', JSON.stringify(updatedPitches));
-            console.log("Updated pitches in localStorage:", updatedPitches);
-          } catch (error) {
-            console.error("Error updating pitches in localStorage:", error);
-          }
-        }
         
         // Show success toast
         toast({

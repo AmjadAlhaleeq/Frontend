@@ -28,7 +28,7 @@ export type ReservationStatus = 'open' | 'full' | 'completed' | 'cancelled';
 // Type for a single reservation
 export interface Reservation {
   id: number;
-  title?: string; // Added title field
+  title?: string;
   pitchName: string;
   date: string; // ISO date string format
   time: string; // e.g., "18:00 - 19:30"
@@ -38,29 +38,30 @@ export interface Reservation {
   lineup: LineupPlayer[];
   waitingList: string[]; // User IDs
   location?: string;
-  city?: string; // Added city field
-  locationLink?: string; // Added locationLink field
+  city?: string;
+  locationLink?: string;
   price?: number;
   imageUrl?: string;
-  pitchImage?: string; // For linking to pitch image
+  pitchImage?: string;
   finalScore?: string;
   mvpPlayerId?: string;
-  highlights?: Highlight[]; // Add highlights property
+  highlights?: Highlight[];
+  description?: string; // Add description to the Reservation interface
 }
 
 // Type for new reservation data
 export interface NewReservationData {
-  title?: string; // Added title field
+  title?: string;
   pitchName: string;
   date: string;
   time: string;
   location?: string;
-  city?: string; // Added city field
-  locationLink?: string; // Added locationLink field
+  city?: string;
+  locationLink?: string;
   maxPlayers: number;
   price?: number;
   imageUrl?: string;
-  description?: string; // Added missing description field
+  description?: string; // Add description field to NewReservationData
 }
 
 // Pitch interface with updated fields
@@ -68,15 +69,15 @@ export interface Pitch {
   id: number;
   name: string;
   location: string; // Google Maps link
-  city?: string; // New field for city
-  image: string; // Main image
-  additionalImages?: string[]; // For multiple images
+  city?: string;
+  image: string;
+  additionalImages?: string[];
   playersPerSide: number;
   description?: string;
   price: number;
-  facilities?: string[]; // Renamed from features for consistency
-  openingHours?: string; // Add openingHours property
-  highlights?: string[]; // Add highlights property for pitch
+  facilities?: string[];
+  openingHours?: string;
+  highlights?: string[];
   details?: {
     address?: string;
     description?: string;
@@ -103,7 +104,7 @@ export interface UserStats {
 // Context type definition
 interface ReservationContextType {
   reservations: Reservation[];
-  addReservation: (data: NewReservationData) => Reservation | undefined; // Updated return type
+  addReservation: (data: NewReservationData) => Reservation | undefined;
   joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
   cancelReservation: (reservationId: number, userId: string) => void;
   updateReservationStatus: (reservationId: number, newStatus: ReservationStatus) => void;
@@ -123,8 +124,8 @@ interface ReservationContextType {
   addHighlight: (reservationId: number, highlight: Omit<Highlight, 'id'>) => void;
   deleteHighlight: (reservationId: number, highlightId: number) => void;
   deleteReservation: (id: number) => void;
-  setPitches: (pitches: Pitch[]) => void; // Added the setter function
-  setReservations: (reservations: Reservation[]) => void; // Added the setter function
+  setPitches: (pitches: Pitch[]) => void;
+  setReservations: (reservations: Reservation[]) => void;
 }
 
 // Create the context
@@ -347,16 +348,38 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Add a new reservation
   const addReservation = (data: NewReservationData): Reservation | undefined => {
+    // Create a new reservation object with all required fields
     const newReservation: Reservation = {
       id: Date.now(), // Simple ID generation
-      ...data,
+      title: data.title,
+      pitchName: data.pitchName,
+      date: data.date,
+      time: data.time,
+      location: data.location,
+      city: data.city,
+      locationLink: data.locationLink,
       status: 'open',
       playersJoined: 0,
+      maxPlayers: data.maxPlayers,
       lineup: [],
       waitingList: [],
+      price: data.price,
+      imageUrl: data.imageUrl,
+      description: data.description // Add description from NewReservationData
     };
     
     setReservations(prev => [...prev, newReservation]);
+
+    // Update localStorage to persist the new reservation
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      const parsedReservations = storedReservations ? JSON.parse(storedReservations) : [];
+      parsedReservations.push(newReservation);
+      localStorage.setItem('reservations', JSON.stringify(parsedReservations));
+      console.log("Saved new reservation to localStorage:", newReservation);
+    } catch (error) {
+      console.error("Error saving reservation to localStorage:", error);
+    }
     
     return newReservation;
   };
@@ -520,24 +543,64 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
     
     setPitches(prev => [...prev, newPitch]);
+
+    // Update localStorage to persist the new pitch
+    try {
+      const storedPitches = localStorage.getItem('pitches');
+      const parsedPitches = storedPitches ? JSON.parse(storedPitches) : [];
+      parsedPitches.push(newPitch);
+      localStorage.setItem('pitches', JSON.stringify(parsedPitches));
+      console.log("Saved new pitch to localStorage:", newPitch);
+    } catch (error) {
+      console.error("Error saving pitch to localStorage:", error);
+    }
+    
     return newPitch;
   };
   
   // Update an existing pitch
   const updatePitch = (pitchId: number, data: Partial<Omit<Pitch, 'id'>>) => {
-    setPitches(prev => prev.map(pitch => {
-      if (pitch.id !== pitchId) return pitch;
+    setPitches(prev => {
+      // Create new array of pitches with the updated pitch
+      const updatedPitches = prev.map(pitch => {
+        if (pitch.id !== pitchId) return pitch;
+        
+        // Create updated pitch with new data
+        const updatedPitch = {
+          ...pitch,
+          ...data
+        };
+        
+        return updatedPitch;
+      });
       
-      return {
-        ...pitch,
-        ...data
-      };
-    }));
+      // Update localStorage
+      try {
+        localStorage.setItem('pitches', JSON.stringify(updatedPitches));
+        console.log("Updated pitches in localStorage after update:", updatedPitches);
+      } catch (error) {
+        console.error("Error updating pitches in localStorage:", error);
+      }
+      
+      return updatedPitches;
+    });
   };
   
   // Delete a pitch
   const deletePitch = (pitchId: number) => {
-    setPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+    setPitches(prev => {
+      const filteredPitches = prev.filter(pitch => pitch.id !== pitchId);
+      
+      // Update localStorage
+      try {
+        localStorage.setItem('pitches', JSON.stringify(filteredPitches));
+        console.log("Updated pitches in localStorage after deletion:", filteredPitches);
+      } catch (error) {
+        console.error("Error updating pitches in localStorage:", error);
+      }
+      
+      return filteredPitches;
+    });
   };
   
   // Get user statistics

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -119,7 +118,7 @@ const Reservations = () => {
     return () => {
       window.removeEventListener('showGameDetails', handleShowGameDetails);
     };
-  }, []); 
+  }, [reservations, setReservations]); 
 
   /**
    * Calculates the actual maximum players based on the game format.
