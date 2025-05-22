@@ -1,3 +1,4 @@
+
 // This is the Pitches.tsx page. It handles UI and logic for Pitches.
 
 import React, { useState, useEffect } from "react";
@@ -101,7 +102,11 @@ const Pitches = () => {
       });
       return;
     }
+    // Navigate to the edit page with the proper ID
     navigate(`/admin/edit-pitch/${pitchId}`);
+    
+    console.log(`Navigating to edit pitch ID: ${pitchId}`);
+    
     toast({ 
       title: "Edit Pitch", 
       description: `Navigating to edit page for pitch ID: ${pitchId}.`

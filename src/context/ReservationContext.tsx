@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isSameDay } from 'date-fns';
 
@@ -337,6 +338,39 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // State to track suspended players
   const [suspendedPlayers, setSuspendedPlayers] = useState<{userId: string, until: Date, reason: string}[]>([]);
   
+  // Load data from localStorage when component mounts
+  useEffect(() => {
+    try {
+      // Load pitches from localStorage
+      const storedPitches = localStorage.getItem('pitches');
+      if (storedPitches) {
+        const parsedPitches = JSON.parse(storedPitches);
+        if (Array.isArray(parsedPitches) && parsedPitches.length > 0) {
+          setPitches(parsedPitches);
+          console.log("Loaded pitches from localStorage in provider:", parsedPitches);
+        }
+      } else {
+        // Initialize localStorage with initial pitches
+        localStorage.setItem('pitches', JSON.stringify(initialPitches));
+      }
+      
+      // Load reservations from localStorage
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        if (Array.isArray(parsedReservations) && parsedReservations.length > 0) {
+          setReservations(parsedReservations);
+          console.log("Loaded reservations from localStorage in provider:", parsedReservations);
+        }
+      } else {
+        // Initialize localStorage with initial reservations
+        localStorage.setItem('reservations', JSON.stringify(initialReservations));
+      }
+    } catch (error) {
+      console.error("Error loading data from localStorage:", error);
+    }
+  }, []);
+
   // Remove the useNavigate hook from here as it needs to be inside Router context
   const navigateToReservation = (pitchName: string) => {
     // Instead of using navigate, we'll create a function that can be used
@@ -348,6 +382,25 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Add a new reservation
   const addReservation = (data: NewReservationData): Reservation | undefined => {
+    // Validate that the pitch exists
+    const pitchExists = pitches.some(p => p.name === data.pitchName);
+    if (!pitchExists) {
+      console.error(`Cannot create reservation: Pitch "${data.pitchName}" does not exist`);
+      return undefined;
+    }
+    
+    // Check for duplicate reservations
+    const isDuplicate = reservations.some(
+      r => r.date === data.date && 
+          r.time === data.time && 
+          r.pitchName === data.pitchName
+    );
+    
+    if (isDuplicate) {
+      console.error("Cannot create reservation: A reservation for this pitch at this time already exists");
+      return undefined;
+    }
+    
     // Create a new reservation object with all required fields
     const newReservation: Reservation = {
       id: Date.now(), // Simple ID generation
@@ -368,18 +421,18 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       description: data.description // Add description from NewReservationData
     };
     
-    setReservations(prev => [...prev, newReservation]);
-
-    // Update localStorage to persist the new reservation
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      const parsedReservations = storedReservations ? JSON.parse(storedReservations) : [];
-      parsedReservations.push(newReservation);
-      localStorage.setItem('reservations', JSON.stringify(parsedReservations));
-      console.log("Saved new reservation to localStorage:", newReservation);
-    } catch (error) {
-      console.error("Error saving reservation to localStorage:", error);
-    }
+    // Update state with the new reservation
+    setReservations(prev => {
+      const updated = [...prev, newReservation];
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+        console.log("Saved new reservation to localStorage:", newReservation);
+      } catch (error) {
+        console.error("Error saving reservation to localStorage:", error);
+      }
+      return updated;
+    });
     
     return newReservation;
   };
@@ -398,67 +451,100 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
     
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        // Check if player is already in lineup
+        const alreadyJoined = res.lineup.some(p => p.userId === userId && p.status === 'joined');
+        if (alreadyJoined) return res;
+        
+        // Calculate new lineup count
+        const currentLineupCount = res.lineup.filter(p => p.status === 'joined').length;
+        
+        // Check if max players reached, don't add player if full
+        const actualMaxPlayers = res.maxPlayers + 2; // Buffer of 2 extra players
+        if (currentLineupCount >= actualMaxPlayers) return res;
+        
+        // Remove from waiting list if present
+        const newWaitingList = res.waitingList.filter(id => id !== userId);
+        
+        // Add to lineup - fixed the type issue
+        const newLineupPlayer: LineupPlayer = {
+          userId,
+          status: 'joined',
+          joinedAt: new Date().toISOString(),
+          playerName: playerName || `Player ${userId.substring(0, 4)}`,
+        };
+        
+        const newLineup = [...res.lineup, newLineupPlayer];
+        
+        return {
+          ...res,
+          lineup: newLineup,
+          playersJoined: newLineup.filter(p => p.status === 'joined').length,
+          waitingList: newWaitingList,
+          status: newLineup.filter(p => p.status === 'joined').length >= res.maxPlayers ? 'full' : 'open'
+        };
+      });
       
-      // Check if player is already in lineup
-      const alreadyJoined = res.lineup.some(p => p.userId === userId && p.status === 'joined');
-      if (alreadyJoined) return res;
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating reservations in localStorage:", error);
+      }
       
-      // Calculate new lineup count
-      const currentLineupCount = res.lineup.filter(p => p.status === 'joined').length;
-      
-      // Check if max players reached, don't add player if full
-      const actualMaxPlayers = res.maxPlayers + 2; // Buffer of 2 extra players
-      if (currentLineupCount >= actualMaxPlayers) return res;
-      
-      // Remove from waiting list if present
-      const newWaitingList = res.waitingList.filter(id => id !== userId);
-      
-      // Add to lineup - fixed the type issue
-      const newLineupPlayer: LineupPlayer = {
-        userId,
-        status: 'joined',
-        joinedAt: new Date().toISOString(),
-        playerName: playerName || `Player ${userId.substring(0, 4)}`,
-      };
-      
-      const newLineup = [...res.lineup, newLineupPlayer];
-      
-      return {
-        ...res,
-        lineup: newLineup,
-        playersJoined: newLineup.filter(p => p.status === 'joined').length,
-        waitingList: newWaitingList,
-        status: newLineup.filter(p => p.status === 'joined').length >= res.maxPlayers ? 'full' : 'open'
-      };
-    }));
+      return updated;
+    });
   };
 
   // Cancel reservation (player leaves the game)
   const cancelReservation = (reservationId: number, userId: string) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        // Update lineup to remove player
+        const newLineup = res.lineup.filter(p => p.userId !== userId);
+        const playersRemaining = newLineup.filter(p => p.status === 'joined').length;
+        
+        return {
+          ...res,
+          lineup: newLineup,
+          playersJoined: playersRemaining,
+          // Update status if needed
+          status: playersRemaining < res.maxPlayers ? 'open' : 'full'
+        };
+      });
       
-      // Update lineup to remove player
-      const newLineup = res.lineup.filter(p => p.userId !== userId);
-      const playersRemaining = newLineup.filter(p => p.status === 'joined').length;
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating reservations in localStorage:", error);
+      }
       
-      return {
-        ...res,
-        lineup: newLineup,
-        playersJoined: playersRemaining,
-        // Update status if needed
-        status: playersRemaining < res.maxPlayers ? 'open' : 'full'
-      };
-    }));
+      return updated;
+    });
   };
 
   // Update reservation status
   const updateReservationStatus = (reservationId: number, newStatus: ReservationStatus) => {
-    setReservations(prev => prev.map(res => 
-      res.id === reservationId ? { ...res, status: newStatus } : res
-    ));
+    setReservations(prev => {
+      const updated = prev.map(res => 
+        res.id === reservationId ? { ...res, status: newStatus } : res
+      );
+      
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating reservation status in localStorage:", error);
+      }
+      
+      return updated;
+    });
   };
 
   // Check if a user has joined a specific game
@@ -471,32 +557,54 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Join waiting list
   const joinWaitingList = (reservationId: number, userId: string) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        // Check if already in waiting list
+        if (res.waitingList.includes(userId)) return res;
+        
+        // Check if already in lineup
+        if (res.lineup.some(p => p.userId === userId && p.status === 'joined')) return res;
+        
+        return {
+          ...res,
+          waitingList: [...res.waitingList, userId]
+        };
+      });
       
-      // Check if already in waiting list
-      if (res.waitingList.includes(userId)) return res;
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating waiting list in localStorage:", error);
+      }
       
-      // Check if already in lineup
-      if (res.lineup.some(p => p.userId === userId && p.status === 'joined')) return res;
-      
-      return {
-        ...res,
-        waitingList: [...res.waitingList, userId]
-      };
-    }));
+      return updated;
+    });
   };
 
   // Leave waiting list
   const leaveWaitingList = (reservationId: number, userId: string) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        return {
+          ...res,
+          waitingList: res.waitingList.filter(id => id !== userId)
+        };
+      });
       
-      return {
-        ...res,
-        waitingList: res.waitingList.filter(id => id !== userId)
-      };
-    }));
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating waiting list in localStorage:", error);
+      }
+      
+      return updated;
+    });
   };
 
   // Check if user has joined any game on a specific date
@@ -525,14 +633,25 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Edit an existing reservation
   const editReservation = (reservationId: number, data: Partial<Omit<Reservation, 'id'>>) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        return {
+          ...res,
+          ...data
+        };
+      });
       
-      return {
-        ...res,
-        ...data
-      };
-    }));
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating reservation in localStorage:", error);
+      }
+      
+      return updated;
+    });
   };
   
   // Add a new pitch
@@ -542,18 +661,19 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
       id: Date.now(),
     };
     
-    setPitches(prev => [...prev, newPitch]);
-
-    // Update localStorage to persist the new pitch
-    try {
-      const storedPitches = localStorage.getItem('pitches');
-      const parsedPitches = storedPitches ? JSON.parse(storedPitches) : [];
-      parsedPitches.push(newPitch);
-      localStorage.setItem('pitches', JSON.stringify(parsedPitches));
-      console.log("Saved new pitch to localStorage:", newPitch);
-    } catch (error) {
-      console.error("Error saving pitch to localStorage:", error);
-    }
+    setPitches(prev => {
+      const updated = [...prev, newPitch];
+      
+      // Update localStorage
+      try {
+        localStorage.setItem('pitches', JSON.stringify(updated));
+        console.log("Saved new pitch to localStorage:", newPitch);
+      } catch (error) {
+        console.error("Error saving pitch to localStorage:", error);
+      }
+      
+      return updated;
+    });
     
     return newPitch;
   };
@@ -641,63 +761,107 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({ c
     ]);
     
     // Remove player from all upcoming games
-    setReservations(prev => prev.map(res => {
-      // Only process upcoming games
-      if (res.status !== 'open' && res.status !== 'full') return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        // Only process upcoming games
+        if (res.status !== 'open' && res.status !== 'full') return res;
+        
+        // Check if player is in this game
+        const isInGame = res.lineup.some(p => p.userId === userId);
+        const isInWaitingList = res.waitingList.includes(userId);
+        
+        if (!isInGame && !isInWaitingList) return res;
+        
+        return {
+          ...res,
+          lineup: res.lineup.filter(p => p.userId !== userId),
+          waitingList: res.waitingList.filter(id => id !== userId),
+          playersJoined: res.lineup.filter(p => p.userId !== userId && p.status === 'joined').length
+        };
+      });
       
-      // Check if player is in this game
-      const isInGame = res.lineup.some(p => p.userId === userId);
-      const isInWaitingList = res.waitingList.includes(userId);
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating reservations in localStorage after suspension:", error);
+      }
       
-      if (!isInGame && !isInWaitingList) return res;
-      
-      return {
-        ...res,
-        lineup: res.lineup.filter(p => p.userId !== userId),
-        waitingList: res.waitingList.filter(id => id !== userId),
-        playersJoined: res.lineup.filter(p => p.userId !== userId && p.status === 'joined').length
-      };
-    }));
+      return updated;
+    });
     
     console.log(`Player ${userId} suspended for ${duration} days. Reason: ${reason}`);
   };
 
   // Add new highlight to a reservation
   const addHighlight = (reservationId: number, highlight: Omit<Highlight, 'id'>) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        const newHighlight = {
+          ...highlight,
+          id: Date.now(), // Simple ID generation
+        };
+        
+        const highlights = res.highlights || [];
+        
+        return {
+          ...res,
+          highlights: [...highlights, newHighlight],
+        };
+      });
       
-      const newHighlight = {
-        ...highlight,
-        id: Date.now(), // Simple ID generation
-      };
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating highlights in localStorage:", error);
+      }
       
-      const highlights = res.highlights || [];
-      
-      return {
-        ...res,
-        highlights: [...highlights, newHighlight],
-      };
-    }));
+      return updated;
+    });
   };
   
   // Delete a highlight from a reservation
   const deleteHighlight = (reservationId: number, highlightId: number) => {
-    setReservations(prev => prev.map(res => {
-      if (res.id !== reservationId) return res;
+    setReservations(prev => {
+      const updated = prev.map(res => {
+        if (res.id !== reservationId) return res;
+        
+        const highlights = res.highlights || [];
+        
+        return {
+          ...res,
+          highlights: highlights.filter(h => h.id !== highlightId),
+        };
+      });
       
-      const highlights = res.highlights || [];
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error updating highlights in localStorage:", error);
+      }
       
-      return {
-        ...res,
-        highlights: highlights.filter(h => h.id !== highlightId),
-      };
-    }));
+      return updated;
+    });
   };
 
   // Delete a reservation (for admins)
   const deleteReservation = (id: number) => {
-    setReservations(prev => prev.filter(reservation => reservation.id !== id));
+    setReservations(prev => {
+      const updated = prev.filter(reservation => reservation.id !== id);
+      
+      // Update localStorage
+      try {
+        localStorage.setItem('reservations', JSON.stringify(updated));
+      } catch (error) {
+        console.error("Error deleting reservation from localStorage:", error);
+      }
+      
+      return updated;
+    });
   };
 
   // Return provider with context value

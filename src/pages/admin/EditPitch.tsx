@@ -1,3 +1,4 @@
+
 import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +149,21 @@ const EditPitch = () => {
         
         // Update the pitch in context
         updatePitch(id, pitchToUpdate);
+        
+        // Update the pitch in localStorage
+        try {
+          const storedPitches = localStorage.getItem('pitches');
+          if (storedPitches) {
+            const parsedPitches = JSON.parse(storedPitches);
+            const updatedPitches = parsedPitches.map((p: Pitch) => {
+              return p.id === id ? pitchToUpdate : p;
+            });
+            localStorage.setItem('pitches', JSON.stringify(updatedPitches));
+            console.log("Updated pitch in localStorage:", pitchToUpdate);
+          }
+        } catch (error) {
+          console.error("Error updating pitch in localStorage:", error);
+        }
         
         // Show success toast
         toast({
