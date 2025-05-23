@@ -396,6 +396,29 @@ const Reservations = () => {
     }
   };
 
+  // Handle suspending a player
+  const suspendPlayer = (userId: string, reason: string, duration: number) => {
+    // Implementation would typically involve API calls or context methods
+    console.log(`Suspending player ${userId} for ${duration} days for reason: ${reason}`);
+    toast({
+      title: "Player Suspended",
+      description: `Player has been suspended for ${duration} days.`,
+    });
+  };
+  
+  // Handle kicking a player from a game
+  const kickPlayerFromGame = (reservationId: number, userId: string) => {
+    if (!userId) return;
+    
+    // Call the context method to handle this action
+    cancelReservation(reservationId, userId);
+    
+    toast({
+      title: "Player Removed",
+      description: "The player has been removed from this game.",
+    });
+  };
+
   // Fix the type issue by creating a function that returns a function
   const createIsUserJoinedFunction = () => {
     return (reservationId: number, userId: string): boolean => {
@@ -504,7 +527,7 @@ const Reservations = () => {
                   onCancel={(id, userId) => handleCancelReservation(id)}
                   onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
                   onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
-                  isUserJoined={isUserJoinedFunction} // Use the function instead of boolean
+                  isUserJoined={isUserJoinedFunction}
                   isFull={reservation.status === "full"}
                   suspendPlayer={userRole === 'admin' ? suspendPlayer : undefined}
                   kickPlayerFromGame={userRole === 'admin' ? kickPlayerFromGame : undefined}
