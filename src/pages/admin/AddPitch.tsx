@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +34,7 @@ const AddPitch = () => {
     location: "", // Google Maps link
     city: "",
     image: "",
-    images: ["", "", ""], // Array to store up to 3 images
+    images: ["", "", "", ""], // Array to store up to 4 images
     playersPerSide: "",
     description: "",
     facilities: {} as Record<string, boolean>, // Changed to object with boolean values
@@ -285,10 +284,10 @@ const AddPitch = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Multiple Image Upload Section - Up to 3 images */}
+              {/* Multiple Image Upload Section - Up to 4 images */}
               <div className="space-y-2">
-                <label htmlFor="image-upload" className="text-sm font-medium">Pitch Images (Up to 3)</label>
-                <div className="grid grid-cols-3 gap-3">
+                <label htmlFor="image-upload" className="text-sm font-medium">Pitch Images (Up to 4)</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {pitchData.images.map((image, index) => (
                     <div 
                       key={index} 

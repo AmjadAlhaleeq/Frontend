@@ -1,20 +1,20 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Calendar as CalendarIcon, Check, Clock, Users } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
-import { Textarea } from "@/components/ui/textarea";
 
 /**
  * AddReservationDialog Component
- * Dialog for creating new game reservations
+ * Dialog for creating new game reservations with simplified fields
  */
 const AddReservationDialog = () => {
   const [open, setOpen] = useState(false);
@@ -23,7 +23,6 @@ const AddReservationDialog = () => {
   const [pitchName, setPitchName] = useState("");
   const [startTime, setStartTime] = useState("");
   const [duration, setDuration] = useState("90"); // Default 90 minutes
-  const [description, setDescription] = useState("");
   const [maxPlayers, setMaxPlayers] = useState<number | null>(null);
   
   const { addReservation, pitches } = useReservation();
@@ -38,18 +37,17 @@ const AddReservationDialog = () => {
         setPitchName("");
         setStartTime("");
         setDuration("90");
-        setDescription("");
         setMaxPlayers(null);
       }, 200);
     }
   }, [open]);
 
-  // Update maxPlayers when pitch changes
+  // Update maxPlayers when pitch changes - add 2 players for substitutes
   useEffect(() => {
     if (pitchName) {
       const selectedPitch = pitches.find(p => p.name === pitchName);
       if (selectedPitch) {
-        // Calculate max players based on pitch format plus 2 subs
+        // Calculate max players: (playersPerSide * 2) + 2 subs
         setMaxPlayers(selectedPitch.playersPerSide * 2 + 2);
       }
     }
@@ -82,10 +80,11 @@ const AddReservationDialog = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
     if (!title || !date || !pitchName || !startTime || !duration) {
       toast({
         title: "Missing Fields",
-        description: "Please fill all required fields.",
+        description: "Please fill all required fields (title and start time are required).",
         variant: "destructive"
       });
       return;
@@ -128,7 +127,7 @@ const AddReservationDialog = () => {
       maxPlayers: maxPlayers || (selectedPitch?.playersPerSide ? selectedPitch.playersPerSide * 2 + 2 : 12),
       price: selectedPitch?.price || 0,
       imageUrl: selectedPitch?.image,
-      description
+      additionalImages: selectedPitch?.additionalImages || [],
     };
     
     // Add the reservation
@@ -163,10 +162,10 @@ const AddReservationDialog = () => {
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Title Input - Now required */}
+          {/* Title Input - Required */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Title*
+              Title* (Required)
             </label>
             <Input
               id="title"
@@ -235,10 +234,10 @@ const AddReservationDialog = () => {
             </Popover>
           </div>
           
-          {/* Start Time Select */}
+          {/* Start Time Select - Required */}
           <div className="space-y-2">
             <label htmlFor="startTime" className="text-sm font-medium">
-              Start Time*
+              Start Time* (Required)
             </label>
             <Select
               value={startTime}
@@ -260,7 +259,7 @@ const AddReservationDialog = () => {
             </Select>
           </div>
           
-          {/* Duration Select */}
+          {/* Duration Select - Replaces time slot */}
           <div className="space-y-2">
             <label htmlFor="duration" className="text-sm font-medium">
               Duration*
@@ -280,35 +279,6 @@ const AddReservationDialog = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          
-          {/* Game format display (read-only) */}
-          {maxPlayers && (
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-              <h4 className="text-sm font-medium mb-1">Game Format:</h4>
-              <div className="flex items-center text-sm">
-                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>
-                  {pitchName && pitches.find(p => p.name === pitchName)?.playersPerSide}v
-                  {pitchName && pitches.find(p => p.name === pitchName)?.playersPerSide} 
-                  {' '}(max {maxPlayers} players with subs)
-                </span>
-              </div>
-            </div>
-          )}
-          
-          {/* Description - Optional */}
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
-            <Textarea
-              id="description"
-              placeholder="Add any additional details about the game..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="resize-y min-h-[100px]"
-            />
           </div>
 
           {/* Submit Button */}

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Define the player interface
+// Define the player interface with role information
 export interface Player {
   userId: string;
   playerName: string;
@@ -11,6 +11,8 @@ export interface Player {
   cleansheet?: boolean;
   mvp?: boolean;
   attended?: boolean;
+  role?: string; // Player position/role
+  avatar?: string; // Player avatar URL
 }
 
 // Define highlight types
@@ -43,7 +45,7 @@ export interface UserStats {
   draws?: number;
 }
 
-// Define the Pitch interface
+// Define the Pitch interface with up to 4 images
 export interface Pitch {
   id: number;
   name: string;
@@ -54,7 +56,7 @@ export interface Pitch {
   description: string;
   price: number;
   facilities: string[];
-  additionalImages?: string[];
+  additionalImages?: string[]; // Up to 4 images total
   type?: string; // 'indoor' or 'outdoor'
   openingHours?: string;
   details?: {
@@ -65,7 +67,7 @@ export interface Pitch {
   };
 }
 
-// Define the Reservation interface
+// Define the Reservation interface with new status system
 export interface Reservation {
   id: number;
   title: string;
@@ -80,9 +82,10 @@ export interface Reservation {
   playersJoined?: number;
   price?: number;
   imageUrl?: string;
+  additionalImages?: string[];
   lineup?: Player[];
   waitingList?: string[];
-  status: "open" | "full" | "cancelled" | "completed";
+  status: "upcoming" | "completed" | "cancelled"; // Updated status system
   description?: string;
   locationLink?: string;
   highlights?: Highlight[];
@@ -91,6 +94,7 @@ export interface Reservation {
     awayScore: number;
     completed: boolean;
     completedAt: string;
+    mvpPlayerId?: string;
   }
 }
 
@@ -111,7 +115,7 @@ interface ReservationContextType {
   joinWaitingList: (id: number, userId: string) => void;
   leaveWaitingList: (id: number, userId: string) => void;
   isUserJoined: (reservationId: number, userId: string) => boolean;
-  updateReservationStatus: (id: number, status: "open" | "full" | "cancelled" | "completed") => void;
+  updateReservationStatus: (id: number, status: "upcoming" | "completed" | "cancelled") => void;
   isDateAvailableForPitch: (date: string, pitchName: string, timeSlot: string) => boolean;
   navigateToReservation: (pitchName: string) => void;
   hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
@@ -196,8 +200,9 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         location: pitch.location,
         city: pitch.city,
         imageUrl: pitch.image,
+        additionalImages: pitch.additionalImages || [],
         playersJoined: 0,
-        status: "open" as "open" | "full" | "cancelled" | "completed",
+        status: "upcoming" as "upcoming" | "completed" | "cancelled", // Updated status
         lineup: [],
         waitingList: []
       };
@@ -214,6 +219,21 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const deleteReservation = (id: number) => {
+    const reservation = reservations.find(res => res.id === id);
+    if (reservation && reservation.lineup) {
+      // Send email notifications to all players
+      reservation.lineup.forEach(player => {
+        const playerEmail = localStorage.getItem(`playerEmail_${player.userId}`);
+        if (playerEmail) {
+          sendEmailNotification(playerEmail, 'deletion', {
+            reservationTitle: reservation.title,
+            date: reservation.date,
+            time: reservation.time
+          });
+        }
+      });
+    }
+    
     setReservations(reservations.filter(res => res.id !== id));
   };
 
@@ -230,73 +250,30 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
             userId: userId,
             playerName: playerName || `Player ${userId.substring(0, 4)}`,
             status: 'joined',
-            joinedAt: new Date().toISOString()
+            joinedAt: new Date().toISOString(),
+            role: `Player ${(reservation.lineup?.length || 0) + 1}` // Assign player role
           };
 
           const updatedLineup = reservation.lineup ? [...reservation.lineup, newPlayer] : [newPlayer];
           const playersJoined = updatedLineup.length;
-          let status = reservation.status;
-
-          if (playersJoined >= reservation.maxPlayers) {
-            status = "full";
-          }
-
-          return { ...reservation, lineup: updatedLineup, playersJoined, status };
+          
+          // Check if waiting list should be activated (when max players reached)
+          let updatedWaitingList = reservation.waitingList || [];
+          
+          return { 
+            ...reservation, 
+            lineup: updatedLineup, 
+            playersJoined,
+            waitingList: updatedWaitingList
+          };
         }
         return reservation;
       });
     });
   };
 
-  const cancelReservation = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
-        if (reservation.id === id) {
-          const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
-          const playersJoined = updatedLineup.length;
-          let status = reservation.status;
-
-          if (status === "full" && playersJoined < reservation.maxPlayers) {
-            status = "open";
-          }
-
-          return { ...reservation, lineup: updatedLineup, playersJoined, status };
-        }
-        return reservation;
-      });
-    });
-  };
-
-  const joinWaitingList = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
-        if (reservation.id === id && !reservation.waitingList?.includes(userId)) {
-          const updatedWaitingList = reservation.waitingList ? [...reservation.waitingList, userId] : [userId];
-          return { ...reservation, waitingList: updatedWaitingList };
-        }
-        return reservation;
-      });
-    });
-  };
-
-  const leaveWaitingList = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
-        if (reservation.id === id && reservation.waitingList?.includes(userId)) {
-          const updatedWaitingList = reservation.waitingList.filter(uid => uid !== userId);
-          return { ...reservation, waitingList: updatedWaitingList };
-        }
-        return reservation;
-      });
-    });
-  };
-
-  const isUserJoined = (reservationId: number, userId: string): boolean => {
-    const reservation = reservations.find(res => res.id === reservationId);
-    return !!reservation?.lineup?.some(player => player.userId === userId);
-  };
-
-  const updateReservationStatus = (id: number, status: "open" | "full" | "cancelled" | "completed") => {
+  // Update reservation status function for new status system
+  const updateReservationStatus = (id: number, status: "upcoming" | "completed" | "cancelled") => {
     setReservations(reservations.map(res => res.id === id ? { ...res, status } : res));
   };
 
@@ -396,10 +373,16 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
+  // Email notification function (placeholder for API integration)
+  const sendEmailNotification = (email: string, type: 'suspension' | 'kick' | 'deletion', details: any) => {
+    console.log(`Sending ${type} email to ${email}:`, details);
+    // This will be implemented with actual email API
+  };
+
+  // Enhanced suspend player function with email notification
   const suspendPlayer = (userId: string, reason: string, duration: number) => {
-    // Store suspension in localStorage
     const now = new Date();
-    const endDate = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000)); // Convert days to milliseconds
+    const endDate = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000));
     
     const suspension = {
       userId,
@@ -410,17 +393,18 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     };
     
     try {
-      // Get existing suspensions
       const suspensionsString = localStorage.getItem('playerSuspensions');
       const suspensions = suspensionsString ? JSON.parse(suspensionsString) : [];
       
-      // Add new suspension
       suspensions.push(suspension);
-      
-      // Save back to localStorage
       localStorage.setItem('playerSuspensions', JSON.stringify(suspensions));
       
-      // Dispatch an event for other components to know a player was suspended
+      // Get player email for notification
+      const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
+      if (playerEmail) {
+        sendEmailNotification(playerEmail, 'suspension', { reason, duration, endDate: endDate.toISOString() });
+      }
+      
       window.dispatchEvent(new CustomEvent('playerSuspended', { 
         detail: { userId, endDate: endDate.toISOString() } 
       }));
@@ -432,27 +416,28 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
+  // Enhanced kick player function with email notification
   const kickPlayerFromGame = (reservationId: number, userId: string) => {
     setReservations((prev) => {
       return prev.map((reservation) => {
         if (reservation.id === reservationId) {
-          // Filter out the kicked player
           const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
-          
-          // Adjust players joined count
           const playersJoined = updatedLineup.length;
           
-          // Determine if the reservation should still be full or open
-          let status = reservation.status;
-          if (status === "full" && playersJoined < reservation.maxPlayers) {
-            status = "open";
+          // Get player email for notification
+          const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
+          if (playerEmail) {
+            sendEmailNotification(playerEmail, 'kick', { 
+              reservationTitle: reservation.title,
+              date: reservation.date,
+              time: reservation.time
+            });
           }
           
           return {
             ...reservation,
             lineup: updatedLineup,
-            playersJoined,
-            status
+            playersJoined
           };
         }
         return reservation;
