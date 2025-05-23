@@ -13,11 +13,13 @@ import {
 import { Users, AlertTriangle } from "lucide-react";
 
 interface WaitlistConfirmationDialogProps {
-  isOpen: boolean;  // Changed from open
+  isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   gameTitle: string;
   isJoining: boolean;
+  gameDate?: string;
+  gameTime?: string;
 }
 
 /**
@@ -29,7 +31,9 @@ const WaitlistConfirmationDialog: React.FC<WaitlistConfirmationDialogProps> = ({
   onClose,
   onConfirm,
   gameTitle,
-  isJoining
+  isJoining,
+  gameDate,
+  gameTime
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -54,6 +58,9 @@ const WaitlistConfirmationDialog: React.FC<WaitlistConfirmationDialogProps> = ({
                 <p className="mb-2">You are about to join the waiting list for:</p>
                 <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
                   <p className="font-medium text-amber-600 dark:text-amber-400">{gameTitle}</p>
+                  {gameDate && gameTime && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{gameDate} at {gameTime}</p>
+                  )}
                 </div>
                 <p>You'll be notified if a spot becomes available. You can leave the waiting list at any time.</p>
               </>
@@ -62,6 +69,9 @@ const WaitlistConfirmationDialog: React.FC<WaitlistConfirmationDialogProps> = ({
                 <p className="mb-2">You are about to leave the waiting list for:</p>
                 <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
                   <p className="font-medium text-amber-600 dark:text-amber-400">{gameTitle}</p>
+                  {gameDate && gameTime && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{gameDate} at {gameTime}</p>
+                  )}
                 </div>
                 <p>You'll lose your position in the waiting list. Are you sure?</p>
               </>

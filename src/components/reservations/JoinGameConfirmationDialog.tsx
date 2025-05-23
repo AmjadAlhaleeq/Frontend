@@ -13,7 +13,7 @@ import {
 import { UserPlus } from "lucide-react";
 
 interface JoinGameConfirmationDialogProps {
-  isOpen: boolean;  // Changed from open
+  isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   gameName: string;
