@@ -3,6 +3,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useReservation } from "@/context/ReservationContext";
+import { toast } from "@/components/ui/use-toast";
 
 // Define simplified HighlightType enum and Highlight interface here to avoid circular dependency
 enum HighlightType {
@@ -36,6 +38,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   reservationId,
   isAdmin = false
 }) => {
+  const { deleteHighlight } = useReservation();
+
   // Function to get the color for a highlight type
   const getHighlightColor = (type: HighlightType) => {
     switch (type) {
@@ -59,6 +63,17 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
       return "Unknown time";
+    }
+  };
+
+  // Handle delete highlight
+  const handleDeleteHighlight = (highlightId: string) => {
+    if (deleteHighlight) {
+      deleteHighlight(reservationId, highlightId);
+      toast({
+        title: "Highlight Deleted",
+        description: "The highlight has been removed from this game.",
+      });
     }
   };
 
@@ -87,11 +102,12 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                 <p className="text-xs text-gray-500 mt-1">{formatTime(highlight.timestamp)}</p>
               </div>
               
-              {isAdmin && (
+              {isAdmin && deleteHighlight && (
                 <Button 
                   variant="ghost" 
                   size="sm"
                   className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10"
+                  onClick={() => handleDeleteHighlight(highlight.id)}
                 >
                   Delete
                 </Button>

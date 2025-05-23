@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +44,13 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
     if (isGamePlayed) {
       // Update the reservation with game results
       updateReservation(reservation.id, {
-        finalScore: `${hometeamScore}-${awayteamScore}`,
+        // Instead of using finalScore directly, we'll modify this to match the interface
+        summary: {
+          homeScore: parseInt(hometeamScore),
+          awayScore: parseInt(awayteamScore),
+          completed: true,
+          completedAt: new Date().toISOString()
+        },
         mvpPlayerId: mvpPlayerId || undefined,
       });
       

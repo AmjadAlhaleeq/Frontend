@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -322,6 +321,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                   {/* Component to list existing highlights */}
                   <HighlightsList 
                     reservationId={reservation.id} 
+                    highlights={reservation.highlights || []}
                     isAdmin={isAdmin} // Pass admin status for conditional controls within HighlightsList
                   />
                 </div>
