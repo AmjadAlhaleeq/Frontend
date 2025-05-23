@@ -31,6 +31,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import GameSummaryDialog from "./GameSummaryDialog";
 
 // Import Player from context but rename it to avoid conflict with local interface
 import { Player as ReservationPlayer } from "@/context/ReservationContext";
@@ -156,14 +157,39 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
 
-  const isGameCompleted = reservation.status === "completed";
-  const isGameUpcoming = reservation.status === "upcoming";
+  const { updateGameSummary } = useReservation();
+
+  // Determine if game is completed based on time
+  const determineGameStatus = () => {
+    const gameDate = new Date(reservation.date);
+    const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || [0, 0];
+    const gameStartTime = new Date(gameDate);
+    gameStartTime.setHours(startHour, startMinute, 0, 0);
+    
+    // Add duration to get end time (assuming duration is in hours)
+    const gameEndTime = new Date(gameStartTime);
+    gameEndTime.setHours(gameStartTime.getHours() + (reservation.duration || 2));
+    
+    const now = new Date();
+    
+    if (now < gameStartTime) {
+      return 'upcoming';
+    } else if (now >= gameEndTime) {
+      return 'completed';
+    } else {
+      return 'in-progress'; // Currently playing
+    }
+  };
+
+  const gameStatus = determineGameStatus();
+  const isGameCompleted = gameStatus === 'completed';
+  const isGameUpcoming = gameStatus === 'upcoming';
   const isAdmin = userRole === "admin";
 
   // Get pitch photos (assuming we have them in the reservation or use defaults)
-  const pitchPhotos = reservation.photos || [
-    `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`
-  ];
+  const pitchPhotos = reservation.additionalImages && reservation.additionalImages.length > 0
+    ? [reservation.imageUrl, ...reservation.additionalImages].filter(Boolean)
+    : [reservation.imageUrl || `https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=400&fit=crop&crop=center`];
 
   const handleJoin = async () => {
     setIsJoining(true);
@@ -222,6 +248,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const handlePlayerClick = (player: Player) => {
     setSelectedPlayer(player);
     setIsPlayerDialogOpen(true);
+  };
+
+  const handleUpdateSummary = (reservationId: number, summary: any, playerStats: any[]) => {
+    updateGameSummary(reservationId, summary, playerStats);
+    setShowSummaryDialog(false);
   };
 
   const isUserInWaitingList = reservation.waitingList?.includes(userId);
@@ -316,12 +347,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               {/* Status Badge (replaces three dots) */}
               <Badge 
                 className={`${
-                  reservation.status === 'upcoming' ? 'bg-green-500' : 
-                  reservation.status === 'completed' ? 'bg-blue-500' :
+                  gameStatus === 'upcoming' ? 'bg-green-500' : 
+                  gameStatus === 'completed' ? 'bg-blue-500' :
+                  gameStatus === 'in-progress' ? 'bg-orange-500' :
                   'bg-red-500'
                 }`}
               >
-                {reservation.status}
+                {gameStatus}
               </Badge>
             </div>
 
@@ -410,13 +442,14 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                       variant="default" 
                       size="sm"
                       onClick={() => setShowSummaryDialog(true)}
+                      className="bg-teal-600 hover:bg-teal-700"
                     >
                       Add Summary
                     </Button>
                   ) : null}
                 </div>
               ) : (
-                // Player Actions
+                // Player Actions (only show for non-completed games)
                 !isGameCompleted && (
                   <>
                     {isUserJoined(reservation.id, userId) ? (
@@ -475,26 +508,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         />
       )}
 
-      {/* Add Summary Dialog - placeholder for now */}
-      <Dialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Game Summary</DialogTitle>
-            <DialogDescription>
-              Add MVP, player statuses, and suspension details for this completed game.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-600">Summary functionality will be implemented here.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSummaryDialog(false)}>
-              Cancel
-            </Button>
-            <Button>Save Summary</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Game Summary Dialog */}
+      {showSummaryDialog && isGameCompleted && (
+        <GameSummaryDialog
+          isOpen={showSummaryDialog}
+          onClose={() => setShowSummaryDialog(false)}
+          reservation={reservation}
+          onUpdateSummary={handleUpdateSummary}
+        />
+      )}
     </>
   );
 };
