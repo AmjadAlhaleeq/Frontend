@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,16 +18,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, UserX } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,11 +28,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { BanIcon } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import SuspendPlayerDialog from "./SuspendPlayerDialog";
+import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Import Player from context but rename it to avoid conflict with local interface
 import { Player as ReservationPlayer } from "@/context/ReservationContext";
@@ -67,6 +55,85 @@ interface ReservationCardProps {
   onDeleteReservation?: (id: number) => void;
 }
 
+interface PlayerDetailsDialogProps {
+  player: Player;
+  isOpen: boolean;
+  onClose: () => void;
+  userRole: string;
+}
+
+const PlayerDetailsDialog: React.FC<PlayerDetailsDialogProps> = ({
+  player,
+  isOpen,
+  onClose,
+  userRole
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
+              <AvatarFallback>{player.playerName.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            {player.playerName}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Status:</span>
+              <Badge className="ml-2" variant={player.status === 'joined' ? 'default' : 'secondary'}>
+                {player.status}
+              </Badge>
+            </div>
+            <div>
+              <span className="font-medium">Joined:</span>
+              <span className="ml-2">{player.joinedAt ? new Date(player.joinedAt).toLocaleDateString() : 'N/A'}</span>
+            </div>
+          </div>
+          
+          {/* Player Stats Section */}
+          <Separator />
+          <div className="space-y-3">
+            <h4 className="font-medium">Player Stats</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Games Played:</span>
+                <div className="font-medium">12</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Win Rate:</span>
+                <div className="font-medium">75%</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Goals Scored:</span>
+                <div className="font-medium">8</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">MVP Awards:</span>
+                <div className="font-medium">3</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Badges Section */}
+          <Separator />
+          <div className="space-y-3">
+            <h4 className="font-medium">Badges</h4>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Top Scorer</Badge>
+              <Badge variant="outline">Team Player</Badge>
+              <Badge variant="outline">Regular</Badge>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
   userId,
@@ -84,24 +151,19 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [playerName, setPlayerName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [attendance, setAttendance] = useState<{ [userId: string]: boolean }>({});
-  const [showAttendance, setShowAttendance] = useState(false);
-  const [selectedPlayerId, setSelectedPlayerId] = useState("");
-  const [selectedPlayerName, setSelectedPlayerName] = useState("");
-  const [selectedPlayerEmail, setSelectedPlayerEmail] = useState("");
-  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
-  const [kickDialogOpen, setKickDialogOpen] = useState(false);
-  const { updateGameSummary, updatePlayerStats } = useReservation();
-  const [homeScore, setHomeScore] = useState(0);
-  const [awayScore, setAwayScore] = useState(0);
-  const [mvpPlayerId, setMvpPlayerId] = useState("");
-  const [showSummaryForm, setShowSummaryForm] = useState(false);
-  const [editLineupDialogOpen, setEditLineupDialogOpen] = useState(false);
-  const [editedLineup, setEditedLineup] = useState<Player[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
 
   const isGameCompleted = reservation.status === "completed";
-  const isGameCancelled = reservation.status === "cancelled";
+  const isGameUpcoming = reservation.status === "upcoming";
   const isAdmin = userRole === "admin";
+
+  // Get pitch photos (assuming we have them in the reservation or use defaults)
+  const pitchPhotos = reservation.photos || [
+    `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`
+  ];
 
   const handleJoin = async () => {
     setIsJoining(true);
@@ -157,6 +219,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     });
   };
 
+  const handlePlayerClick = (player: Player) => {
+    setSelectedPlayer(player);
+    setIsPlayerDialogOpen(true);
+  };
+
   const isUserInWaitingList = reservation.waitingList?.includes(userId);
 
   const getPlayerAvatar = (player: Player) => {
@@ -164,449 +231,271 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     const initials = nameParts.map((part) => part[0].toUpperCase()).join("");
 
     return (
-      <Avatar className="h-8 w-8">
+      <Avatar className="h-8 w-8 cursor-pointer" onClick={() => handlePlayerClick(player)}>
         <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
     );
   };
 
-  const toggleAttendance = (player: Player) => {
-    setAttendance((prevAttendance) => ({
-      ...prevAttendance,
-      [player.userId]: !prevAttendance[player.userId],
-    }));
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % pitchPhotos.length);
   };
 
-  const handleShowAttendance = () => {
-    // Initialize attendance state based on the current lineup
-    const initialAttendance = reservation.lineup?.reduce((acc, player) => {
-      acc[player.userId] = true; // Default to true (attended)
-      return acc;
-    }, {});
-    setAttendance(initialAttendance || {});
-    setShowAttendance(true);
-  };
-
-  const handleCloseAttendance = () => {
-    setShowAttendance(false);
-  };
-
-  const handleOpenSuspendDialog = (player: Player) => {
-    setSelectedPlayerId(player.userId);
-    setSelectedPlayerName(player.playerName);
-    setSelectedPlayerEmail(player.email || ''); // Use optional chaining or default to empty string
-    setSuspendDialogOpen(true);
-  };
-
-  const handleOpenKickDialog = (player: Player) => {
-    setSelectedPlayerId(player.userId);
-    setSelectedPlayerName(player.playerName);
-    setKickDialogOpen(true);
-  };
-
-  const handleKickPlayer = () => {
-    if (kickPlayerFromGame && selectedPlayerId) {
-      kickPlayerFromGame(reservation.id, selectedPlayerId);
-      setKickDialogOpen(false);
-      toast({
-        title: "Player Kicked",
-        description: `Player ${selectedPlayerName} has been kicked from the game.`,
-      });
-    }
-  };
-
-  // Define the missing handlePlayerSuspension function
-  const handlePlayerSuspension = (userId: string, reason: string, duration: number) => {
-    if (suspendPlayer && typeof suspendPlayer === 'function') {
-      suspendPlayer(userId, reason, duration);
-      setSuspendDialogOpen(false);
-      toast({
-        title: "Player Suspended",
-        description: `Player has been suspended for ${duration} days.`,
-      });
-    }
-  };
-
-  const handleSaveSummary = () => {
-    // Prepare player stats based on attendance
-    const playerStats = reservation.lineup?.map(player => ({
-      ...player,
-      attended: attendance[player.userId] === undefined ? true : attendance[player.userId],
-    })) || [];
-    
-    // Update game summary and player stats
-    updateGameSummary(
-      reservation.id,
-      {
-        homeScore,
-        awayScore,
-        completed: true,
-        completedAt: new Date().toISOString(),
-      },
-      playerStats
-    );
-    
-    setShowSummaryForm(false);
-    toast({
-      title: "Game Summary Saved",
-      description: "The game summary has been saved.",
-    });
-  };
-
-  const handleEditLineup = () => {
-    setEditedLineup(reservation.lineup || []);
-    setEditLineupDialogOpen(true);
-  };
-
-  const handleLineupChange = (userId: string, value: string) => {
-    setEditedLineup(prevLineup =>
-      prevLineup.map(player =>
-        player.userId === userId ? { ...player, status: value } : player
-      )
-    );
-  };
-
-  const handleSaveLineup = () => {
-    // Save the edited lineup to the reservation
-    updateGameSummary(
-      reservation.id,
-      {
-        homeScore,
-        awayScore,
-        completed: true,
-        completedAt: new Date().toISOString(),
-      },
-      editedLineup
-    );
-    setEditLineupDialogOpen(false);
-    toast({
-      title: "Lineup Saved",
-      description: "The edited lineup has been saved.",
-    });
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + pitchPhotos.length) % pitchPhotos.length);
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{reservation.pitchName}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{reservation.date} at {reservation.time}</p>
-            <Badge variant="secondary" className="mt-2">{reservation.status}</Badge>
-            {isGameCompleted && reservation.summary && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                Final Score: {reservation.summary.homeScore} - {reservation.summary.awayScore}
-              </p>
+    <>
+      <Card className="bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="flex">
+          {/* Pitch Photo Section */}
+          <div className="relative w-48 h-48 flex-shrink-0">
+            <img
+              src={pitchPhotos[currentPhotoIndex]}
+              alt={reservation.pitchName}
+              className="w-full h-full object-cover"
+            />
+            {pitchPhotos.length > 1 && (
+              <>
+                <button
+                  onClick={prevPhoto}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  {pitchPhotos.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${
+                        index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
-          {isAdmin && !isGameCompleted && !isGameCancelled && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={handleShowAttendance}>
-                  Mark Attendance
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowSummaryForm(true)}>
-                  Add Game Summary
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleEditLineup}>
-                  Edit Lineup
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" className="text-red-500 focus-visible:bg-red-50 dark:focus-visible:bg-red-900/20">
-                        Cancel Game
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently cancel the game.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            updateGameSummary(
-                              reservation.id,
-                              {
-                                homeScore: 0,
-                                awayScore: 0,
-                                completed: false,
-                                completedAt: new Date().toISOString(),
-                              },
-                              []
-                            );
-                            toast({
-                              title: "Game Cancelled",
-                              description: "The game has been cancelled.",
-                            });
-                          }}
-                          className="bg-red-500 hover:bg-red-600 text-white"
-                        >
-                          Confirm
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        <Separator className="my-2 dark:bg-gray-700" />
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200">Players Joined:</h3>
-          {reservation.lineup && reservation.lineup.length > 0 ? (
-            <ScrollArea className="h-[150px] rounded-md border dark:border-gray-700">
-              <div className="p-2">
-                {reservation.lineup.map((player) => (
-                  <div key={player.userId} className="flex items-center justify-between py-2">
-                    <div className="flex items-center space-x-2">
-                      {getPlayerAvatar(player)}
-                      <p className="text-sm text-gray-800 dark:text-gray-100">{player.playerName}</p>
-                      {player.mvp && <Badge className="ml-1">MVP</Badge>}
-                    </div>
-                    {isAdmin && !isGameCompleted && !isGameCancelled && player.userId !== userId && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-7 w-7 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleOpenSuspendDialog(player)}>
-                            Suspend Player
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenKickDialog(player)}>
-                            Kick Player
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">No players have joined yet.</p>
-          )}
-        </div>
-        {/* Action Buttons */}
-        {!isGameCompleted && !isGameCancelled && (
-          <CardFooter className="flex justify-between items-center">
-            {isUserJoined(reservation.id, userId) ? (
-              <Button
-                variant="destructive"
-                onClick={handleCancel}
-                disabled={isCancelling}
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                {isCancelling ? "Cancelling..." : "Cancel Reservation"}
-              </Button>
-            ) : isFull ? (
-              !isUserInWaitingList ? (
-                <Button variant="secondary" onClick={handleJoinWaitingList}>
-                  Join Waiting List
-                </Button>
-              ) : (
-                <Button variant="secondary" onClick={handleLeaveWaitingList}>
-                  Leave Waiting List
-                </Button>
-              )
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Input
-                  type="text"
-                  placeholder="Your Name"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="max-w-[150px]"
-                />
-                <Button onClick={handleJoin} disabled={isJoining} className="bg-green-500 hover:bg-green-600 text-white">
-                  {isJoining ? "Joining..." : "Join Game"}
-                </Button>
-              </div>
-            )}
-          </CardFooter>
-        )}
-      </CardContent>
 
-      {/* Attendance Dialog */}
-      <Dialog open={showAttendance} onOpenChange={setShowAttendance}>
-        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <DialogTitle>Mark Attendance</DialogTitle>
-            <DialogDescription>
-              Mark the attendance of players for this game.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[300px]">
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {reservation.lineup?.map((player) => (
-                <div key={player.userId} className="flex items-center justify-between py-3">
-                  <div className="flex items-center space-x-3">
-                    {getPlayerAvatar(player)}
-                    <p className="text-sm font-medium leading-none text-gray-800 dark:text-gray-100">{player.playerName}</p>
+          {/* Content Section */}
+          <CardContent className="flex-1 p-4">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {reservation.title || reservation.pitchName}
+                </h2>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {reservation.date}
                   </div>
-                  <Checkbox
-                    id={`attendance-${player.userId}`}
-                    checked={attendance[player.userId] === undefined ? true : attendance[player.userId]}
-                    onCheckedChange={() => toggleAttendance(player)}
-                  />
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Clock className="h-4 w-4 mr-2" />
+                    {reservation.startTime} ({reservation.duration}h)
+                  </div>
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    {reservation.location}
+                  </div>
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Users className="h-4 w-4 mr-2" />
+                    {reservation.lineup?.length || 0}/{reservation.maxPlayers}
+                  </div>
                 </div>
-              ))}
+              </div>
+              
+              {/* Status Badge (replaces three dots) */}
+              <Badge 
+                className={`${
+                  reservation.status === 'upcoming' ? 'bg-green-500' : 
+                  reservation.status === 'completed' ? 'bg-blue-500' :
+                  'bg-red-500'
+                }`}
+              >
+                {reservation.status}
+              </Badge>
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button type="button" onClick={handleCloseAttendance}>
-              Save Attendance
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Summary Form Dialog */}
-      <Dialog open={showSummaryForm} onOpenChange={setShowSummaryForm}>
-        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
+            <Separator className="my-3" />
+
+            {/* Players Section */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                Players Joined:
+              </h3>
+              {reservation.lineup && reservation.lineup.length > 0 ? (
+                <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
+                  <div className="p-2 space-y-2">
+                    {reservation.lineup.map((player) => (
+                      <div 
+                        key={player.userId} 
+                        className="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => handlePlayerClick(player)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {getPlayerAvatar(player)}
+                          <p className="text-sm text-gray-800 dark:text-gray-100">
+                            {player.playerName}
+                          </p>
+                          {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center border rounded-md">
+                  No players have joined yet.
+                </p>
+              )}
+
+              {/* Waiting List for Admin */}
+              {isAdmin && reservation.waitingList && reservation.waitingList.length > 0 && (
+                <div className="mt-3">
+                  <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                    Waiting List ({reservation.waitingList.length}):
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {reservation.waitingList.map((waitingUserId, index) => (
+                      <Badge key={waitingUserId} variant="outline" className="text-xs">
+                        Player {index + 1}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center mt-4">
+              {isAdmin ? (
+                // Admin Actions
+                <div className="flex gap-2">
+                  {isGameUpcoming ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          Delete Reservation
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this reservation? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteReservation?.(reservation.id)}
+                            className="bg-red-500 hover:bg-red-600"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : isGameCompleted ? (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => setShowSummaryDialog(true)}
+                    >
+                      Add Summary
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                // Player Actions
+                !isGameCompleted && (
+                  <>
+                    {isUserJoined(reservation.id, userId) ? (
+                      <Button
+                        variant="destructive"
+                        onClick={handleCancel}
+                        disabled={isCancelling}
+                        size="sm"
+                      >
+                        {isCancelling ? "Cancelling..." : "Cancel Reservation"}
+                      </Button>
+                    ) : isFull ? (
+                      !isUserInWaitingList ? (
+                        <Button variant="secondary" onClick={handleJoinWaitingList} size="sm">
+                          Join Waiting List
+                        </Button>
+                      ) : (
+                        <Button variant="secondary" onClick={handleLeaveWaitingList} size="sm">
+                          Leave Waiting List
+                        </Button>
+                      )
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="text"
+                          placeholder="Your Name"
+                          value={playerName}
+                          onChange={(e) => setPlayerName(e.target.value)}
+                          className="max-w-[120px] h-8"
+                        />
+                        <Button 
+                          onClick={handleJoin} 
+                          disabled={isJoining} 
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                        >
+                          {isJoining ? "Joining..." : "Join Game"}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )
+              )}
+            </div>
+          </CardContent>
+        </div>
+      </Card>
+
+      {/* Player Details Dialog */}
+      {selectedPlayer && (
+        <PlayerDetailsDialog
+          player={selectedPlayer}
+          isOpen={isPlayerDialogOpen}
+          onClose={() => setIsPlayerDialogOpen(false)}
+          userRole={userRole}
+        />
+      )}
+
+      {/* Add Summary Dialog - placeholder for now */}
+      <Dialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Game Summary</DialogTitle>
             <DialogDescription>
-              Enter the final score and MVP for this game.
+              Add MVP, player statuses, and suspension details for this completed game.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="home-score">Home Team Score</Label>
-                <Input
-                  id="home-score"
-                  value={homeScore}
-                  onChange={(e) => setHomeScore(parseInt(e.target.value))}
-                  type="number"
-                  min="0"
-                  className="col-span-1"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="away-score">Away Team Score</Label>
-                <Input
-                  id="away-score"
-                  value={awayScore}
-                  onChange={(e) => setAwayScore(parseInt(e.target.value))}
-                  type="number"
-                  min="0"
-                  className="col-span-1"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mvp">MVP Player ID (optional)</Label>
-              <Input
-                id="mvp"
-                value={mvpPlayerId}
-                onChange={(e) => setMvpPlayerId(e.target.value)}
-                placeholder="Player ID of the MVP"
-              />
-            </div>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">Summary functionality will be implemented here.</p>
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setShowSummaryForm(false)}>
+            <Button variant="outline" onClick={() => setShowSummaryDialog(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSaveSummary}>
-              Save Summary
-            </Button>
+            <Button>Save Summary</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Edit Lineup Dialog */}
-      <Dialog open={editLineupDialogOpen} onOpenChange={setEditLineupDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <DialogTitle>Edit Lineup</DialogTitle>
-            <DialogDescription>
-              Edit the status of players in the lineup.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[300px]">
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {editedLineup.map((player) => (
-                <div key={player.userId} className="flex items-center justify-between py-3">
-                  <div className="flex items-center space-x-3">
-                    {getPlayerAvatar(player)}
-                    <p className="text-sm font-medium leading-none text-gray-800 dark:text-gray-100">{player.playerName}</p>
-                  </div>
-                  <Select value={player.status} onValueChange={(value) => handleLineupChange(player.userId, value)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select a status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="joined">Joined</SelectItem>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="maybe">Maybe</SelectItem>
-                      <SelectItem value="not-attending">Not Attending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setEditLineupDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSaveLineup}>
-              Save Lineup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Suspend Player Dialog */}
-      <SuspendPlayerDialog
-        isOpen={suspendDialogOpen}
-        onClose={() => setSuspendDialogOpen(false)}
-        players={[{ 
-          userId: selectedPlayerId, 
-          playerName: selectedPlayerName, 
-          email: selectedPlayerEmail 
-        }]}
-        onSuspend={handlePlayerSuspension}
-      />
-
-      {/* Kick Player Dialog */}
-      <AlertDialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Kick Player</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to kick {selectedPlayerName} from this game?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setKickDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleKickPlayer} className="bg-red-500 hover:bg-red-600 text-white">
-              Kick Player
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+    </>
   );
 };
 
