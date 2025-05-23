@@ -52,14 +52,14 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           <ShieldCheck className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Clean Sheets</p>
-            <p className="text-lg font-bold">{stats.cleansheets}</p>
+            <p className="text-lg font-bold">{stats.cleanSheets}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           <Trophy className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">MVP Awards</p>
-            <p className="text-lg font-bold">{stats.mvps}</p>
+            <p className="text-lg font-bold">{stats.mvp}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">

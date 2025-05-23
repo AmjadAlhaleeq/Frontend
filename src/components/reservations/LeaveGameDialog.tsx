@@ -10,8 +10,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { UserMinus, AlertTriangle, Calendar, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { UserMinus, AlertTriangle, Calendar, Clock, X } from "lucide-react";
+import { formatDistanceToNow, parseISO, addHours, isBefore } from "date-fns";
 
 interface LeaveGameDialogProps {
   isOpen: boolean;
@@ -22,12 +22,14 @@ interface LeaveGameDialogProps {
   gameTime: string;
   isPenalty: boolean;
   timeToGame?: string;
+  isDisabled?: boolean;
 }
 
 /**
  * LeaveGameDialog component
  * Shows a confirmation dialog when a user wants to leave a game
  * Includes warning about penalties if leaving within 2 hours of game time
+ * Prevents leaving if less than 6 hours before game
  */
 const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   isOpen,
@@ -37,14 +39,20 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   gameDate,
   gameTime,
   isPenalty,
-  timeToGame
+  timeToGame,
+  isDisabled
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className={isPenalty ? "text-red-600" : ""}>
-            {isPenalty ? (
+            {isDisabled ? (
+              <div className="flex items-center">
+                <X className="h-5 w-5 mr-2 text-red-600" />
+                Cannot Leave Game
+              </div>
+            ) : isPenalty ? (
               <div className="flex items-center">
                 <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
                 Warning: Penalty May Apply
@@ -54,7 +62,11 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
             )}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <p className="mb-2">You are about to leave:</p>
+            <p className="mb-2">
+              {isDisabled 
+                ? "You cannot leave this game because it's less than 6 hours before the start time:" 
+                : "You are about to leave:"}
+            </p>
             <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
               <p className="font-medium text-teal-700 dark:text-teal-400">{gameName}</p>
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
@@ -69,7 +81,15 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
               </div>
             </div>
             
-            {isPenalty && (
+            {isDisabled ? (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 p-3 rounded-md mb-3">
+                <p className="text-red-600 dark:text-red-400 font-medium">Cancellation Restricted</p>
+                <p className="text-sm text-red-600/80 dark:text-red-400/80">
+                  Reservations cannot be cancelled less than 6 hours before the game starts.
+                  This helps ensure that other players have adequate notice.
+                </p>
+              </div>
+            ) : isPenalty && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 p-3 rounded-md mb-3">
                 <p className="text-red-600 dark:text-red-400 font-medium">Penalty Warning</p>
                 <p className="text-sm text-red-600/80 dark:text-red-400/80">
@@ -79,21 +99,25 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
               </div>
             )}
             
-            <p>Are you sure you want to leave this game?</p>
+            {!isDisabled && (
+              <p>Are you sure you want to leave this game?</p>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onConfirm} 
-            className={isPenalty ? 
-              "bg-red-600 hover:bg-red-700 text-white" : 
-              "bg-amber-600 hover:bg-amber-700 text-white"
-            }
-          >
-            <UserMinus className="h-4 w-4 mr-1.5" />
-            {isPenalty ? "Leave Anyway" : "Leave Game"}
-          </AlertDialogAction>
+          <AlertDialogCancel>Close</AlertDialogCancel>
+          {!isDisabled && (
+            <AlertDialogAction 
+              onClick={onConfirm} 
+              className={isPenalty ? 
+                "bg-red-600 hover:bg-red-700 text-white" : 
+                "bg-amber-600 hover:bg-amber-700 text-white"
+              }
+            >
+              <UserMinus className="h-4 w-4 mr-1.5" />
+              {isPenalty ? "Leave Anyway" : "Leave Game"}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

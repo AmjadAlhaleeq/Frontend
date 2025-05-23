@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
+import { CalendarIcon, Check, Clock, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 
 /**
@@ -22,15 +22,14 @@ const AddReservationDialog = () => {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [title, setTitle] = useState("");
   const [pitchName, setPitchName] = useState("");
-  const [time, setTime] = useState("");
-  const [maxPlayers, setMaxPlayers] = useState<string>("10");
-  const [location, setLocation] = useState("");
-  const [city, setCity] = useState("");
-  const [price, setPrice] = useState<string>("");
+  const [startTime, setStartTime] = useState("");
+  const [duration, setDuration] = useState("90");
   const [description, setDescription] = useState("");
   
   const { addReservation, pitches } = useReservation();
   const { toast } = useToast();
+  
+  const maxBookingDate = addDays(new Date(), 90); // 3 months ahead
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -39,28 +38,31 @@ const AddReservationDialog = () => {
         setDate(undefined);
         setTitle("");
         setPitchName("");
-        setTime("");
-        setMaxPlayers("10");
-        setLocation("");
-        setCity("");
-        setPrice("");
+        setStartTime("");
+        setDuration("90");
         setDescription("");
       }, 200);
     }
   }, [open]);
 
   // Time slots for the select dropdown
-  const timeSlots = [
-    "08:00 - 09:30", "09:30 - 11:00", "11:00 - 12:30",
-    "12:30 - 14:00", "14:00 - 15:30", "15:30 - 17:00",
-    "17:00 - 18:30", "18:30 - 20:00", "20:00 - 21:30",
-    "21:30 - 23:00"
+  const timeOptions = [
+    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", 
+    "20:00", "21:00", "22:00"
+  ];
+  
+  // Duration options
+  const durationOptions = [
+    { value: "60", label: "60 minutes" },
+    { value: "90", label: "90 minutes" },
+    { value: "120", label: "120 minutes" }
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !pitchName || !time || !maxPlayers) {
+    if (!title || !date || !pitchName || !startTime || !duration) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
@@ -80,18 +82,28 @@ const AddReservationDialog = () => {
       return;
     }
     
+    // Calculate max players based on pitch format (players per side * 2 + substitutes)
+    const playersPerSide = selectedPitch?.playersPerSide || 5;
+    const totalMaxPlayers = playersPerSide * 2 + Math.min(4, Math.ceil(playersPerSide / 2));
+    
     // Create the reservation data object
     const reservationData = {
-      title: title || `${pitchName} Game`,
+      title: title,
       pitchName,
+      pitchId: selectedPitch?.id || 0,
       date: format(date, 'yyyy-MM-dd'),
-      time,
-      location: location || selectedPitch?.location,
-      city: city || selectedPitch?.city,
-      maxPlayers: parseInt(maxPlayers),
-      price: price ? parseFloat(price) : selectedPitch?.price,
-      imageUrl: selectedPitch?.image,
-      description: description // Pass description to the context
+      time: `${startTime} - ${parseInt(duration)} mins`,
+      startTime,
+      duration: parseInt(duration),
+      location: selectedPitch?.location || "",
+      city: selectedPitch?.city || "",
+      maxPlayers: selectedPitch ? playersPerSide * 2 : 10,
+      price: selectedPitch?.price || 0,
+      imageUrl: selectedPitch?.image || "",
+      description: description,
+      status: "upcoming",
+      playersPerSide: selectedPitch?.playersPerSide || 5,
+      actualMaxPlayers: totalMaxPlayers
     };
     
     // Add the reservation
@@ -126,16 +138,17 @@ const AddReservationDialog = () => {
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Title Input */}
+          {/* Title Input - Now required */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Title (optional)
+              Title*
             </label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Game title (defaults to pitch name if empty)"
+              placeholder="Enter game title"
+              required
             />
           </div>
 
@@ -146,7 +159,14 @@ const AddReservationDialog = () => {
             </label>
             <Select
               value={pitchName}
-              onValueChange={setPitchName}
+              onValueChange={(value) => {
+                setPitchName(value);
+                // Auto-populate the title if it's empty
+                if (!title) {
+                  setTitle(`Game at ${value}`);
+                }
+              }}
+              required
             >
               <SelectTrigger id="pitchName" className="w-full">
                 <SelectValue placeholder="Select a pitch" />
@@ -183,30 +203,38 @@ const AddReservationDialog = () => {
                   selected={date}
                   onSelect={setDate}
                   initialFocus
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today || date > maxBookingDate;
+                  }}
                 />
               </PopoverContent>
             </Popover>
+            <p className="text-xs text-muted-foreground">
+              You can only book up to 3 months in advance.
+            </p>
           </div>
           
-          {/* Time Select */}
+          {/* Start Time Select */}
           <div className="space-y-2">
-            <label htmlFor="time" className="text-sm font-medium">
-              Time Slot*
+            <label htmlFor="startTime" className="text-sm font-medium">
+              Start Time*
             </label>
             <Select
-              value={time}
-              onValueChange={setTime}
+              value={startTime}
+              onValueChange={setStartTime}
+              required
             >
-              <SelectTrigger id="time" className="w-full">
-                <SelectValue placeholder="Select a time" />
+              <SelectTrigger id="startTime" className="w-full">
+                <SelectValue placeholder="Select start time" />
               </SelectTrigger>
               <SelectContent>
-                {timeSlots.map((slot) => (
-                  <SelectItem key={slot} value={slot}>
+                {timeOptions.map((time) => (
+                  <SelectItem key={time} value={time}>
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {slot}
+                      {time}
                     </div>
                   </SelectItem>
                 ))}
@@ -214,79 +242,27 @@ const AddReservationDialog = () => {
             </Select>
           </div>
           
-          {/* Max Players Select */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="maxPlayers" className="text-sm font-medium">
-                Game Format*
-              </label>
-              <Select
-                value={maxPlayers}
-                onValueChange={setMaxPlayers}
-              >
-                <SelectTrigger id="maxPlayers" className="w-full">
-                  <SelectValue placeholder="Select format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="4">2v2</SelectItem>
-                  <SelectItem value="6">3v3</SelectItem>
-                  <SelectItem value="8">4v4</SelectItem>
-                  <SelectItem value="10">5v5</SelectItem>
-                  <SelectItem value="12">6v6</SelectItem>
-                  <SelectItem value="14">7v7</SelectItem>
-                  <SelectItem value="22">11v11</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Price Input - Optional */}
-            <div className="space-y-2">
-              <label htmlFor="price" className="text-sm font-medium">
-                Price Per Player
-              </label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g., 10"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          {/* Location Information - Optional */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="city" className="text-sm font-medium">
-                City
-              </label>
-              <Input
-                id="city"
-                placeholder="e.g., New York"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                From pitch if empty
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="location" className="text-sm font-medium">
-                Location
-              </label>
-              <Input
-                id="location"
-                placeholder="e.g., Central Park"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                From pitch if empty
-              </p>
-            </div>
+          {/* Duration Select */}
+          <div className="space-y-2">
+            <label htmlFor="duration" className="text-sm font-medium">
+              Duration*
+            </label>
+            <Select
+              value={duration}
+              onValueChange={setDuration}
+              required
+            >
+              <SelectTrigger id="duration" className="w-full">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent>
+                {durationOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           {/* Description - Optional */}

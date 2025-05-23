@@ -27,6 +27,14 @@ const PitchCard: React.FC<PitchCardProps> = ({
   onEditClick,
   onDeleteClick
 }) => {
+  // Default image if the pitch image is not available or invalid
+  const fallbackImage = "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=800&q=60";
+  
+  // Function to handle image loading errors
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = fallbackImage;
+  };
+  
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
       {/* Card image */}
@@ -35,9 +43,10 @@ const PitchCard: React.FC<PitchCardProps> = ({
         onClick={onViewDetails}
       >
         <img 
-          src={pitch.image}
+          src={pitch.image || fallbackImage}
           alt={pitch.name} 
           className="w-full h-full object-cover"
+          onError={handleImageError}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
         <div className="absolute bottom-0 left-0 right-0 p-3">
@@ -45,6 +54,15 @@ const PitchCard: React.FC<PitchCardProps> = ({
             {pitch.name}
           </h3>
         </div>
+        
+        {/* Indoor/Outdoor Badge */}
+        {pitch.type && (
+          <Badge 
+            className="absolute top-2 right-2 bg-white/80 text-black text-xs font-medium"
+          >
+            {pitch.type}
+          </Badge>
+        )}
       </div>
       
       <CardContent className="p-4">
@@ -69,26 +87,22 @@ const PitchCard: React.FC<PitchCardProps> = ({
         <div className="mb-3">
           <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
           <div className="flex flex-wrap gap-1.5">
-            {pitch.facilities && pitch.facilities.length > 0 ? (
-              pitch.facilities.map((facility, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {facility.replace('_', ' ')}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-xs text-gray-500 italic">No facilities listed</span>
-            )}
+            {pitch.services && Object.entries(pitch.services).filter(([_, enabled]) => enabled).map(([service]) => (
+              <Badge key={service} variant="outline" className="text-xs">
+                {service.charAt(0).toUpperCase() + service.slice(1)}
+              </Badge>
+            ))}
           </div>
         </div>
         
-        {/* Price and players info */}
+        {/* Players info */}
         <div className="flex justify-between items-center mb-3 text-sm">
           <div className="font-medium">
-            ${pitch.price} <span className="text-gray-500 font-normal">/ hour</span>
+            Format: {pitch.playersPerSide}v{pitch.playersPerSide}
           </div>
           <div className="flex items-center text-gray-600">
             <Users className="h-4 w-4 mr-1" />
-            {pitch.playersPerSide}v{pitch.playersPerSide}
+            {pitch.playersPerSide * 2} + {Math.min(4, Math.ceil(pitch.playersPerSide / 2))} subs
           </div>
         </div>
         
