@@ -48,6 +48,7 @@ export interface Highlight {
   type: HighlightType;
   minute: number;
   description?: string;
+  reservationId?: number; // Add reservationId to the Highlight interface
 }
 
 export interface UserStats {
@@ -334,14 +335,17 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
   
-  // Add highlight to a reservation
+  // Add highlight to a reservation - Fix the function to handle reservationId correctly
   const addHighlight = (highlight: Omit<Highlight, "id">) => {
+    const { reservationId, ...highlightData } = highlight as Omit<Highlight, "id"> & { reservationId: number };
+    
     setReservations(prevReservations => {
       return prevReservations.map(res => {
-        if (res.id === highlight.reservationId) {
+        if (res.id === reservationId) {
           const newHighlight = {
-            ...highlight,
+            ...highlightData,
             id: Date.now().toString(), // Simple ID generation
+            reservationId
           };
           return {
             ...res,
