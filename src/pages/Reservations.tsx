@@ -396,10 +396,15 @@ const Reservations = () => {
     }
   };
 
-  // Fix the type issue by converting the boolean to a function
-  const isUserJoinedFunction = (reservationId: number, userId: string): boolean => {
-    return isUserJoined(reservationId, userId);
+  // Fix the type issue by creating a function that returns a function
+  const createIsUserJoinedFunction = () => {
+    return (reservationId: number, userId: string): boolean => {
+      return isUserJoined(reservationId, userId);
+    };
   };
+  
+  // Create the function that will be passed to ReservationCard
+  const isUserJoinedFunction = createIsUserJoinedFunction();
 
   // Show loading state
   if (isLoading) {

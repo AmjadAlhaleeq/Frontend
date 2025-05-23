@@ -64,6 +64,7 @@ interface ReservationCardProps {
   isFull: boolean;
   suspendPlayer?: (userId: string, reason: string, duration: number) => void;
   kickPlayerFromGame?: (reservationId: number, userId: string) => void;
+  onDeleteReservation?: (id: number) => void; // Add this prop
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -78,6 +79,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   isFull,
   suspendPlayer,
   kickPlayerFromGame,
+  onDeleteReservation,
 }) => {
   const [playerName, setPlayerName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
