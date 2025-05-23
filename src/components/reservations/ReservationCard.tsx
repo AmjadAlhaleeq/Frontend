@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -161,23 +160,29 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // Determine if game is completed based on time
   const determineGameStatus = () => {
-    const gameDate = new Date(reservation.date);
-    const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || [0, 0];
-    const gameStartTime = new Date(gameDate);
-    gameStartTime.setHours(startHour, startMinute, 0, 0);
-    
-    // Add duration to get end time (assuming duration is in hours)
-    const gameEndTime = new Date(gameStartTime);
-    gameEndTime.setHours(gameStartTime.getHours() + (reservation.duration || 2));
-    
-    const now = new Date();
-    
-    if (now < gameStartTime) {
-      return 'upcoming';
-    } else if (now >= gameEndTime) {
-      return 'completed';
-    } else {
-      return 'in-progress'; // Currently playing
+    try {
+      const gameDate = new Date(reservation.date);
+      const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || [0, 0];
+      const gameStartTime = new Date(gameDate);
+      gameStartTime.setHours(startHour, startMinute, 0, 0);
+      
+      // Add duration to get end time (assuming duration is in hours)
+      const gameEndTime = new Date(gameStartTime);
+      gameEndTime.setHours(gameStartTime.getHours() + (reservation.duration || 2));
+      
+      const now = new Date();
+      
+      if (now < gameStartTime) {
+        return 'upcoming';
+      } else if (now >= gameEndTime) {
+        return 'completed';
+      } else {
+        return 'in-progress'; // Currently playing
+      }
+    } catch (error) {
+      // Fallback to reservation status if date parsing fails
+      console.error("Error determining game status:", error);
+      return reservation.status || 'upcoming';
     }
   };
 

@@ -98,7 +98,7 @@ export interface Reservation {
   }
 }
 
-// Define the ReservationContext interface
+// Define the ReservationContextType interface
 interface ReservationContextType {
   pitches: Pitch[];
   reservations: Reservation[];
@@ -140,32 +140,86 @@ export const useReservation = () => {
   return context;
 };
 
+/**
+ * Safe localStorage wrapper with error handling
+ * @param key The key to store data under
+ * @param value The data to store
+ * @returns boolean indicating success or failure
+ */
+const safeSetLocalStorage = (key: string, value: any): boolean => {
+  try {
+    // For large objects, we can check size before attempting to store
+    const serialized = JSON.stringify(value);
+    
+    // If serialized data is too large (over 2MB), return false
+    if (serialized.length > 2000000) {
+      console.warn(`LocalStorage: Data for '${key}' is too large (${Math.round(serialized.length/1024)}KB). Consider reducing data size.`);
+      return false;
+    }
+    
+    localStorage.setItem(key, serialized);
+    return true;
+  } catch (error) {
+    console.error(`LocalStorage: Failed to save ${key}`, error);
+    return false;
+  }
+};
+
+/**
+ * Safe localStorage getter with error handling
+ * @param key The key to retrieve data from
+ * @param defaultValue Default value if key doesn't exist or error occurs
+ * @returns The retrieved value or defaultValue
+ */
+const safeGetLocalStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const value = localStorage.getItem(key);
+    if (value === null) {
+      return defaultValue;
+    }
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.error(`LocalStorage: Failed to get ${key}`, error);
+    return defaultValue;
+  }
+};
+
 export const ReservationProvider = ({ children }: { children: React.ReactNode }) => {
   const [pitches, setPitches] = useState<Pitch[]>(() => {
-    try {
-      const storedPitches = localStorage.getItem('pitches');
-      return storedPitches ? JSON.parse(storedPitches) : [];
-    } catch (error) {
-      console.error("Error loading pitches from localStorage:", error);
-      return [];
-    }
+    return safeGetLocalStorage<Pitch[]>('pitches', []);
   });
+  
   const [reservations, setReservations] = useState<Reservation[]>(() => {
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      return storedReservations ? JSON.parse(storedReservations) : [];
-    } catch (error) {
-      console.error("Error loading reservations from localStorage:", error);
-      return [];
-    }
+    return safeGetLocalStorage<Reservation[]>('reservations', []);
   });
 
   useEffect(() => {
-    localStorage.setItem('pitches', JSON.stringify(pitches));
+    const success = safeSetLocalStorage('pitches', pitches);
+    if (!success) {
+      console.warn("Failed to save pitches to localStorage due to size limits.");
+    }
   }, [pitches]);
 
   useEffect(() => {
-    localStorage.setItem('reservations', JSON.stringify(reservations));
+    // Try to save all reservations first
+    const success = safeSetLocalStorage('reservations', reservations);
+    
+    // If saving all failed, try saving a maximum of 50 most recent reservations
+    if (!success && reservations.length > 50) {
+      console.warn("Trimming reservations data to fit in localStorage");
+      
+      // Sort by date (most recent first) and take only 50
+      const sortedReservations = [...reservations]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 50);
+      
+      // Try saving the reduced set
+      const reducedSuccess = safeSetLocalStorage('reservations', sortedReservations);
+      
+      if (!reducedSuccess) {
+        console.error("Even reduced reservations data is too large for localStorage");
+      }
+    }
   }, [reservations]);
 
   const addPitch = (pitch: Omit<Pitch, "id">) => {
