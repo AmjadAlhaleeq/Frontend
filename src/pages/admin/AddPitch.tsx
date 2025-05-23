@@ -1,4 +1,3 @@
-
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +82,7 @@ const AddPitch = () => {
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
           facilities: pitchData.facilities,
-          pitchType: pitchData.pitchType
+          pitchType: pitchData.pitchType as "indoor" | "outdoor" // Properly typed pitchType
       });
       
       toast({

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban, FileText, EyeIcon, User } from "lucide-react";
@@ -733,34 +732,41 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       </CardFooter>
 
       {/* Confirmation Dialogs */}
+      {/* Join Game Confirmation Dialog */}
       <JoinGameConfirmationDialog
-        open={showJoinGameDialog}
-        onOpenChange={setShowJoinGameDialog}
+        isOpen={showJoinGameDialog}
+        onClose={() => setShowJoinGameDialog(false)}
         onConfirm={confirmJoinGame}
-        gameTitle={reservation.title || reservation.pitchName}
-        gameTime={reservation.time}
+        gameName={reservation.title || reservation.pitchName}
         gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
       />
       
+      {/* Leave Game Confirmation Dialog */}
       <LeaveGameDialog
-        open={showLeaveGameDialog}
-        onOpenChange={setShowLeaveGameDialog}
+        isOpen={showLeaveGameDialog}
+        onClose={() => setShowLeaveGameDialog(false)}
         onConfirm={confirmLeaveGame}
-        gameTitle={reservation.title || reservation.pitchName}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
         isPenalty={isPenalty()}
+        timeToGame={getTimeToGame()}
       />
       
+      {/* Join Waitlist Confirmation Dialog */}
       <WaitlistConfirmationDialog
-        open={showJoinWaitlistDialog}
-        onOpenChange={setShowJoinWaitlistDialog}
+        isOpen={showJoinWaitlistDialog}
+        onClose={() => setShowJoinWaitlistDialog(false)}
         onConfirm={confirmJoinWaitlist}
         gameTitle={reservation.title || reservation.pitchName}
         isJoining={true}
       />
       
+      {/* Leave Waitlist Confirmation Dialog */}
       <WaitlistConfirmationDialog
-        open={showLeaveWaitlistDialog}
-        onOpenChange={setShowLeaveWaitlistDialog}
+        isOpen={showLeaveWaitlistDialog}
+        onClose={() => setShowLeaveWaitlistDialog(false)}
         onConfirm={confirmLeaveWaitlist}
         gameTitle={reservation.title || reservation.pitchName}
         isJoining={false}

@@ -14,7 +14,7 @@ import { UserMinus, AlertTriangle, Calendar, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface LeaveGameDialogProps {
-  isOpen: boolean;
+  isOpen: boolean;  // Changed from open
   onClose: () => void;
   onConfirm: () => void;
   gameName: string;
