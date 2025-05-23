@@ -43,6 +43,15 @@ import { BanIcon } from "lucide-react";
 import { useReservation, Reservation, Player } from "@/context/ReservationContext";
 import SuspendPlayerDialog from "./SuspendPlayerDialog";
 
+// Update the Player interface to include email property if it's not already defined
+interface Player {
+  userId: string;
+  playerName: string;
+  status: string;
+  email?: string; // Add email as optional property
+  mvp?: boolean;
+}
+
 interface ReservationCardProps {
   reservation: Reservation;
   userId: string;
@@ -184,7 +193,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const handleOpenSuspendDialog = (player: Player) => {
     setSelectedPlayerId(player.userId);
     setSelectedPlayerName(player.playerName);
-    setSelectedPlayerEmail(player.email || '');
+    setSelectedPlayerEmail(player.email || ''); // Use optional chaining or default to empty string
     setSuspendDialogOpen(true);
   };
 
@@ -205,6 +214,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
+  // Define the missing handlePlayerSuspension function
   const handlePlayerSuspension = (userId: string, reason: string, duration: number) => {
     if (suspendPlayer && typeof suspendPlayer === 'function') {
       suspendPlayer(userId, reason, duration);

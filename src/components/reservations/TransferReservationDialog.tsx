@@ -50,8 +50,8 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
           awayScore: parseInt(awayteamScore),
           completed: true,
           completedAt: new Date().toISOString()
-        },
-        mvpPlayerId: mvpPlayerId || undefined,
+        }
+        // Remove mvpPlayerId since it doesn't exist in the type
       });
       
       // Mark as completed

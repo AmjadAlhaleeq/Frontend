@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useRouter } from 'next/router';
+import { useNavigate, useParams } from 'react-router-dom'; // Replace next/router with react-router-dom
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,8 +59,8 @@ const pitchSchema = z.object({
 });
 
 const EditPitch = () => {
-  const router = useRouter();
-  const { pitchId } = router.query;
+  const navigate = useNavigate(); // Use react-router-dom's navigate instead of router
+  const { pitchId } = useParams(); // Use useParams instead of router.query
   const { pitches, addPitch, updatePitch, deletePitch } = useReservation();
   const { toast } = useToast();
   const [isNewPitch, setIsNewPitch] = useState(true);
@@ -119,16 +119,24 @@ const EditPitch = () => {
   const onSubmit = (values: z.infer<typeof pitchSchema>) => {
     const facilities = Array.isArray(values.facilities) ? values.facilities : [];
     const pitchData = {
-      ...values,
+      name: values.name, // Make these required fields explicit
+      location: values.location,
+      city: values.city,
+      image: values.image || 'https://placehold.co/600x400?text=Football+Pitch', // Provide default image
+      description: values.description,
+      playersPerSide: values.playersPerSide,
+      price: values.price,
       facilities: facilities,
+      type: values.type || 'outdoor',
+      openingHours: values.openingHours || '',
       details: {
-        address: values.address,
-      },
+        address: values.address || '',
+      }
     };
 
     if (pitchId) {
       const id = parseInt(pitchId as string, 10);
-      updatePitch({ id, ...pitchData } as any);
+      updatePitch({ id, ...pitchData });
       toast({
         title: "Pitch updated successfully!",
       });
@@ -138,7 +146,7 @@ const EditPitch = () => {
         title: "Pitch added successfully!",
       });
     }
-    router.push('/admin/Pitches');
+    navigate('/admin/Pitches'); // Use navigate instead of router.push
   };
 
   const onDelete = () => {
@@ -148,7 +156,7 @@ const EditPitch = () => {
       toast({
         title: "Pitch deleted successfully!",
       });
-      router.push('/admin/Pitches');
+      navigate('/admin/Pitches');
     }
   };
 

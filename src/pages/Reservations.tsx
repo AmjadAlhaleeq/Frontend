@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -397,6 +396,11 @@ const Reservations = () => {
     }
   };
 
+  // Fix the type issue by converting the boolean to a function
+  const isUserJoinedFunction = (reservationId: number, userId: string): boolean => {
+    return isUserJoined(reservationId, userId);
+  };
+
   // Show loading state
   if (isLoading) {
     return (
@@ -494,7 +498,7 @@ const Reservations = () => {
                   onCancelReservation={() => handleCancelReservation(reservation.id)}
                   onJoinWaitingList={() => handleJoinWaitingList(reservation.id)}
                   onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
-                  isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
+                  isUserJoined={isUserJoinedFunction} // Use the function instead of boolean
                   isUserOnWaitingList={currentUserId ? reservation.waitingList?.includes(currentUserId) || false : false}
                   hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
                   currentUserId={currentUserId || ""} 
