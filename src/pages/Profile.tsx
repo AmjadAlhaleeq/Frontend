@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -155,8 +154,26 @@ const Profile = () => {
     navigate("/my-bookings");
   };
 
-  // Get user stats from ReservationContext
-  const userStats = getUserStats(currentUser?.id || "");
+  // Try to get stats from localStorage
+  const userId = currentUser?.id || "";
+  const userStats = {
+    gamesPlayed: 0,
+    goalsScored: 0,
+    assists: 0,
+    cleansheets: 0,
+    mvps: 0,
+    wins: 0
+  };
+
+  try {
+    const userStatsString = localStorage.getItem(`userStats_${userId}`);
+    if (userStatsString) {
+      const storedStats = JSON.parse(userStatsString);
+      Object.assign(userStats, storedStats);
+    }
+  } catch (error) {
+    console.error("Error getting user stats:", error);
+  }
   
   // Generate achievements based on stats
   const achievements = [

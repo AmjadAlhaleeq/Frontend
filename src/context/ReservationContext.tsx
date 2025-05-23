@@ -13,6 +13,36 @@ export interface Player {
   attended?: boolean;
 }
 
+// Define highlight types
+export interface Highlight {
+  id: string;
+  playerId: string;
+  playerName: string;
+  type: HighlightType;
+  description: string;
+  timestamp: string;
+}
+
+export enum HighlightType {
+  GOAL = "goal",
+  ASSIST = "assist",
+  SAVE = "save",
+  TACKLE = "tackle",
+  OTHER = "other"
+}
+
+// Define user stats interface
+export interface UserStats {
+  gamesPlayed: number;
+  goalsScored: number;
+  assists: number;
+  cleansheets: number;
+  mvps: number;
+  wins: number;
+  losses?: number;
+  draws?: number;
+}
+
 // Define the Pitch interface
 export interface Pitch {
   id: number;
@@ -26,6 +56,13 @@ export interface Pitch {
   facilities: string[];
   additionalImages?: string[];
   type?: string; // 'indoor' or 'outdoor'
+  openingHours?: string;
+  details?: {
+    address?: string;
+    description?: string;
+    price?: string;
+    facilities?: string[];
+  };
 }
 
 // Define the Reservation interface
@@ -47,6 +84,8 @@ export interface Reservation {
   waitingList?: string[];
   status: "open" | "full" | "cancelled" | "completed";
   description?: string;
+  locationLink?: string;
+  highlights?: Highlight[];
   summary?: {
     homeScore: number;
     awayScore: number;
@@ -81,6 +120,10 @@ interface ReservationContextType {
   updatePlayerStats: (userId: string, stats: any) => void;
   suspendPlayer: (userId: string, reason: string, duration: number) => void;
   kickPlayerFromGame: (reservationId: number, userId: string) => void;
+  editReservation: (id: number, updates: Partial<Reservation>) => void;
+  getUserStats: (userId: string) => UserStats;
+  addHighlight: (reservationId: number, highlight: Omit<Highlight, "id">) => void;
+  deleteHighlight: (reservationId: number, highlightId: string) => void;
 }
 
 const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
@@ -417,6 +460,65 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     });
   };
 
+  const editReservation = (id: number, updates: Partial<Reservation>) => {
+    setReservations(reservations.map(res => res.id === id ? { ...res, ...updates } : res));
+  };
+
+  const getUserStats = (userId: string): UserStats => {
+    try {
+      const userStatsString = localStorage.getItem(`userStats_${userId}`);
+      if (userStatsString) {
+        return JSON.parse(userStatsString);
+      }
+    } catch (error) {
+      console.error("Error getting user stats:", error);
+    }
+    
+    return {
+      gamesPlayed: 0,
+      goalsScored: 0,
+      assists: 0,
+      cleansheets: 0,
+      mvps: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+    };
+  };
+  
+  const addHighlight = (reservationId: number, highlight: Omit<Highlight, "id">) => {
+    setReservations(prev => {
+      return prev.map(res => {
+        if (res.id === reservationId) {
+          const newHighlight = {
+            ...highlight,
+            id: `highlight_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+          };
+          const currentHighlights = res.highlights || [];
+          return {
+            ...res,
+            highlights: [...currentHighlights, newHighlight]
+          };
+        }
+        return res;
+      });
+    });
+  };
+
+  const deleteHighlight = (reservationId: number, highlightId: string) => {
+    setReservations(prev => {
+      return prev.map(res => {
+        if (res.id === reservationId && res.highlights) {
+          return {
+            ...res,
+            highlights: res.highlights.filter(h => h.id !== highlightId)
+          };
+        }
+        return res;
+      });
+    });
+  };
+
   return (
     <ReservationContext.Provider
       value={{
@@ -445,6 +547,10 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         updatePlayerStats,
         suspendPlayer,
         kickPlayerFromGame,
+        editReservation,
+        getUserStats,
+        addHighlight,
+        deleteHighlight,
       }}
     >
       {children}

@@ -42,7 +42,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   showAdminControls = false
 }) => {
   const formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
-  const joinedPlayers = reservation.lineup.filter(p => p.status === 'joined');
+  const joinedPlayers = reservation.lineup?.filter(p => p.status === 'joined') || [];
 
   // Get initials from player name
   const getInitials = (name?: string) => {
@@ -115,9 +115,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                 <div className="flex flex-col">
                   <span>{reservation.city || reservation.location}</span>
-                  {reservation.locationLink && (
+                  {reservation.location && (
                     <a 
-                      href={reservation.locationLink} 
+                      href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline flex items-center text-xs"
@@ -141,7 +141,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           <Tabs defaultValue="players">
             <TabsList className="mb-4">
               <TabsTrigger value="players">Players</TabsTrigger>
-              <TabsTrigger value="waiting">Waiting List ({reservation.waitingList.length})</TabsTrigger>
+              <TabsTrigger value="waiting">Waiting List ({reservation.waitingList?.length || 0})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="players">
@@ -178,9 +178,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             </TabsContent>
 
             <TabsContent value="waiting">
-              <h3 className="text-sm font-medium mb-2">Waiting List ({reservation.waitingList.length})</h3>
+              <h3 className="text-sm font-medium mb-2">Waiting List ({reservation.waitingList?.length || 0})</h3>
               <ScrollArea className="h-[200px] border rounded-md p-2">
-                {reservation.waitingList.length > 0 ? (
+                {reservation.waitingList && reservation.waitingList.length > 0 ? (
                   <div className="space-y-2">
                     {reservation.waitingList.map((userId, index) => (
                       <div key={userId} className="flex items-center justify-between p-2 rounded-md bg-muted/40">

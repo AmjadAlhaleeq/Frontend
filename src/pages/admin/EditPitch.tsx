@@ -3,109 +3,83 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
-import { Save, Upload, Trash2, Loader } from "lucide-react";
-import { useReservation, Pitch } from "@/context/ReservationContext";
+import { Plus, Upload, Loader } from "lucide-react";
+import { useReservation } from "@/context/ReservationContext";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Available facilities for selection
+// Available facilities for selection - Updated with new structure
 const AVAILABLE_FACILITIES = [
+  { id: "water", label: "Water" },
+  { id: "cafeteria", label: "Cafeteria" },
+  { id: "lockers", label: "Lockers" },
+  { id: "bathrooms", label: "Bathrooms" },
   { id: "parking", label: "Parking" },
-  { id: "changing_rooms", label: "Changing Rooms" },
-  { id: "showers", label: "Showers" },
-  { id: "floodlights", label: "Floodlights" },
-  { id: "cafe", label: "Cafe/Refreshments" },
   { id: "wifi", label: "WiFi" },
 ];
 
-/**
- * EditPitch component
- * Allows admins to edit existing pitch details
- */
 const EditPitch = () => {
-  const { pitchId } = useParams();
+  const { pitchId } = useParams<{ pitchId: string }>();
+  const navigate = useNavigate();
+  const { updatePitch, pitches } = useReservation();
+  const { toast } = useToast();
+
   const [pitchData, setPitchData] = useState({
     name: "",
-    location: "",
+    location: "", // Google Maps link
     city: "",
     image: "",
     images: ["", "", "", ""], // Array to store up to 4 images
     playersPerSide: "",
     description: "",
-    price: "",
-    facilities: [] as string[],
-    highlights: [] as string[]
+    facilities: {} as Record<string, boolean>, // Changed to object with boolean values
+    type: "outdoor" // New: default to outdoor
   });
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [notFound, setNotFound] = useState(false);
   
   // For image preview and slider functionality
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track which image is being uploaded
 
-  const navigate = useNavigate();
-  const { pitches, updatePitch } = useReservation();
-  const { toast } = useToast();
-
-  // Load pitch data on component mount
   useEffect(() => {
     if (pitchId) {
-      const id = parseInt(pitchId);
-      const pitch = pitches.find(p => p.id === id);
-      
+      const pitch = pitches.find((p) => p.id === parseInt(pitchId));
       if (pitch) {
-        // Initialize the images array with the main image and any additional images
-        const images = ["", "", "", ""];
-        images[0] = pitch.image || "";
-        
-        if (pitch.additionalImages && pitch.additionalImages.length > 0) {
-          pitch.additionalImages.forEach((img, i) => {
-            if (i < 3) { // Limit to 3 additional images (4 total)
-              images[i + 1] = img;
-            }
-          });
-        }
-        
         setPitchData({
-          name: pitch.name || "",
-          location: pitch.location || "",
-          city: pitch.city || "",
-          image: pitch.image || "",
-          images,
-          playersPerSide: pitch.playersPerSide?.toString() || "",
-          description: pitch.description || "",
-          price: pitch.price?.toString() || "",
-          facilities: pitch.facilities || [],
-          highlights: pitch.highlights || []
-        });
-        
-        console.log("Loaded pitch data:", pitch);
-      } else {
-        setNotFound(true);
-        toast({
-          title: "Pitch Not Found",
-          description: "The pitch you're trying to edit could not be found.",
-          variant: "destructive"
+          name: pitch.name,
+          location: pitch.location,
+          city: pitch.city,
+          image: pitch.image,
+          images: pitch.additionalImages ? [...pitch.additionalImages, ...Array(4 - pitch.additionalImages.length).fill("")] : ["", "", "", ""],
+          playersPerSide: String(pitch.playersPerSide),
+          description: pitch.description,
+          facilities: AVAILABLE_FACILITIES.reduce((acc, facility) => {
+            acc[facility.id] = pitch.facilities.includes(facility.id);
+            return acc;
+          }, {} as Record<string, boolean>),
+          type: pitch.type || "outdoor",
         });
       }
     }
-    
-    setIsLoading(false);
-  }, [pitchId, pitches, toast]);
+  }, [pitchId, pitches]);
 
-  // Handle submit function - Fixed to properly update pitch
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.price) {
+    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.type) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
@@ -123,68 +97,37 @@ const EditPitch = () => {
       return;
     }
     
-    setIsSaving(true);
+    setIsSubmitting(true);
     
-    try {
+    // Convert facilities object to array format expected by the context
+    const facilitiesArray = Object.entries(pitchData.facilities)
+      .filter(([_, value]) => value)
+      .map(([key]) => key);
+    
+    setTimeout(() => {
       if (pitchId) {
-        const id = parseInt(pitchId);
-        
-        // Create a completely new pitch object with all updated fields
-        const pitchToUpdate: Pitch = {
-          id: id,
+        updatePitch({
+          id: parseInt(pitchId),
           name: pitchData.name,
           location: pitchData.location,
           city: pitchData.city,
           image: pitchData.images[0], // Primary image
-          additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images (filtered to remove empty strings)
+          additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
-          price: Number(pitchData.price),
-          facilities: [...pitchData.facilities],
-          highlights: [...pitchData.highlights],
-        };
+          price: 0, // Default price as it's removed
+          facilities: facilitiesArray,
+          type: pitchData.type, // New: indoor/outdoor type
+        });
         
-        console.log("Updating pitch with data:", pitchToUpdate);
-        
-        // Update the pitch in context
-        updatePitch(id, pitchToUpdate);
-        
-        // Update the pitch in localStorage
-        try {
-          const storedPitches = localStorage.getItem('pitches');
-          if (storedPitches) {
-            const parsedPitches = JSON.parse(storedPitches);
-            const updatedPitches = parsedPitches.map((p: Pitch) => {
-              return p.id === id ? pitchToUpdate : p;
-            });
-            localStorage.setItem('pitches', JSON.stringify(updatedPitches));
-            console.log("Updated pitch in localStorage:", pitchToUpdate);
-          }
-        } catch (error) {
-          console.error("Error updating pitch in localStorage:", error);
-        }
-        
-        // Show success toast
         toast({
           title: "Success!",
           description: "Pitch has been updated successfully.",
         });
         
-        // Navigate away after success - with slight delay to allow toast to be seen
-        setTimeout(() => {
-          navigate('/pitches');
-        }, 1500);
+        navigate('/pitches');
       }
-    } catch (error) {
-      console.error("Error updating pitch:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update pitch. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    }, 1000);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -195,14 +138,44 @@ const EditPitch = () => {
     }));
   };
 
+  const handleTypeChange = (value: string) => {
+    setPitchData(prev => ({
+      ...prev,
+      type: value
+    }));
+  };
+
   const handleFacilityChange = (facilityId: string, checked: boolean) => {
     setPitchData(prev => ({
       ...prev,
-      facilities: checked 
-        ? [...prev.facilities, facilityId]
-        : prev.facilities.filter(id => id !== facilityId)
+      facilities: {
+        ...prev.facilities,
+        [facilityId]: checked
+      }
     }));
   };
+
+  // Initialize facilities with default values
+  React.useEffect(() => {
+    const initialFacilities = AVAILABLE_FACILITIES.reduce((acc, facility) => {
+      // Set default values based on your requirements
+      const defaultValues: Record<string, boolean> = {
+        water: true,
+        cafeteria: true,
+        lockers: true,
+        bathrooms: true,
+        parking: false,
+        wifi: true
+      };
+      acc[facility.id] = defaultValues[facility.id] !== undefined ? defaultValues[facility.id] : false;
+      return acc;
+    }, {} as Record<string, boolean>);
+    
+    setPitchData(prev => ({
+      ...prev,
+      facilities: initialFacilities
+    }));
+  }, []);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -283,30 +256,8 @@ const EditPitch = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-teal-500" />
-        <span className="ml-3 text-muted-foreground">Loading pitch data...</span>
-      </div>
-    );
-  }
-
-  if (notFound) {
-    return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Pitch Not Found</h2>
-        <p className="mb-4">The pitch you're trying to edit could not be found.</p>
-        <Button onClick={() => navigate('/pitches')}>
-          Return to Pitches
-        </Button>
-      </div>
-    );
-  }
-  
   // Preview section
   const previewPitch = {
-    id: parseInt(pitchId || "0"),
     name: pitchData.name || "Pitch Name",
     location: pitchData.location || "https://maps.google.com",
     city: pitchData.city || "City Name",
@@ -314,8 +265,10 @@ const EditPitch = () => {
     additionalImages: pitchData.images.slice(1).filter(img => img),
     playersPerSide: Number(pitchData.playersPerSide) || 5,
     description: pitchData.description || "Pitch description...",
-    price: Number(pitchData.price) || 0,
-    facilities: pitchData.facilities,
+    type: pitchData.type || "outdoor",
+    facilities: Object.entries(pitchData.facilities)
+      .filter(([_, value]) => value)
+      .map(([key]) => key),
   };
 
   return (
@@ -435,19 +388,21 @@ const EditPitch = () => {
                   />
                 </div>
                 
+                {/* New: Indoor/Outdoor selector */}
                 <div className="space-y-2">
-                  <label htmlFor="price" className="text-sm font-medium">Price per Hour*</label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={pitchData.price}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g., 20"
-                  />
+                  <label htmlFor="type" className="text-sm font-medium">Pitch Type*</label>
+                  <Select 
+                    value={pitchData.type} 
+                    onValueChange={handleTypeChange}
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="indoor">Indoor</SelectItem>
+                      <SelectItem value="outdoor">Outdoor</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
@@ -464,6 +419,7 @@ const EditPitch = () => {
                 <p className="text-xs text-gray-500">Paste a Google Maps link to the pitch location</p>
               </div>
               
+              {/* Updated: Facilities checkboxes */}
               <div className="space-y-2">
                 <div className="mb-2">
                   <label className="text-sm font-medium">Facilities Available</label>
@@ -474,7 +430,7 @@ const EditPitch = () => {
                     <div key={facility.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={facility.id} 
-                        checked={pitchData.facilities.includes(facility.id)}
+                        checked={pitchData.facilities[facility.id] || false}
                         onCheckedChange={(checked) => {
                           handleFacilityChange(facility.id, checked === true);
                         }}
@@ -502,24 +458,24 @@ const EditPitch = () => {
                   type="button" 
                   variant="outline" 
                   onClick={() => navigate('/pitches')}
-                  disabled={isSaving}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   className="bg-teal-600 hover:bg-teal-700 text-white"
-                  disabled={isSaving}
+                  disabled={isSubmitting}
                 >
-                  {isSaving ? (
+                  {isSubmitting ? (
                     <>
                       <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Updating...
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
+                      <Plus className="mr-2 h-4 w-4" />
+                      Update Pitch
                     </>
                   )}
                 </Button>
@@ -556,6 +512,17 @@ const EditPitch = () => {
                   </div>
                 </div>
                 
+                {/* Type badge */}
+                <div className="mb-3">
+                  <span className={`inline-block px-2 py-1 text-xs rounded ${
+                    previewPitch.type === 'indoor' 
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' 
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  }`}>
+                    {previewPitch.type === 'indoor' ? 'Indoor' : 'Outdoor'}
+                  </span>
+                </div>
+                
                 {/* Facilities */}
                 <div className="mb-3">
                   <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
@@ -563,7 +530,7 @@ const EditPitch = () => {
                     {previewPitch.facilities && previewPitch.facilities.length > 0 ? (
                       previewPitch.facilities.map((facility, index) => (
                         <span key={index} className="inline-block bg-gray-100 dark:bg-gray-800 text-xs px-2 py-1 rounded">
-                          {facility.replace('_', ' ')}
+                          {AVAILABLE_FACILITIES.find(f => f.id === facility)?.label || facility}
                         </span>
                       ))
                     ) : (
@@ -572,11 +539,8 @@ const EditPitch = () => {
                   </div>
                 </div>
                 
-                {/* Price and players info */}
+                {/* Players info */}
                 <div className="flex justify-between items-center mb-3 text-sm">
-                  <div className="font-medium">
-                    ${previewPitch.price} <span className="text-gray-500 font-normal">/ hour</span>
-                  </div>
                   <div className="text-gray-600">
                     {previewPitch.playersPerSide}v{previewPitch.playersPerSide}
                   </div>

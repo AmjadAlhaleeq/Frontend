@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
@@ -447,14 +446,14 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           <div className="flex items-center text-sm">
             <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
             <span>{reservation.location || reservation.pitchName}</span>
-            {reservation.locationLink && (
+            {reservation.location && (
               <a 
-                href={reservation.locationLink} 
-                target="_blank" 
+                href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`}
+                target="_blank"
                 rel="noopener noreferrer"
-                className="ml-2 text-teal-600 hover:text-teal-700"
+                className="text-blue-500 hover:underline flex items-center text-xs"
               >
-                <ExternalLink className="h-3 w-3" />
+                View on Maps <ExternalLink className="h-3 w-3 ml-1" />
               </a>
             )}
           </div>
@@ -684,9 +683,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         <SuspendPlayerDialog
           isOpen={showSuspendDialog}
           onClose={() => setShowSuspendDialog(false)}
-          playerId={selectedPlayerId}
-          playerName={selectedPlayerName}
-          playerEmail={selectedPlayerEmail}
+          players={[{ userId: selectedPlayerId, playerName: selectedPlayerName, email: selectedPlayerEmail }]}
+          onSuspend={handlePlayerSuspension}
         />
       )}
     </Card>

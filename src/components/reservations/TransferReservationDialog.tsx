@@ -12,7 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Reservation, useReservation } from "@/context/ReservationContext";
 import HighlightForm from "./HighlightForm";
 
@@ -32,7 +32,7 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
   reservation,
 }) => {
   const { toast } = useToast();
-  const { updateReservationStatus, editReservation } = useReservation();
+  const { updateReservationStatus, updateReservation } = useReservation();
   const [showHighlightForm, setShowHighlightForm] = useState(false);
   const [hometeamScore, setHometeamScore] = useState("0");
   const [awayteamScore, setAwayteamScore] = useState("0");
@@ -44,7 +44,7 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
     
     if (isGamePlayed) {
       // Update the reservation with game results
-      editReservation(reservation.id, {
+      updateReservation(reservation.id, {
         finalScore: `${hometeamScore}-${awayteamScore}`,
         mvpPlayerId: mvpPlayerId || undefined,
       });
@@ -76,11 +76,11 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
     const updatedHighlights = [...currentHighlights, highlight];
     
     // Here we directly modify the reservation object to update the highlights
-    // This is necessary since editReservation doesn't accept highlights directly
+    // This is necessary since updateReservation doesn't accept highlights directly
     const updatedReservation = { ...reservation, highlights: updatedHighlights };
     
-    // Use the editReservation to save other fields, but we'll rely on the local state update for highlights
-    editReservation(reservation.id, {
+    // Use the updateReservation to save other fields, but we'll rely on the local state update for highlights
+    updateReservation(reservation.id, {
       pitchName: updatedReservation.pitchName,
       date: updatedReservation.date,
       time: updatedReservation.time,

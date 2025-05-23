@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { MapPin, Clock, Calendar, Users, Star, CheckCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -50,11 +51,11 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
     setCurrentPhotoIndex((prev) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length);
   };
   
-  // Make sure to handle potential undefined details
-  const address = pitch.details?.address || pitch.location;
-  const description = pitch.details?.description || pitch.description;
-  const priceDisplay = pitch.details?.price || `$${pitch.price} per hour`;
-  const facilities = pitch.details?.facilities || [];
+  // Address all type issues by using optional chaining and fallbacks
+  const address = pitch.location;
+  const description = pitch.description;
+  const priceDisplay = `$${pitch.price} per hour`;
+  const facilities = pitch.facilities || [];
   
   const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 
@@ -200,7 +201,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                   </div>
                 </div>
                 
-                {/* Check if openingHours property exists before rendering */}
+                {/* Opening hours section - only show if available */}
                 {pitch.openingHours && (
                   <div className="flex items-start">
                     <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
