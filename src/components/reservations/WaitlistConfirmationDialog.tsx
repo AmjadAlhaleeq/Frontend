@@ -10,16 +10,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, AlertTriangle } from "lucide-react";
+import { UserPlus, UserMinus } from "lucide-react";
 
 interface WaitlistConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  gameTitle: string;
+  gameName: string;
+  gameDate: string;
+  gameTime: string;
   isJoining: boolean;
-  gameDate?: string;
-  gameTime?: string;
 }
 
 /**
@@ -30,61 +30,52 @@ const WaitlistConfirmationDialog: React.FC<WaitlistConfirmationDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  gameTitle,
-  isJoining,
+  gameName,
   gameDate,
-  gameTime
+  gameTime,
+  isJoining
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center">
-            {isJoining ? (
-              <>
-                <Users className="mr-2 h-5 w-5 text-amber-500" />
-                Join Waiting List
-              </>
-            ) : (
-              <>
-                <AlertTriangle className="mr-2 h-5 w-5 text-amber-500" />
-                Leave Waiting List
-              </>
-            )}
+          <AlertDialogTitle>
+            {isJoining ? "Join waiting list?" : "Leave waiting list?"}
           </AlertDialogTitle>
           <AlertDialogDescription>
+            <p className="mb-2">
+              {isJoining 
+                ? "You are about to join the waiting list for:" 
+                : "You are about to leave the waiting list for:"}
+            </p>
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
+              <p className="font-medium text-teal-700 dark:text-teal-400">{gameName}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{gameDate} at {gameTime}</p>
+            </div>
             {isJoining ? (
-              <>
-                <p className="mb-2">You are about to join the waiting list for:</p>
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
-                  <p className="font-medium text-amber-600 dark:text-amber-400">{gameTitle}</p>
-                  {gameDate && gameTime && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{gameDate} at {gameTime}</p>
-                  )}
-                </div>
-                <p>You'll be notified if a spot becomes available. You can leave the waiting list at any time.</p>
-              </>
+              <p>You'll be notified if a spot becomes available.</p>
             ) : (
-              <>
-                <p className="mb-2">You are about to leave the waiting list for:</p>
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
-                  <p className="font-medium text-amber-600 dark:text-amber-400">{gameTitle}</p>
-                  {gameDate && gameTime && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{gameDate} at {gameTime}</p>
-                  )}
-                </div>
-                <p>You'll lose your position in the waiting list. Are you sure?</p>
-              </>
+              <p>You'll no longer be in line for this game if spots open up.</p>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onConfirm}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={onConfirm} 
+            className={isJoining ? "bg-teal-600 hover:bg-teal-700" : "bg-amber-600 hover:bg-amber-700"}
           >
-            {isJoining ? "Join Waiting List" : "Leave Waiting List"}
+            {isJoining ? (
+              <>
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                Join Waiting List
+              </>
+            ) : (
+              <>
+                <UserMinus className="h-4 w-4 mr-1.5" />
+                Leave Waiting List
+              </>
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

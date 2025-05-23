@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle,
   Users,
@@ -9,8 +10,6 @@ import {
   ListFilter,
   XCircle,
   Loader,
-  CheckSquare,
-  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
@@ -19,12 +18,13 @@ import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import { cn } from "@/lib/utils";
 import ReservationCard from "@/components/reservations/ReservationCard";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
-import { format, parseISO, isAfter } from 'date-fns';
-import AddReservationSummary from "@/components/reservations/AddReservationSummary";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, parseISO } from 'date-fns';
 
 /**
  * Formats a date string or Date object into a more readable format.
+ * @param dateString - The date string (ISO format) or Date object.
+ * @param dateFormat - The desired date format string (default: "PP").
+ * @returns Formatted date string or "Invalid Date" on error.
  */
 const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
   try {
@@ -39,6 +39,12 @@ const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
 /**
  * Reservations Page Component
  * Displays and manages game reservations
+ * 
+ * Features:
+ * - Filter reservations by date
+ * - Join or leave games
+ * - View game details
+ * - Admin controls for managing reservations
  */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
@@ -46,13 +52,9 @@ const Reservations = () => {
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("upcoming");
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
-  
-  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
-  const [selectedReservationForSummary, setSelectedReservationForSummary] = useState<Reservation | null>(null);
   
   // Get access to reservations context
   const {
@@ -63,10 +65,10 @@ const Reservations = () => {
     leaveWaitingList,
     isUserJoined,
     hasUserJoinedOnDate,
+    getReservationsForDate,
     updateReservationStatus,
     deleteReservation,
-    setReservations,
-    addReservationSummary,
+    setReservations, // Added to initialize from localStorage
   } = useReservation();
 
   useEffect(() => {
@@ -122,6 +124,7 @@ const Reservations = () => {
   /**
    * Calculates the actual maximum players based on the game format.
    * For 5v5 format (10 players), we add 2 for substitutes.
+   * For all other formats, add 2 as requested.
    */
   const calculateActualMaxPlayers = (maxPlayers: number) => {
     if (maxPlayers === 10) return 12;
@@ -130,48 +133,22 @@ const Reservations = () => {
 
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
-    const today = new Date(); 
-    
-    const filterUpcoming = (res: Reservation) => {
-      const gameDate = parseISO(res.date);
-      // Compare only the date part
-      return (res.status === "open" || res.status === "full") && 
-             !isAfter(today, new Date(gameDate.setHours(23, 59, 59)));
-    };
+    const today = new Date(new Date().setHours(0, 0, 0, 0)); 
 
     if (currentDate) {
       // For current date
       const dateString = format(currentDate, 'yyyy-MM-dd');
+      const filtered = reservations.filter(
+        res => res.date === dateString && (res.status === "open" || res.status === "full")
+      );
+      gamesToShow = filtered;
+    } else {
       gamesToShow = reservations.filter(
-        res => res.date === dateString && filterUpcoming(res)
+        (res) => (res.status === "open" || res.status === "full") && 
+                 new Date(res.date) >= today
       );
-    } else {
-      gamesToShow = reservations.filter(filterUpcoming);
     }
-    
     return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
-  }, [reservations, currentDate]);
-
-  const completedReservations = useMemo(() => {
-    const today = new Date();
-    
-    const filterCompleted = (res: Reservation) => {
-      const gameDate = parseISO(res.date);
-      // Show only completed or automatically completed past games
-      return res.status === "completed" || 
-             (isAfter(today, new Date(gameDate.setHours(23, 59, 59))) && 
-              (res.status === "open" || res.status === "full"));
-    };
-    
-    if (currentDate) {
-      // For current date
-      const dateString = format(currentDate, 'yyyy-MM-dd');
-      return reservations.filter(
-        res => res.date === dateString && filterCompleted(res)
-      );
-    } else {
-      return reservations.filter(filterCompleted);
-    }
   }, [reservations, currentDate]);
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
@@ -179,7 +156,7 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  // Handle joining a game
+  // Handle joining a game and update localStorage
   const handleJoinGame = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -202,18 +179,40 @@ const Reservations = () => {
     // Join game through context
     joinGame(reservationId, undefined, currentUserId);
     
-    toast({
-      title: "Success!",
-      description: "You've joined the game",
-    });
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId) {
+            // Use lineup instead of players
+            const updatedLineup = res.lineup ? [...res.lineup] : [];
+            if (!updatedLineup.some(player => player.userId === currentUserId)) {
+              updatedLineup.push({ 
+                userId: currentUserId, 
+                status: 'joined',
+                joinedAt: new Date().toISOString(),
+                playerName: `Player ${currentUserId.substring(0, 4)}` 
+              });
+            }
+            return {...res, lineup: updatedLineup};
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating reservation in localStorage:", error);
+    }
   };
   
-  // Handle leaving a game
+  // Handle canceling a reservation and update localStorage
   const handleCancelReservation = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
-        description: "Please log in to leave this game.", 
+        description: "Please log in to cancel a reservation.", 
         variant: "destructive"
       });
       return;
@@ -222,13 +221,28 @@ const Reservations = () => {
     // Cancel reservation through context
     cancelReservation(reservationId, currentUserId);
     
-    toast({
-      title: "Reservation cancelled",
-      description: "You've left the game",
-    });
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId && res.lineup) {
+            return {
+              ...res, 
+              lineup: res.lineup.filter(player => player.userId !== currentUserId)
+            };
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating reservation in localStorage:", error);
+    }
   };
 
-  // Handle joining waiting list
+  // Handle joining waiting list and update localStorage
   const handleJoinWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -248,16 +262,53 @@ const Reservations = () => {
       return;
     }
     
+    // Only allow joining waiting list for full games
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (reservation && reservation.status !== 'full') {
+      toast({
+        title: "Game not full",
+        description: "You can only join the waiting list when the game is full.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Restrict waiting list to max 3 people
+    if (reservation && reservation.waitingList && reservation.waitingList.length >= 3) {
+      toast({
+        title: "Waiting List Full",
+        description: "The waiting list is limited to 3 players",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Join waiting list through context
     joinWaitingList(reservationId, currentUserId);
     
-    toast({
-      title: "Added to waiting list",
-      description: "You've been added to the waiting list",
-    });
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId) {
+            const updatedWaitingList = res.waitingList ? [...res.waitingList] : [];
+            if (!updatedWaitingList.includes(currentUserId)) {
+              updatedWaitingList.push(currentUserId);
+            }
+            return {...res, waitingList: updatedWaitingList};
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating waiting list in localStorage:", error);
+    }
   };
   
-  // Handle leaving waiting list
+  // Handle leaving waiting list and update localStorage
   const handleLeaveWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -271,13 +322,28 @@ const Reservations = () => {
     // Leave waiting list through context
     leaveWaitingList(reservationId, currentUserId);
     
-    toast({
-      title: "Removed from waiting list",
-      description: "You've been removed from the waiting list",
-    });
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.map((res: Reservation) => {
+          if (res.id === reservationId && res.waitingList) {
+            return {
+              ...res,
+              waitingList: res.waitingList.filter(id => id !== currentUserId)
+            };
+          }
+          return res;
+        });
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error updating waiting list in localStorage:", error);
+    }
   };
-
-  // Handle deleting a reservation (admin only)
+  
+  // Handle deleting reservation and update localStorage
   const handleDeleteReservation = (reservationId: number) => {
     if (!currentUserId || userRole !== 'admin') {
       toast({ 
@@ -291,54 +357,34 @@ const Reservations = () => {
     // Delete reservation through context
     deleteReservation(reservationId);
     
+    // Update localStorage
+    try {
+      const storedReservations = localStorage.getItem('reservations');
+      if (storedReservations) {
+        const parsedReservations = JSON.parse(storedReservations);
+        const updatedReservations = parsedReservations.filter((res: Reservation) => res.id !== reservationId);
+        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      }
+    } catch (error) {
+      console.error("Error deleting reservation from localStorage:", error);
+    }
+    
     toast({
       title: "Reservation Deleted",
       description: "The reservation has been successfully deleted."
     });
   };
 
-  // Handle opening summary dialog for a complete reservation
-  const handleOpenSummaryDialog = (reservation: Reservation) => {
-    setSelectedReservationForSummary(reservation);
-    setShowSummaryDialog(true);
-  };
-
-  // Handle submitting a reservation summary
-  const handleSubmitSummary = (summaryData: any) => {
-    if (!currentUserId || userRole !== 'admin') {
-      toast({ 
-        title: "Permission Denied", 
-        description: "Only admins can add summaries.", 
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      addReservationSummary(summaryData);
-      
-      toast({
-        title: "Summary Added",
-        description: "Game summary has been successfully added."
-      });
-      
-      // Mark the reservation as completed if it wasn't already
-      if (selectedReservationForSummary && selectedReservationForSummary.status !== "completed") {
-        updateReservationStatus(selectedReservationForSummary.id, "completed");
+  const upcomingGamesHeader = useMemo(() => {
+    if (currentDate) {
+      const formattedDate = format(currentDate, "MMM d, yyyy");
+      if (upcomingReservations.length > 0) {
+        return `Showing ${upcomingReservations.length} game${upcomingReservations.length === 1 ? '' : 's'} on ${formattedDate}`;
       }
-    } catch (error) {
-      console.error("Error adding summary:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add game summary.",
-        variant: "destructive"
-      });
+      return `No upcoming games found for ${formattedDate}`;
     }
-  };
-
-  // Format tab headers
-  const upcomingTabHeader = `Upcoming (${upcomingReservations.length})`;
-  const completedTabHeader = `Completed (${completedReservations.length})`;
+    return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
+  }, [currentDate, upcomingReservations.length]);
 
   const hasUserJoinedOnDateFixed = (dateString: string, userId: string): boolean => {
     if (!userId) return false;
@@ -386,121 +432,78 @@ const Reservations = () => {
             onDateChange={setCurrentDate}
             hasReservations={checkHasReservationsOnDate}
           />
-          
-          {currentDate && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setCurrentDate(undefined)} 
-              className="mt-2 w-full"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Clear Date Filter
-            </Button>
-          )}
         </div>
 
-        {/* Right Column: Reservations Tabs */}
+        {/* Right Column: Upcoming Games */}
         <div className="lg:col-span-2 space-y-4">
-          <Tabs 
-            defaultValue="upcoming" 
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="upcoming" className="flex items-center">
-                <Clock className="mr-2 h-4 w-4" />
-                {upcomingTabHeader}
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center">
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {completedTabHeader}
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="upcoming" className="mt-4 space-y-4">
-              {upcomingReservations.length === 0 ? (
-                <EmptyState
-                  icon={currentDate ? <ListFilter className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" /> : <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
-                  title={
-                    currentDate 
-                    ? `No upcoming games on ${format(currentDate, "MMMM d, yyyy")}` 
-                    : "No upcoming games"
+          <div className="flex items-center justify-between p-2 rounded-lg bg-gray-100 dark:bg-gray-900">
+            <h2 className="text-lg font-semibold text-teal-600 dark:text-teal-400 flex items-center">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Upcoming Games
+            </h2>
+          </div>
+
+          {upcomingReservations.length === 0 ? (
+            <EmptyState
+              icon={currentDate ? <ListFilter className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" /> : <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
+              title={
+                currentDate 
+                ? `No upcoming games on ${format(currentDate, "MMMM d, yyyy")}` 
+                : "No upcoming games"
+              }
+              description={
+                currentDate 
+                ? "Try selecting a different date or clear the filter to see all upcoming games."
+                : "No games scheduled yet. Check back later or, if you're an admin, add a new one!"
+              }
+              actionText={
+                currentDate 
+                ? "Clear Date Filter" 
+                : (userRole === 'admin' ? "Add New Reservation" : undefined)
+              }
+              onActionClick={
+                currentDate 
+                ? () => setCurrentDate(undefined) 
+                : userRole === 'admin' ? () => { 
+                    const addDialogButton = document.getElementById('add-reservation-dialog-trigger')?.querySelector('button');
+                    if (addDialogButton) addDialogButton.click();
                   }
-                  description={
-                    currentDate 
-                    ? "Try selecting a different date or clear the filter to see all upcoming games."
-                    : "No games scheduled yet. Check back later or, if you're an admin, add a new one!"
-                  }
-                  actionText={
-                    currentDate 
-                    ? "Clear Date Filter" 
-                    : (userRole === 'admin' ? "Add New Reservation" : undefined)
-                  }
-                  onActionClick={
-                    currentDate 
-                    ? () => setCurrentDate(undefined) 
-                    : userRole === 'admin' ? () => { 
-                        const addDialogButton = document.getElementById('add-reservation-dialog-trigger')?.querySelector('button');
-                        if (addDialogButton) addDialogButton.click();
-                      }
-                    : undefined
-                  }
-                  actionIcon={currentDate ? <XCircle className="ml-2 h-4 w-4" /> : (userRole === 'admin' ? <ArrowRight className="ml-2 h-4 w-4" /> : undefined)}
+                : undefined
+              }
+              actionIcon={currentDate ? <XCircle className="ml-2 h-4 w-4" /> : (userRole === 'admin' ? <ArrowRight className="ml-2 h-4 w-4" /> : undefined)}
+            />
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-1 px-1">
+                <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
+                  {upcomingGamesHeader}
+                </div>
+                {currentDate && (
+                   <Button variant="ghost" size="sm" onClick={() => setCurrentDate(undefined)} className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
+                     <XCircle className="h-3.5 w-3.5 mr-1" /> Clear Filter
+                   </Button>
+                )}
+              </div>
+
+              {upcomingReservations.map((reservation) => (
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  type="upcoming"
+                  onJoinGame={() => handleJoinGame(reservation.id)}
+                  onCancelReservation={() => handleCancelReservation(reservation.id)}
+                  onJoinWaitingList={() => handleJoinWaitingList(reservation.id)}
+                  onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
+                  isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
+                  isUserOnWaitingList={currentUserId ? reservation.waitingList?.includes(currentUserId) || false : false}
+                  hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
+                  currentUserId={currentUserId || ""} 
+                  isAdmin={userRole === 'admin'}
+                  onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
                 />
-              ) : (
-                upcomingReservations.map((reservation) => (
-                  <ReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                    type="upcoming"
-                    onJoinGame={() => handleJoinGame(reservation.id)}
-                    onCancelReservation={() => handleCancelReservation(reservation.id)}
-                    onJoinWaitingList={() => handleJoinWaitingList(reservation.id)}
-                    onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
-                    isUserJoined={currentUserId ? isUserJoined(reservation.id, currentUserId) : false}
-                    isUserOnWaitingList={currentUserId ? reservation.waitingList?.includes(currentUserId) || false : false}
-                    hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
-                    currentUserId={currentUserId || ""} 
-                    isAdmin={userRole === 'admin'}
-                    onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
-                    showWaitlist={userRole === 'admin'}
-                  />
-                ))
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed" className="mt-4 space-y-4">
-              {completedReservations.length === 0 ? (
-                <EmptyState
-                  icon={<CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
-                  title="No completed games"
-                  description="No games have been completed yet."
-                />
-              ) : (
-                completedReservations.map((reservation) => (
-                  <ReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                    type="past"
-                    onJoinGame={() => {}}
-                    onCancelReservation={() => {}}
-                    onJoinWaitingList={() => {}}
-                    onLeaveWaitingList={() => {}}
-                    isUserJoined={false}
-                    isUserOnWaitingList={false}
-                    hasUserJoinedOnDate={() => false}
-                    currentUserId={currentUserId || ""}
-                    isAdmin={userRole === 'admin'}
-                    onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
-                    onAddSummary={userRole === 'admin' ? handleOpenSummaryDialog : undefined}
-                    hasSummary={Boolean(reservation.summary)}
-                  />
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
@@ -518,16 +521,6 @@ const Reservations = () => {
           }}
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(selectedGameForDetails.maxPlayers)}
-        />
-      )}
-      
-      {/* Dialog for Adding Game Summary */}
-      {selectedReservationForSummary && (
-        <AddReservationSummary
-          reservation={selectedReservationForSummary}
-          open={showSummaryDialog}
-          onOpenChange={setShowSummaryDialog}
-          onSubmitSummary={handleSubmitSummary}
         />
       )}
     </div>

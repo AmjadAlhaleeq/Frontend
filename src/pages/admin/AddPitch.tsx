@@ -1,3 +1,4 @@
+
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Available facilities for selection
 const AVAILABLE_FACILITIES = [
@@ -18,23 +18,22 @@ const AVAILABLE_FACILITIES = [
   { id: "changing_rooms", label: "Changing Rooms" },
   { id: "showers", label: "Showers" },
   { id: "floodlights", label: "Floodlights" },
+  { id: "cafe", label: "Cafe/Refreshments" },
   { id: "wifi", label: "WiFi" },
-  { id: "water", label: "Water Supply" },
-  { id: "benches", label: "Benches" },
-  { id: "equipment", label: "Training Equipment" },
 ];
 
 const AddPitch = () => {
   const [pitchData, setPitchData] = useState({
     name: "",
-    location: "",
+    location: "", // Google Maps link
     city: "",
     image: "",
     images: ["", "", "", ""], // Array to store up to 4 images
     playersPerSide: "",
     description: "",
+    price: "",
     facilities: [] as string[],
-    pitchType: "outdoor" // Default to outdoor
+    openingHours: "9:00 AM - 10:00 PM"
   });
   
   // For image preview and slider functionality
@@ -52,7 +51,7 @@ const AddPitch = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide) {
+    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.price) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
@@ -81,8 +80,9 @@ const AddPitch = () => {
           additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
+          price: Number(pitchData.price),
           facilities: pitchData.facilities,
-          pitchType: pitchData.pitchType as "indoor" | "outdoor" // Properly typed pitchType
+          openingHours: pitchData.openingHours
       });
       
       toast({
@@ -108,13 +108,6 @@ const AddPitch = () => {
       facilities: checked 
         ? [...prev.facilities, facilityId]
         : prev.facilities.filter(id => id !== facilityId)
-    }));
-  };
-
-  const handlePitchTypeChange = (type: string) => {
-    setPitchData(prev => ({
-      ...prev,
-      pitchType: type
     }));
   };
 
@@ -206,8 +199,9 @@ const AddPitch = () => {
     additionalImages: pitchData.images.slice(1).filter(img => img),
     playersPerSide: Number(pitchData.playersPerSide) || 5,
     description: pitchData.description || "Pitch description...",
+    price: Number(pitchData.price) || 0,
     facilities: pitchData.facilities,
-    pitchType: pitchData.pitchType
+    openingHours: pitchData.openingHours
   };
 
   return (
@@ -328,21 +322,29 @@ const AddPitch = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Pitch Type*</label>
-                  <RadioGroup 
-                    value={pitchData.pitchType} 
-                    onValueChange={handlePitchTypeChange}
-                    className="flex space-x-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="indoor" id="indoor" />
-                      <Label htmlFor="indoor">Indoor</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="outdoor" id="outdoor" />
-                      <Label htmlFor="outdoor">Outdoor</Label>
-                    </div>
-                  </RadioGroup>
+                  <label htmlFor="price" className="text-sm font-medium">Price per Hour*</label>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={pitchData.price}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., 20"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="openingHours" className="text-sm font-medium">Opening Hours</label>
+                  <Input
+                    id="openingHours"
+                    name="openingHours"
+                    value={pitchData.openingHours}
+                    onChange={handleChange}
+                    placeholder="e.g., 9:00 AM - 10:00 PM"
+                  />
                 </div>
               </div>
               
@@ -364,7 +366,7 @@ const AddPitch = () => {
                   <label className="text-sm font-medium">Facilities Available</label>
                   <p className="text-xs text-gray-500">Select all that apply</p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {AVAILABLE_FACILITIES.map((facility) => (
                     <div key={facility.id} className="flex items-center space-x-2">
                       <Checkbox 
@@ -451,17 +453,6 @@ const AddPitch = () => {
                   </div>
                 </div>
                 
-                {/* Pitch type badge */}
-                <div className="mb-3">
-                  <span className={`inline-block text-xs px-2 py-1 rounded capitalize ${
-                    previewPitch.pitchType === "indoor" 
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" 
-                      : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                  }`}>
-                    {previewPitch.pitchType} pitch
-                  </span>
-                </div>
-                
                 {/* Facilities */}
                 <div className="mb-3">
                   <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
@@ -478,11 +469,18 @@ const AddPitch = () => {
                   </div>
                 </div>
                 
-                {/* Players info */}
+                {/* Price and players info */}
                 <div className="flex justify-between items-center mb-3 text-sm">
+                  <div className="font-medium">
+                    ${previewPitch.price} <span className="text-gray-500 font-normal">/ hour</span>
+                  </div>
                   <div className="text-gray-600">
                     {previewPitch.playersPerSide}v{previewPitch.playersPerSide}
                   </div>
+                </div>
+                
+                <div className="mb-2 text-xs text-gray-500">
+                  {previewPitch.openingHours}
                 </div>
                 
                 {/* Description preview */}

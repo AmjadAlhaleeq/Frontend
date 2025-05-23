@@ -31,14 +31,14 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           <Calendar className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Games Played</p>
-            <p className="text-lg font-bold">{stats.matches}</p>
+            <p className="text-lg font-bold">{stats.gamesPlayed}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           <BadgePlus className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Goals Scored</p>
-            <p className="text-lg font-bold">{stats.goals}</p>
+            <p className="text-lg font-bold">{stats.goalsScored}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
@@ -52,14 +52,14 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           <ShieldCheck className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">Clean Sheets</p>
-            <p className="text-lg font-bold">{stats.cleanSheets}</p>
+            <p className="text-lg font-bold">{stats.cleansheets}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           <Trophy className="h-5 w-5 text-gray-500" />
           <div>
             <p className="text-sm font-medium leading-none">MVP Awards</p>
-            <p className="text-lg font-bold">{stats.mvp}</p>
+            <p className="text-lg font-bold">{stats.mvps}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">

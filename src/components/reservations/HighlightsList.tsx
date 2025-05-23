@@ -2,12 +2,12 @@
 import React, { useState } from "react";
 import { Trash2, Trophy, Edit, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext";
+import { useReservation, Highlight, HighlightType } from "@/context/ReservationContext"; // Update import to include HighlightType
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface HighlightsListProps {
   reservationId: number;
@@ -26,8 +26,8 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   
   const initialNewHighlightState: NewHighlightInput = {
-    type: "goal" as HighlightType,
     minute: 1,
+    type: "goal", // Default type
     playerId: `player-temp-${Date.now()}`, // Temporary, can be refined
     playerName: "",
     description: ""
@@ -37,7 +37,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const reservation = reservations.find(r => r.id === reservationId);
   if (!reservation) return <div className="py-4 text-center text-sm text-gray-500 italic">Reservation not found.</div>;
   
-  const { highlights = [] } = reservation;
+  const { highlights } = reservation;
   
   const handleAddHighlight = () => {
     if (!newHighlight.playerName.trim()) {
@@ -58,13 +58,13 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
     }
 
     // Ensure a unique playerId if needed for the actual highlight object
-    const highlightToAdd: NewHighlightInput = {
+    const highlightToAdd: Omit<Highlight, 'id'> = {
       ...newHighlight,
       playerId: `player-${Date.now()}-${newHighlight.playerName.replace(/\s+/g, '-')}`, // Example of a more unique ID
       description: newHighlight.description?.trim() || undefined
     };
 
-    addHighlight(highlightToAdd);
+    addHighlight(reservationId, highlightToAdd);
     
     toast({
       title: "Highlight added",
@@ -113,9 +113,9 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
       case 'redCard':
         return <span className="text-red-500 font-bold">🟥</span>;
       case 'save':
-        return <span className="text-purple-500 font-bold">🧤</span>;
+        return <span className="text-purple-500 font-bold">🧤</span>; // Example for save
       case 'other':
-        return <span className="text-gray-500 font-bold">⭐</span>;
+        return <span className="text-gray-500 font-bold">⭐</span>; // Example for other
       default:
         return <span>•</span>;
     }
@@ -125,6 +125,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const assistCount = highlights.filter(h => h.type === 'assist').length;
   const yellowCardCount = highlights.filter(h => h.type === 'yellowCard').length;
   const redCardCount = highlights.filter(h => h.type === 'redCard').length;
+  // Add counts for 'save' and 'other' if they become relevant
 
   return (
     <div className="space-y-4">
@@ -185,7 +186,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
               </Select>
             </div>
             
-            <div className="space-y-1 md:col-span-1">
+            <div className="space-y-1 md:col-span-1"> {/* Ensure player name is not full width if description is too */}
               <label className="text-xs font-medium text-gray-700">Player Name</label>
               <Input 
                 value={newHighlight.playerName}
@@ -195,7 +196,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
               />
             </div>
             
-            <div className="space-y-1 md:col-span-2">
+            <div className="space-y-1 md:col-span-2"> {/* Description can span full width */}
               <label className="text-xs font-medium text-gray-700">Description (Optional)</label>
               <Input 
                 value={newHighlight.description || ''}
@@ -251,7 +252,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
           {sortedHighlights.map((highlight) => (
             <div 
               key={highlight.id} 
-              className={`flex items-start text-sm p-3 rounded-md ${
+              className={`flex items-start text-sm p-3 rounded-md ${ // items-start for better alignment with description
                 highlight.type === 'goal' 
                   ? 'bg-green-50 border-l-4 border-green-500' 
                   : highlight.type === 'assist'
@@ -262,13 +263,13 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                   ? 'bg-red-50 border-l-4 border-red-500'
                   : highlight.type === 'save'
                   ? 'bg-purple-50 border-l-4 border-purple-500'
-                  : 'bg-gray-50 border-l-4 border-gray-300'
+                  : 'bg-gray-50 border-l-4 border-gray-300' // Default for 'other' or unstyled
               }`}
             >
-              <div className="w-12 text-muted-foreground font-mono font-semibold text-xs pt-0.5">{highlight.minute}'</div>
-              <div className="flex-1 flex items-start">
+              <div className="w-12 text-muted-foreground font-mono font-semibold text-xs pt-0.5">{highlight.minute}'</div> {/* Adjusted width and size */}
+              <div className="flex-1 flex items-start"> {/* items-start */}
                 <div className="mr-2 pt-0.5">{getEventIcon(highlight.type)}</div>
-                <div className="flex-grow">
+                <div className="flex-grow"> {/* flex-grow to take available space */}
                   <span className="font-medium mr-2">{highlight.playerName}</span>
                   {highlight.type === 'goal' && <span className="text-green-600 font-semibold">GOAL!</span>}
                   {highlight.type === 'assist' && <span className="text-blue-600 font-semibold">Assist</span>}
@@ -277,12 +278,14 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                   {highlight.type === 'save' && <span className="text-purple-600 font-semibold">Save</span>}
                   {highlight.type === 'other' && <span className="text-gray-600 font-semibold">Event</span>}
                   {highlight.description && (
-                    <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{highlight.description}</p>
+                    <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{highlight.description}</p> // whitespace-pre-wrap
                   )}
                 </div>
               </div>
               {isAdmin && (
-                <div className="flex space-x-1 ml-2 flex-shrink-0">
+                <div className="flex space-x-1 ml-2 flex-shrink-0"> {/* flex-shrink-0 */}
+                  {/* Edit button can be added here if needed */}
+                  {/* <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:bg-blue-100"> <Edit className="h-3.5 w-3.5" /> </Button> */}
                   <Button
                     variant="ghost"
                     size="icon"

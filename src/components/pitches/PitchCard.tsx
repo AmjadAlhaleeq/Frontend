@@ -81,13 +81,11 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </div>
         </div>
         
-        {/* Players info */}
+        {/* Price and players info */}
         <div className="flex justify-between items-center mb-3 text-sm">
-          {pitch.price && (
-            <div className="font-medium">
-              ${pitch.price} <span className="text-gray-500 font-normal">/ hour</span>
-            </div>
-          )}
+          <div className="font-medium">
+            ${pitch.price} <span className="text-gray-500 font-normal">/ hour</span>
+          </div>
           <div className="flex items-center text-gray-600">
             <Users className="h-4 w-4 mr-1" />
             {pitch.playersPerSide}v{pitch.playersPerSide}

@@ -1,97 +1,208 @@
 
 import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { useReservation, Reservation } from "@/context/ReservationContext";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
+import { Reservation, useReservation } from "@/context/ReservationContext";
+import HighlightForm from "./HighlightForm";
 
 interface TransferReservationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedReservation: Reservation | null;
-  onConfirm: () => void;
+  reservation: Reservation;
 }
 
 /**
- * TransferReservationDialog component
- * Allows an admin to transfer all players from one reservation to another
+ * Dialog for admin to transfer a reservation from upcoming to past,
+ * and add game details like final score and highlights.
  */
 const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
   isOpen,
   onClose,
-  selectedReservation,
-  onConfirm
+  reservation,
 }) => {
   const { toast } = useToast();
-  const { reservations, editReservation } = useReservation();
-  const [targetReservation, setTargetReservation] = useState<Reservation | null>(null);
+  const { updateReservationStatus, editReservation } = useReservation();
+  const [showHighlightForm, setShowHighlightForm] = useState(false);
+  const [hometeamScore, setHometeamScore] = useState("0");
+  const [awayteamScore, setAwayteamScore] = useState("0");
+  const [mvpPlayerId, setMvpPlayerId] = useState("");
+  const [isGamePlayed, setIsGamePlayed] = useState(true);
 
-  const handleConfirm = () => {
-    if (!selectedReservation || !targetReservation) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Get the data we want to transfer
-    const dataToTransfer: Partial<Reservation> = {
-      lineup: selectedReservation.lineup,
-      playersJoined: selectedReservation.playersJoined,
-      waitingList: selectedReservation.waitingList,
-      // Only include summary if it exists
-      ...(selectedReservation.summary && { summary: selectedReservation.summary })
-    };
+    if (isGamePlayed) {
+      // Update the reservation with game results
+      editReservation(reservation.id, {
+        finalScore: `${hometeamScore}-${awayteamScore}`,
+        mvpPlayerId: mvpPlayerId || undefined,
+      });
+      
+      // Mark as completed
+      updateReservationStatus(reservation.id, "completed");
+      
+      toast({
+        title: "Game Completed",
+        description: `The game has been marked as completed with a score of ${hometeamScore}-${awayteamScore}.`,
+      });
+    } else {
+      // Mark as cancelled if game wasn't played
+      updateReservationStatus(reservation.id, "cancelled");
+      
+      toast({
+        title: "Game Cancelled",
+        description: "The game has been marked as cancelled.",
+      });
+    }
     
-    // Update the target reservation with the transferred data
-    editReservation(targetReservation.id, dataToTransfer);
-    
-    // Close the dialog and confirm the transfer
     onClose();
-    onConfirm();
   };
-
-  const filteredReservations = [...reservations]
-    .filter(res => 
-      res.id !== selectedReservation?.id &&
-      !res.highlights &&
-      res.status !== 'cancelled'
-    )
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  // Handle saving highlights
+  const handleSaveHighlight = (highlight: any) => {
+    // Create a new array of highlights
+    const currentHighlights = reservation.highlights || [];
+    const updatedHighlights = [...currentHighlights, highlight];
+    
+    // Here we directly modify the reservation object to update the highlights
+    // This is necessary since editReservation doesn't accept highlights directly
+    const updatedReservation = { ...reservation, highlights: updatedHighlights };
+    
+    // Use the editReservation to save other fields, but we'll rely on the local state update for highlights
+    editReservation(reservation.id, {
+      pitchName: updatedReservation.pitchName,
+      date: updatedReservation.date,
+      time: updatedReservation.time,
+      location: updatedReservation.location,
+      price: updatedReservation.price,
+      maxPlayers: updatedReservation.maxPlayers,
+    });
+    
+    toast({
+      title: "Highlight Added",
+      description: `Added a new highlight for ${highlight.playerName}`,
+    });
+    
+    setShowHighlightForm(false);
+  };
+  
+  // Handle canceling highlight addition
+  const handleCancelHighlight = () => {
+    setShowHighlightForm(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Transfer Players</DialogTitle>
+          <DialogTitle>Complete Game</DialogTitle>
+          <DialogDescription>
+            Transfer this game to the past games list and add the final results.
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="target-reservation" className="text-right text-sm font-medium leading-none text-gray-800 dark:text-gray-100 col-span-1">
-              Target Reservation
-            </label>
-            <Select onValueChange={(value) => setTargetReservation(reservations.find(r => r.id === Number(value)) || null)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a reservation to transfer to" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredReservations.map((reservation) => (
-                  <SelectItem key={reservation.id} value={reservation.id.toString()}>
-                    {reservation.title || reservation.pitchName} - {reservation.date} at {reservation.time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="game-played"
+                checked={isGamePlayed}
+                onCheckedChange={(checked) => setIsGamePlayed(checked as boolean)}
+              />
+              <Label htmlFor="game-played">
+                Game was played
+              </Label>
+            </div>
+            
+            {isGamePlayed && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="home-score">Home Team Score</Label>
+                    <Input
+                      id="home-score"
+                      value={hometeamScore}
+                      onChange={(e) => setHometeamScore(e.target.value)}
+                      type="number"
+                      min="0"
+                      className="col-span-1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="away-score">Away Team Score</Label>
+                    <Input
+                      id="away-score"
+                      value={awayteamScore}
+                      onChange={(e) => setAwayteamScore(e.target.value)}
+                      type="number"
+                      min="0"
+                      className="col-span-1"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mvp">MVP Player ID (optional)</Label>
+                  <Input
+                    id="mvp"
+                    value={mvpPlayerId}
+                    onChange={(e) => setMvpPlayerId(e.target.value)}
+                    placeholder="Player ID of the MVP"
+                  />
+                </div>
+                
+                {!showHighlightForm ? (
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowHighlightForm(true)}
+                  >
+                    Add Highlights
+                  </Button>
+                ) : (
+                  <div className="border rounded-lg p-4 mt-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium">Add Game Highlight</h4>
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setShowHighlightForm(false)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                    <HighlightForm 
+                      reservationId={reservation.id}
+                      onSave={handleSaveHighlight}
+                      onCancel={handleCancelHighlight}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
-        <Button onClick={handleConfirm}>Confirm Transfer</Button>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {isGamePlayed ? "Complete Game" : "Cancel Game"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

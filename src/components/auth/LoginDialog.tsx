@@ -22,9 +22,12 @@ import {
   Phone,
   MapPin,
   CalendarDays,
+  Shirt,
+  Users,
   Loader,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { loginWithTestAccount } from "@/utils/testAccounts";
 
 // API Base URL
 const API_BASE_URL = "http://127.0.0.1:3000";
@@ -75,13 +78,14 @@ interface LoginResponse {
   token: string;
 }
 
-// Define a type for the user's profile data (for component state)
+// Define a type for the user's profile data
 interface UserProfileData {
   id: string;
   firstName: string;
   lastName: string;
   age: string;
   city: string;
+  favoritePosition: string;
   phoneNumber: string;
   email: string;
   password: string;
@@ -91,6 +95,7 @@ interface UserProfileData {
 interface LoginDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  // Updated to pass user details along with the role
   onLoginSuccess: (
     role: "admin" | "player",
     userDetails?: UserProfileData
@@ -98,14 +103,14 @@ interface LoginDialogProps {
 }
 
 /**
- * LoginDialog component for user authentication with full-stack API integration
+ * LoginDialog component for user authentication
+ * 
+ * @remarks
+ * This component is designed to work with a Node.js/MongoDB backend.
+ * Form fields match expected MongoDB schema.
  */
-const LoginDialog: React.FC<LoginDialogProps> = ({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-}) => {
-  const [formType, setFormType] = useState<"login" | "signup">("login");
+const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+  const [formType, setFormType] = useState<'login' | 'signup'>('login');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -113,274 +118,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState("");
 
   // Sign-up states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [age, setAge] = useState("");
   const [city, setCity] = useState("");
+  const [favoritePosition, setFavoritePosition] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [bio, setBio] = useState("");
 
-  /**
-   * Handles the login form submission with API call
-   */
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginEmail || !loginPassword) {
-      toast({
-        title: "Missing fields",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
+  // Store current page URL when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentPage(window.location.pathname);
     }
-
-    setIsProcessing(true);
-
-    try {
-      const response = await axios.post<ApiResponse<LoginResponse>>(
-        "/auth/login",
-        {
-          email: loginEmail,
-          password: loginPassword,
-        }
-      );
-
-      if (response.data.status === "success") {
-        const { user, token } = response.data.data;
-
-        // Store user data and token in localStorage
-        localStorage.setItem(
-          "currentUser",
-          JSON.stringify({
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            age: user.age.toString(),
-            city: user.city,
-            phoneNumber: user.phone,
-            avatarUrl:
-              user.profilePicture ||
-              `https://i.pravatar.cc/300?u=${user.email}`,
-          })
-        );
-
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("userRole", user.role);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("firstTimeLogin", "true");
-
-        // Set axios default authorization header
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-        // Dispatch login event
-        window.dispatchEvent(new Event("userLoggedIn"));
-
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${user.firstName}!`,
-        });
-
-        onLoginSuccess(user.role, {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          age: user.age.toString(),
-          city: user.city,
-          phoneNumber: user.phone,
-          email: user.email,
-          password: "",
-          avatarUrl:
-            user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`,
-        });
-
-        onClose();
-        resetForms();
-        navigate("/profile");
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-
-      let errorMessage = "Login failed. Please try again.";
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 401) {
-        errorMessage = "Invalid email or password.";
-      } else if (error.response?.status === 404) {
-        errorMessage = "User not found. Please sign up first.";
-      } else if (
-        error.code === "ECONNREFUSED" ||
-        error.code === "ERR_NETWORK"
-      ) {
-        errorMessage = "Unable to connect to server. Please try again later.";
-      }
-
-      toast({
-        title: "Login Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-
-      // If user not found, suggest signing up
-      if (error.response?.status === 404) {
-        setTimeout(() => setFormType("signup"), 1000);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  /**
-   * Handles the sign-up form submission with API call
-   */
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const allFieldsFilled =
-      firstName &&
-      lastName &&
-      age &&
-      city &&
-      phoneNumber &&
-      signUpEmail &&
-      signUpPassword &&
-      confirmPassword;
-
-    if (!allFieldsFilled) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill out all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (signUpPassword !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Basic password validation
-    if (signUpPassword.length < 6) {
-      toast({
-        title: "Weak Password",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const signUpData = {
-        firstName,
-        lastName,
-        email: signUpEmail,
-        password: signUpPassword,
-        phone: phoneNumber,
-        city,
-        age: parseInt(age),
-        bio: `I love football and play from ${city}.`,
-        role: "player" as const,
-      };
-
-      const response = await axios.post<ApiResponse<SignUpResponse>>(
-        "/auth/signup",
-        signUpData
-      );
-
-      if (response.data.status === "success") {
-        const { user, token } = response.data.data;
-
-        toast({
-          title: "Sign Up Successful",
-          description: `Welcome to our community, ${user.firstName}! You can now log in.`,
-        });
-
-        // Switch to login form with email prefilled
-        setFormType("login");
-        setLoginEmail(signUpEmail);
-        setLoginPassword("");
-
-        // Clear signup form
-        resetSignUpForm();
-      }
-    } catch (error: any) {
-      console.error("Signup error:", error);
-
-      let errorMessage = "Sign up failed. Please try again.";
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 400) {
-        errorMessage = "Invalid data provided. Please check your inputs.";
-      } else if (error.response?.status === 409) {
-        errorMessage =
-          "Email already exists. Please use a different email or login.";
-      } else if (
-        error.code === "ECONNREFUSED" ||
-        error.code === "ERR_NETWORK"
-      ) {
-        errorMessage = "Unable to connect to server. Please try again later.";
-      }
-
-      toast({
-        title: "Sign Up Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-
-      // If email already exists, suggest logging in
-      if (error.response?.status === 409) {
-        setTimeout(() => {
-          setFormType("login");
-          setLoginEmail(signUpEmail);
-        }, 1000);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  /**
-   * Toggles between login and sign-up forms.
-   */
-  const toggleFormType = (type: "login" | "signup") => {
-    setFormType(type);
-    resetForms(); // Reset form fields when switching
-  };
-
-  const resetForms = () => {
-    setLoginEmail("");
-    setLoginPassword("");
-    resetSignUpForm();
-  };
-
-  const resetSignUpForm = () => {
-    setFirstName("");
-    setLastName("");
-    setAge("");
-    setCity("");
-    setPhoneNumber("");
-    setSignUpEmail("");
-    setSignUpPassword("");
-    setConfirmPassword("");
-  };
-
-  const handleDialogClose = () => {
-    resetForms();
-    onClose();
-  };
+  }, [isOpen]);
 
   // Initialize axios interceptors for token management
   useEffect(() => {
@@ -408,8 +165,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
           localStorage.removeItem("currentUser");
           localStorage.removeItem("userRole");
           localStorage.removeItem("isLoggedIn");
+          window.dispatchEvent(new Event("loginStatusChanged"));
           delete axios.defaults.headers.common["Authorization"];
-          window.dispatchEvent(new Event("userLoggedOut"));
         }
         return Promise.reject(error);
       }
@@ -422,13 +179,303 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     };
   }, []);
 
-  // Render login form
+  /**
+   * Handles the login form submission.
+   * Validates input fields and attempts login against backend API.
+   * 
+   * @param e - The form event.
+   */
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail || !loginPassword) {
+      toast({
+        title: "Missing fields",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    // Check if this is admin login attempt
+    if (loginEmail.toLowerCase().includes('admin')) {
+      // Use the test admin account
+      if (loginWithTestAccount('admin')) {
+        toast({
+          title: "Admin Login Successful",
+          description: "Welcome back, Admin!",
+        });
+        onLoginSuccess('admin');
+        onClose();
+        resetForms();
+        // Navigate to home page
+        navigate('/');
+      } else {
+        toast({
+          title: "Admin Login Failed",
+          description: "Please check your credentials.",
+          variant: "destructive",
+        });
+      }
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Check if it's test player account
+    if (loginEmail === "testplayer@example.com" && loginPassword === "testplayer") {
+      if (loginWithTestAccount('player')) {
+        toast({
+          title: "Player Login Successful",
+          description: "Welcome back, Player!",
+        });
+        onLoginSuccess('player');
+        onClose();
+        resetForms();
+        // Navigate to home page
+        navigate('/');
+      }
+      setIsProcessing(false);
+      return;
+    }
+    
+    try {
+      const response = await axios.post<ApiResponse<LoginResponse>>(
+        "/auth/login",
+        {
+          email: loginEmail,
+          password: loginPassword,
+        }
+      );
+
+      if (response.data.status === "success") {
+        const { user, token } = response.data.data;
+
+        // Store user data in localStorage with the exact format expected by the app
+        localStorage.setItem('currentUser', JSON.stringify({
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          age: user.age.toString(),
+          city: user.city,
+          position: user.preferredPosition || "",
+          phoneNumber: user.phone,
+          avatarUrl: user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`
+        }));
+        
+        // Set auth tokens and user role
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userRole', user.role);
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Set first time login flag
+        localStorage.setItem("firstTimeLogin", "true");
+        
+        // Set axios default authorization header
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+        // Dispatch login events
+        window.dispatchEvent(new Event('loginStatusChanged'));
+        window.dispatchEvent(new Event('userLoggedIn'));
+        
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${user.firstName}!`,
+        });
+        
+        // Pass user details to onLoginSuccess
+        onLoginSuccess(user.role, {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          age: user.age.toString(),
+          city: user.city,
+          favoritePosition: user.preferredPosition || "",
+          phoneNumber: user.phone,
+          email: user.email,
+          password: "", // Don't store password
+          avatarUrl: user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`,
+        });
+        
+        onClose();
+        resetForms();
+        
+        // Navigate to home page
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+
+      let errorMessage = "Login failed. Please try again.";
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 401) {
+        errorMessage = "Invalid email or password.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "User not found. Please sign up first.";
+      } else if (error.code === "ECONNREFUSED" || error.code === "ERR_NETWORK") {
+        errorMessage = "Unable to connect to server. Please try again later.";
+      }
+
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      // If user not found, suggest signing up
+      if (error.response?.status === 404) {
+        setTimeout(() => setFormType("signup"), 1000);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Handles the sign-up form submission.
+   * Validates input fields, registers new user with backend API.
+   * 
+   * @param e - The form event.
+   */
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const allFieldsFilled = firstName && lastName && age && city && favoritePosition && phoneNumber && signUpEmail && signUpPassword && confirmPassword;
+    if (!allFieldsFilled) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill out all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (signUpPassword !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Basic password validation
+    if (signUpPassword.length < 6) {
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      const signUpData = {
+        firstName,
+        lastName,
+        email: signUpEmail,
+        password: signUpPassword,
+        phone: phoneNumber,
+        city,
+        preferredPosition: favoritePosition,
+        age: parseInt(age),
+        bio: bio || `I love football and play from ${city}.`,
+        profilePicture: "",
+        role: "player" as const,
+      };
+
+      const response = await axios.post<ApiResponse<SignUpResponse>>(
+        "/auth/signup",
+        signUpData
+      );
+
+      if (response.data.status === "success") {
+        toast({
+          title: "Sign Up Successful",
+          description: `Welcome to our community, ${firstName}! You can now log in.`,
+        });
+        
+        // Switch to login form with email prefilled
+        setFormType("login");
+        setLoginEmail(signUpEmail);
+        setLoginPassword("");
+      }
+    } catch (error: any) {
+      console.error("Signup error:", error);
+
+      let errorMessage = "Sign up failed. Please try again.";
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 400) {
+        errorMessage = "Invalid data provided. Please check your inputs.";
+      } else if (error.response?.status === 409) {
+        errorMessage = "Email already exists. Please use a different email or login.";
+      } else if (error.code === "ECONNREFUSED" || error.code === "ERR_NETWORK") {
+        errorMessage = "Unable to connect to server. Please try again later.";
+      }
+
+      toast({
+        title: "Sign Up Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      // If email already exists, suggest logging in
+      if (error.response?.status === 409) {
+        setTimeout(() => {
+          setFormType("login");
+          setLoginEmail(signUpEmail);
+        }, 1000);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  /**
+   * Toggles between login and sign-up forms.
+   * @param type - The form type to switch to ('login' or 'signup').
+   */
+  const toggleFormType = (type: 'login' | 'signup') => {
+    setFormType(type);
+    resetForms(); // Reset form fields when switching
+  };
+
+  const resetForms = () => {
+    setLoginEmail("");
+    setLoginPassword("");
+    resetSignUpForm();
+  };
+
+  const resetSignUpForm = () => {
+    setFirstName("");
+    setLastName("");
+    setAge("");
+    setCity("");
+    setFavoritePosition("");
+    setPhoneNumber("");
+    setSignUpEmail("");
+    setSignUpPassword("");
+    setConfirmPassword("");
+    setBio("");
+  };
+
+  const handleDialogClose = () => {
+    resetForms();
+    onClose();
+  };
+
+  // Render login form 
   const renderLoginForm = () => (
     <form onSubmit={handleLogin}>
       <DialogHeader className="mb-4">
         <DialogTitle className="flex items-center text-2xl">
-          <LogIn className="mr-2 h-6 w-6 text-bokit-500" /> Login to Your
-          Account
+          <LogIn className="mr-2 h-6 w-6 text-bokit-500" /> Login to Your Account
         </DialogTitle>
         <DialogDescription>
           Access your reservations and manage your pitches.
@@ -436,10 +483,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
       </DialogHeader>
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-1 items-center gap-2">
-          <Label htmlFor="email-login" className="flex items-center">
-            <AtSign className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Email
-          </Label>
+          <Label htmlFor="email-login" className="flex items-center"><AtSign className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Email</Label>
           <Input
             id="email-login"
             type="email"
@@ -452,10 +496,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
           />
         </div>
         <div className="grid grid-cols-1 items-center gap-2">
-          <Label htmlFor="password-login" className="flex items-center">
-            <KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Password
-          </Label>
+          <Label htmlFor="password-login" className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Password</Label>
           <Input
             id="password-login"
             type="password"
@@ -469,41 +510,27 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
         </div>
       </div>
       <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center mt-2">
-        <Button
-          type="button"
-          variant="link"
-          onClick={() =>
-            toast({
-              title: "Forgot Password",
-              description: "Password recovery coming soon!",
-            })
-          }
-          className="p-0 h-auto text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-        >
+        <Button type="button" variant="link" onClick={() => toast({ title: "Forgot Password", description: "Password recovery coming soon!" })} className="p-0 h-auto text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
           <KeyRound className="mr-1 h-4 w-4" /> Forgot Password?
         </Button>
         <div className="flex gap-2 mt-2 sm:mt-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => toggleFormType("signup")}
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => toggleFormType('signup')} 
             className="border-sky-500 text-sky-600 hover:bg-sky-50 hover:text-sky-700 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/50 dark:hover:text-blue-300"
             disabled={isProcessing}
           >
-            <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+             <UserPlus className="mr-2 h-4 w-4" /> Sign Up
           </Button>
-          <Button
-            type="submit"
+          <Button 
+            type="submit" 
             className="bg-bokit-500 hover:bg-bokit-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
             disabled={isProcessing}
           >
-            {isProcessing ? (
-              <Loader className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <LogIn className="mr-2 h-4 w-4" />
-            )}
-            {isProcessing ? "Processing..." : "Login"}
-          </Button>
+             {isProcessing ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />} 
+             {isProcessing ? "Processing..." : "Login"}
+           </Button>
         </div>
       </DialogFooter>
     </form>
@@ -514,8 +541,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     <form onSubmit={handleSignUp}>
       <DialogHeader className="mb-4">
         <DialogTitle className="flex items-center text-2xl">
-          <UserPlus className="mr-2 h-6 w-6 text-bokit-500" /> Create Your
-          Account
+          <UserPlus className="mr-2 h-6 w-6 text-bokit-500" /> Create Your Account
         </DialogTitle>
         <DialogDescription>
           Join our community and start booking pitches! All fields are required.
@@ -523,51 +549,36 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
       </DialogHeader>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
         <div className="space-y-1">
-          <Label
-            htmlFor="firstName"
-            className="flex items-center dark:text-gray-300"
-          >
-            <UserCircle2 className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            First Name
-          </Label>
-          <Input
-            id="firstName"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Ahmad"
+          <Label htmlFor="firstName" className="flex items-center dark:text-gray-300"><UserCircle2 className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>First Name</Label>
+          <Input 
+            id="firstName" 
+            value={firstName} 
+            onChange={(e) => setFirstName(e.target.value)} 
+            placeholder="Ahmad" 
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
           />
         </div>
         <div className="space-y-1">
-          <Label
-            htmlFor="lastName"
-            className="flex items-center dark:text-gray-300"
-          >
-            <UserCircle2 className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Last Name
-          </Label>
-          <Input
-            id="lastName"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Naser"
+          <Label htmlFor="lastName" className="flex items-center dark:text-gray-300"><UserCircle2 className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Last Name</Label>
+          <Input 
+            id="lastName" 
+            value={lastName} 
+            onChange={(e) => setLastName(e.target.value)} 
+            placeholder="Naser" 
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="age" className="flex items-center dark:text-gray-300">
-            <CalendarDays className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Age
-          </Label>
-          <Input
-            id="age"
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
+          <Label htmlFor="age" className="flex items-center dark:text-gray-300"><CalendarDays className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Age</Label>
+          <Input 
+            id="age" 
+            type="number" 
+            value={age} 
+            onChange={(e) => setAge(e.target.value)} 
             placeholder="25"
             min="16"
             max="100"
@@ -577,74 +588,62 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
           />
         </div>
         <div className="space-y-1">
-          <Label
-            htmlFor="city"
-            className="flex items-center dark:text-gray-300"
-          >
-            <MapPin className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            City
-          </Label>
-          <Input
-            id="city"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Amman"
+          <Label htmlFor="city" className="flex items-center dark:text-gray-300"><MapPin className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>City</Label>
+          <Input 
+            id="city" 
+            value={city} 
+            onChange={(e) => setCity(e.target.value)} 
+            placeholder="Amman" 
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
           />
         </div>
         <div className="space-y-1">
-          <Label
-            htmlFor="phoneNumber"
-            className="flex items-center dark:text-gray-300"
-          >
-            <Phone className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Phone Number
-          </Label>
-          <Input
-            id="phoneNumber"
-            type="tel"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            placeholder="+962790123456"
+          <Label htmlFor="favoritePosition" className="flex items-center dark:text-gray-300"><Shirt className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Preferred Position</Label>
+          <Input 
+            id="favoritePosition" 
+            value={favoritePosition} 
+            onChange={(e) => setFavoritePosition(e.target.value)} 
+            placeholder="Midfielder" 
+            className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+            disabled={isProcessing}
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="phoneNumber" className="flex items-center dark:text-gray-300"><Phone className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Phone Number</Label>
+          <Input 
+            id="phoneNumber" 
+            type="tel" 
+            value={phoneNumber} 
+            onChange={(e) => setPhoneNumber(e.target.value)} 
+            placeholder="+962790123456" 
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
           />
         </div>
         <div className="space-y-1 md:col-span-2">
-          <Label
-            htmlFor="email-signup"
-            className="flex items-center dark:text-gray-300"
-          >
-            <AtSign className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Email
-          </Label>
-          <Input
-            id="email-signup"
-            type="email"
-            value={signUpEmail}
-            onChange={(e) => setSignUpEmail(e.target.value)}
-            placeholder="ahmad.naser@example.com"
+          <Label htmlFor="email-signup" className="flex items-center dark:text-gray-300"><AtSign className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Email</Label>
+          <Input 
+            id="email-signup" 
+            type="email" 
+            value={signUpEmail} 
+            onChange={(e) => setSignUpEmail(e.target.value)} 
+            placeholder="ahmad.naser@example.com" 
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
           />
         </div>
         <div className="space-y-1">
-          <Label
-            htmlFor="password-signup"
-            className="flex items-center dark:text-gray-300"
-          >
-            <KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Password
-          </Label>
-          <Input
-            id="password-signup"
-            type="password"
-            value={signUpPassword}
-            onChange={(e) => setSignUpPassword(e.target.value)}
+          <Label htmlFor="password-signup" className="flex items-center dark:text-gray-300"><KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Password</Label>
+          <Input 
+            id="password-signup" 
+            type="password" 
+            value={signUpPassword} 
+            onChange={(e) => setSignUpPassword(e.target.value)} 
             placeholder="••••••••"
             minLength={6}
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
@@ -653,46 +652,47 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
           />
         </div>
         <div className="space-y-1">
-          <Label
-            htmlFor="confirmPassword"
-            className="flex items-center dark:text-gray-300"
-          >
-            <KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            Confirm Password
-          </Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+          <Label htmlFor="confirmPassword" className="flex items-center dark:text-gray-300"><KeyRound className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Confirm Password</Label>
+          <Input 
+            id="confirmPassword" 
+            type="password" 
+            value={confirmPassword} 
+            onChange={(e) => setConfirmPassword(e.target.value)} 
             placeholder="••••••••"
             minLength={6}
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
             required
+          />
+        </div>
+        <div className="space-y-1 md:col-span-2">
+          <Label htmlFor="bio" className="flex items-center dark:text-gray-300"><Users className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400"/>Bio (Optional)</Label>
+          <Input 
+            id="bio" 
+            value={bio} 
+            onChange={(e) => setBio(e.target.value)} 
+            placeholder="I love football and play every weekend." 
+            className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+            disabled={isProcessing}
           />
         </div>
       </div>
       <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center mt-4">
-        <Button
-          type="button"
-          variant="link"
-          onClick={() => toggleFormType("login")}
+        <Button 
+          type="button" 
+          variant="link" 
+          onClick={() => toggleFormType('login')} 
           className="p-0 h-auto text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
           disabled={isProcessing}
         >
           Already have an account? Login
         </Button>
-        <Button
-          type="submit"
+        <Button 
+          type="submit" 
           className="bg-bokit-500 hover:bg-bokit-600 text-white mt-2 sm:mt-0 dark:bg-blue-600 dark:hover:bg-blue-700"
           disabled={isProcessing}
         >
-          {isProcessing ? (
-            <Loader className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <UserPlus className="mr-2 h-4 w-4" />
-          )}
+          {isProcessing ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
           {isProcessing ? "Creating Account..." : "Sign Up"}
         </Button>
       </DialogFooter>
@@ -702,7 +702,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out bg-white dark:bg-gray-800 border dark:border-gray-700">
-        {formType === "login" ? renderLoginForm() : renderSignUpForm()}
+        {formType === 'login' ? renderLoginForm() : renderSignUpForm()}
       </DialogContent>
     </Dialog>
   );

@@ -1,369 +1,321 @@
 
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CalendarIcon, ImagePlus, Clock, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { useReservation, Pitch } from "@/context/ReservationContext";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
-
-// Zod schema for form validation
-const formSchema = z.object({
-  pitch: z.string().min(1, "Please select a pitch"),
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  time: z.string({
-    required_error: "Please select a time slot",
-  }),
-  location: z.string().min(2, "Location must be at least 2 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-  maxPlayers: z.string().min(1, "Please select max players"),
-  price: z.number().min(1, "Price is required"),
-  image: z.string().url("Must be a valid URL").optional(),
-  duration: z.string().optional(),
-});
+import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
- * AddReservationDialog component
- * Allows admins to add a new game reservation
+ * AddReservationDialog Component
+ * Dialog for creating new game reservations
  */
-const AddReservationDialog: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
+const AddReservationDialog = () => {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [title, setTitle] = useState("");
+  const [pitchName, setPitchName] = useState("");
+  const [time, setTime] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState<string>("10");
+  const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [price, setPrice] = useState<string>("");
+  const [description, setDescription] = useState("");
+  
   const { addReservation, pitches } = useReservation();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { toast } = useToast();
 
-  // Initialize react-hook-form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      pitch: "",
-      title: "",
-      date: new Date(),
-      time: "17:00 - 18:30",
-      location: "",
-      city: "",
-      maxPlayers: "10",
-      price: 25,
-      image: "",
-      duration: "90 minutes",
-    },
-  });
-
+  // Reset form when dialog closes
   useEffect(() => {
-    // Load user data from localStorage
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setCurrentUser(userData);
-      } catch (e) {
-        console.error("Error parsing user data:", e);
-        toast({
-          title: "Error",
-          description: "Could not load user profile data",
-          variant: "destructive",
-        });
-      }
+    if (!open) {
+      setTimeout(() => {
+        setDate(undefined);
+        setTitle("");
+        setPitchName("");
+        setTime("");
+        setMaxPlayers("10");
+        setLocation("");
+        setCity("");
+        setPrice("");
+        setDescription("");
+      }, 200);
     }
-  }, [toast]);
+  }, [open]);
 
-  const handleOpen = () => setIsOpen(true);
-  const handleClose = () => setIsOpen(false);
+  // Time slots for the select dropdown
+  const timeSlots = [
+    "08:00 - 09:30", "09:30 - 11:00", "11:00 - 12:30",
+    "12:30 - 14:00", "14:00 - 15:30", "15:30 - 17:00",
+    "17:00 - 18:30", "18:30 - 20:00", "20:00 - 21:30",
+    "21:30 - 23:00"
+  ];
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!currentUser) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!date || !pitchName || !time || !maxPlayers) {
       toast({
-        title: "Error",
-        description: "You must be logged in to create a reservation",
+        title: "Missing Fields",
+        description: "Please fill all required fields.",
         variant: "destructive"
       });
       return;
     }
-
-    // Add the new reservation
-    addReservation({
-      pitchId: parseInt(values.pitch, 10), // Make sure pitchId is properly set
-      pitchName: pitches.find(p => p.id === parseInt(values.pitch, 10))?.name || values.title,
-      title: values.title,
-      date: values.date.toISOString().split('T')[0],
-      time: values.time,
-      location: values.location,
-      city: values.city,
-      maxPlayers: parseInt(values.maxPlayers, 10),
-      price: values.price,
-      imageUrl: values.image,
-      duration: values.duration,
-      lineup: [{
-        userId: currentUser.id,
-        playerName: `${currentUser.firstName} ${currentUser.lastName}`,
-        joinedAt: new Date().toISOString(),
-        status: 'confirmed'
-      }]
-    });
     
-    // Close the dialog and show a success message
-    setIsOpen(false);
-    toast({
-      title: "Success",
-      description: "Reservation created successfully",
-    });
+    // Find the selected pitch to get additional details
+    const selectedPitch = pitches.find(p => p.name === pitchName);
+    if (!selectedPitch && pitchName) {
+      toast({
+        title: "Invalid Pitch",
+        description: "The selected pitch does not exist.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create the reservation data object
+    const reservationData = {
+      title: title || `${pitchName} Game`,
+      pitchName,
+      date: format(date, 'yyyy-MM-dd'),
+      time,
+      location: location || selectedPitch?.location,
+      city: city || selectedPitch?.city,
+      maxPlayers: parseInt(maxPlayers),
+      price: price ? parseFloat(price) : selectedPitch?.price,
+      imageUrl: selectedPitch?.image,
+      description: description // Pass description to the context
+    };
+    
+    // Add the reservation
+    const newReservation = addReservation(reservationData);
+    
+    if (newReservation) {
+      toast({
+        title: "Success!",
+        description: "Reservation created successfully.",
+      });
+      setOpen(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "A reservation for this pitch at this time already exists or the pitch doesn't exist.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
-    <>
-      <Button onClick={handleOpen} className="bg-[#0F766E] hover:bg-[#0d6d66]">
-        <Plus className="mr-2 h-4 w-4" />
-        Add Reservation
-      </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Reservation
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">Create New Reservation</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* Title Input */}
+          <div className="space-y-2">
+            <label htmlFor="title" className="text-sm font-medium">
+              Title (optional)
+            </label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Game title (defaults to pitch name if empty)"
+            />
+          </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-850">
-          <DialogHeader>
-            <DialogTitle className="text-[#0F766E] dark:text-teal-400">Add New Reservation</DialogTitle>
-            <DialogDescription>
-              Schedule a new game on one of our pitches.
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="pitch"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pitch</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
-                          <SelectValue placeholder="Select a pitch" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="dark:bg-gray-800">
-                        {pitches.map((pitch) => (
-                          <SelectItem key={pitch.id} value={String(pitch.id)}>
-                            {pitch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Game Title" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 dark:bg-gray-800" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Time</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
-                          <SelectValue placeholder="Select time slot" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="dark:bg-gray-800">
-                        <SelectItem value="17:00 - 18:30">17:00 - 18:30</SelectItem>
-                        <SelectItem value="18:30 - 20:00">18:30 - 20:00</SelectItem>
-                        <SelectItem value="20:00 - 21:30">20:00 - 21:30</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter location" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter city" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="maxPlayers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Max Players</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100">
-                            <SelectValue placeholder="Select size" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="dark:bg-gray-800">
-                          <SelectItem value="10">5v5 (10 players)</SelectItem>
-                          <SelectItem value="14">7v7 (14 players)</SelectItem>
-                          <SelectItem value="22">11v11 (22 players)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+          {/* Pitch Name Select */}
+          <div className="space-y-2">
+            <label htmlFor="pitchName" className="text-sm font-medium">
+              Pitch*
+            </label>
+            <Select
+              value={pitchName}
+              onValueChange={setPitchName}
+            >
+              <SelectTrigger id="pitchName" className="w-full">
+                <SelectValue placeholder="Select a pitch" />
+              </SelectTrigger>
+              <SelectContent>
+                {pitches.map((pitch) => (
+                  <SelectItem key={pitch.id} value={pitch.name}>
+                    {pitch.name} ({pitch.playersPerSide}v{pitch.playersPerSide})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Date Picker */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Date*</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
                   )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : "Select a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price per Player</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="25" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="image"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter image URL" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          {/* Time Select */}
+          <div className="space-y-2">
+            <label htmlFor="time" className="text-sm font-medium">
+              Time Slot*
+            </label>
+            <Select
+              value={time}
+              onValueChange={setTime}
+            >
+              <SelectTrigger id="time" className="w-full">
+                <SelectValue placeholder="Select a time" />
+              </SelectTrigger>
+              <SelectContent>
+                {timeSlots.map((slot) => (
+                  <SelectItem key={slot} value={slot}>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {slot}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Max Players Select */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="maxPlayers" className="text-sm font-medium">
+                Game Format*
+              </label>
+              <Select
+                value={maxPlayers}
+                onValueChange={setMaxPlayers}
+              >
+                <SelectTrigger id="maxPlayers" className="w-full">
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">2v2</SelectItem>
+                  <SelectItem value="6">3v3</SelectItem>
+                  <SelectItem value="8">4v4</SelectItem>
+                  <SelectItem value="10">5v5</SelectItem>
+                  <SelectItem value="12">6v6</SelectItem>
+                  <SelectItem value="14">7v7</SelectItem>
+                  <SelectItem value="22">11v11</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Price Input - Optional */}
+            <div className="space-y-2">
+              <label htmlFor="price" className="text-sm font-medium">
+                Price Per Player
+              </label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g., 10"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
               />
-
-              <FormField
-                control={form.control}
-                name="duration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter duration" {...field} className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+          </div>
+          
+          {/* Location Information - Optional */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="city" className="text-sm font-medium">
+                City
+              </label>
+              <Input
+                id="city"
+                placeholder="e.g., New York"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                From pitch if empty
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="location" className="text-sm font-medium">
+                Location
+              </label>
+              <Input
+                id="location"
+                placeholder="e.g., Central Park"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                From pitch if empty
+              </p>
+            </div>
+          </div>
+          
+          {/* Description - Optional */}
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium">
+              Description
+            </label>
+            <Textarea
+              id="description"
+              placeholder="Add any additional details about the game..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="resize-y min-h-[100px]"
+            />
+          </div>
 
-              <Button type="submit" className="bg-[#0F766E] hover:bg-[#0d6d66] text-white dark:bg-teal-600 dark:hover:bg-teal-700">
-                Create Reservation
-              </Button>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </>
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Create Reservation
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

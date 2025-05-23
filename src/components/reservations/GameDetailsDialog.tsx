@@ -1,178 +1,213 @@
+
 import React from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Calendar, Clock, MapPin, Users, BadgePlus } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { Button } from "@/components/ui/button";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { useReservation, Reservation } from "@/context/ReservationContext";
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { format, parseISO } from "date-fns";
+import { MapPin, Calendar, Clock, Users, X, ExternalLink } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Reservation } from "@/context/ReservationContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface GameDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   reservation: Reservation;
   isAdmin?: boolean;
-  onStatusChange?: (status: Reservation['status']) => void;
+  onStatusChange?: (status: 'open' | 'full' | 'completed' | 'cancelled') => void;
   currentUserId: string;
   actualMaxPlayers: number;
+  showAdminControls?: boolean;
 }
 
 /**
  * GameDetailsDialog component
- * Shows detailed information about a specific game reservation
+ * Displays detailed information about a game reservation
  */
 const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   isOpen,
   onClose,
   reservation,
   isAdmin = false,
-  onStatusChange,
   currentUserId,
-  actualMaxPlayers
+  actualMaxPlayers,
+  showAdminControls = false
 }) => {
-  const { toast } = useToast();
-  const { updateReservationStatus } = useReservation();
+  const formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
+  const joinedPlayers = reservation.lineup.filter(p => p.status === 'joined');
 
-  // Format date for display
-  const formatDate = (dateString: string): string => {
-    try {
-      return format(parseISO(dateString), 'EEE, MMM d, yyyy');
-    } catch (error) {
-      console.error("Error formatting date:", dateString, error);
-      return dateString;
-    }
-  };
-
-  // Filter players by status (joined, waiting)
-  const confirmedPlayers = reservation.lineup?.filter(
-    (player) => player.status === 'confirmed'
-  ) || [];
-  
-  const waitingListPlayers = reservation.waitingList || [];
-
-  // Handle status change
-  const handleStatusChange = (status: Reservation['status']) => {
-    if (onStatusChange) {
-      onStatusChange(status);
-      toast({
-        title: "Status Updated",
-        description: `Reservation status updated to ${status}`,
-      });
-    }
+  // Get initials from player name
+  const getInitials = (name?: string) => {
+    if (!name) return "?";
+    const names = name.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-lg">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center justify-between">
-            {reservation.title || reservation.pitchName}
-            <Badge 
-              className={cn(
-                "text-xs",
-                reservation.status === 'open' 
-                  ? "bg-green-500" 
-                  : reservation.status === 'full' 
-                  ? "bg-orange-500" 
-                  : "bg-gray-500"
-              )}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl">
+              {reservation.title || reservation.pitchName}
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={onClose}
             >
-              {reservation.status}
-            </Badge>
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            <div className="space-y-3">
-              {/* Date and Time */}
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <Calendar className="h-4 w-4 mr-2" />
-                {formatDate(reservation.date)} at {reservation.time}
-              </div>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <DialogDescription className="mt-2">
+            Game details and players
+          </DialogDescription>
+        </DialogHeader>
 
-              {/* Location link */}
-              {reservation.location && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-teal-600 dark:hover:text-teal-400 underline"
-                  >
-                    {reservation.location}
-                  </a>
-                </div>
-              )}
+        {/* Game image */}
+        <div className="relative h-48 w-full">
+          <img
+            src={reservation.imageUrl || `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`}
+            alt={reservation.pitchName}
+            className="h-full w-full object-cover"
+          />
+        </div>
 
-              {/* Players Joined */}
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <Users className="h-4 w-4 mr-2" />
-                {confirmedPlayers.length}/{actualMaxPlayers} Players Joined
-              </div>
-
-              {/* Player List */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Players:</h4>
-                <ul className="list-disc list-inside text-sm text-gray-500 dark:text-gray-400">
-                  {confirmedPlayers.map((player) => (
-                    <li key={player.userId}>{player.playerName || player.userId}</li>
-                  ))}
-                  {confirmedPlayers.length === 0 && (
-                    <li className="text-gray-400">No players have joined yet</li>
-                  )}
-                </ul>
-              </div>
-              
-              {/* Waiting List */}
-              {waitingListPlayers.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Waiting List:</h4>
-                  <ul className="list-disc list-inside text-sm text-gray-500 dark:text-gray-400">
-                    {waitingListPlayers.map((userId) => (
-                      <li key={userId}>{userId}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Admin Controls */}
-              {isAdmin && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Admin Controls:</h4>
-                  <div className="flex items-center space-x-3">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Change Status:</p>
-                    <Select onValueChange={handleStatusChange} defaultValue={reservation.status}>
-                      <SelectTrigger className="text-sm">
-                        <SelectValue placeholder={reservation.status} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="full">Full</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
+        <div className="p-6">
+          {/* Game details */}
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-lg">Game Information</h3>
+              <Badge className={`${
+                reservation.status === 'open' ? 'bg-green-500' : 
+                reservation.status === 'full' ? 'bg-amber-500' :
+                reservation.status === 'completed' ? 'bg-blue-500' :
+                'bg-red-500'
+              }`}>
+                {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+              </Badge>
             </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Close</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{formattedDate}</span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{reservation.time}</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{`${reservation.playersJoined}/${actualMaxPlayers} players`}</span>
+              </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                <div className="flex flex-col">
+                  <span>{reservation.city || reservation.location}</span>
+                  {reservation.locationLink && (
+                    <a 
+                      href={reservation.locationLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline flex items-center text-xs"
+                    >
+                      View on Maps <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center mt-1 text-sm">
+              <span className="font-medium mr-1">Price:</span>
+              <span>${reservation.price} per player</span>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          {/* Players tab */}
+          <Tabs defaultValue="players">
+            <TabsList className="mb-4">
+              <TabsTrigger value="players">Players</TabsTrigger>
+              <TabsTrigger value="waiting">Waiting List ({reservation.waitingList.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="players">
+              <h3 className="text-sm font-medium mb-2">Joined Players ({joinedPlayers.length}/{actualMaxPlayers})</h3>
+              <ScrollArea className="h-[200px] border rounded-md p-2">
+                {joinedPlayers.length > 0 ? (
+                  <div className="space-y-2">
+                    {joinedPlayers.map((player, index) => (
+                      <div key={player.userId || index} className="flex items-center justify-between p-2 rounded-md bg-muted/40">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            <AvatarFallback>{getInitials(player.playerName)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{player.playerName || `Player ${player.userId.substring(0, 4)}`}</p>
+                            {player.joinedAt && (
+                              <p className="text-xs text-muted-foreground">
+                                Joined: {format(new Date(player.joinedAt), "MMM d, h:mm a")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isAdmin && player.userId === currentUserId && (
+                          <Badge className="bg-blue-500">You</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-8">No players have joined yet.</p>
+                )}
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="waiting">
+              <h3 className="text-sm font-medium mb-2">Waiting List ({reservation.waitingList.length})</h3>
+              <ScrollArea className="h-[200px] border rounded-md p-2">
+                {reservation.waitingList.length > 0 ? (
+                  <div className="space-y-2">
+                    {reservation.waitingList.map((userId, index) => (
+                      <div key={userId} className="flex items-center justify-between p-2 rounded-md bg-muted/40">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            <AvatarFallback>{(index + 1).toString()}</AvatarFallback>
+                          </Avatar>
+                          <p className="text-sm font-medium">
+                            {`Player ${userId.substring(0, 6)}`}
+                          </p>
+                        </div>
+                        
+                        {userId === currentUserId && (
+                          <Badge variant="outline" className="border-amber-500 text-amber-500">You</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-8">The waiting list is empty.</p>
+                )}
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -21,7 +21,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
   const [highlightType, setHighlightType] = useState<HighlightType>("goal");
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
-  const [minute, setMinute] = useState<number>(1);
+  const [minute, setMinute] = useState<string>("1");
   const [description, setDescription] = useState<string>("");
   const [availablePlayers, setAvailablePlayers] = useState<{id: string, name: string}[]>([]);
   
@@ -33,7 +33,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     if (reservation && reservation.lineup) {
       // Extract player names and IDs from lineup
       const players = reservation.lineup
-        .filter(player => player.status === 'confirmed' && player.playerName)
+        .filter(player => player.status === 'joined' && player.playerName)
         .map(player => ({
           id: player.userId || `player-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is never empty
           name: player.playerName || `Player ${player.userId}`
@@ -61,7 +61,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     e.preventDefault();
     
     // Validate minute is a number between 1-90
-    const minuteNum = parseInt(minute.toString());
+    const minuteNum = parseInt(minute);
     if (isNaN(minuteNum) || minuteNum < 1 || minuteNum > 90) {
       toast({
         title: "Invalid minute",
@@ -73,7 +73,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
     
     // Create highlight object
     const highlight: Highlight = {
-      id: Date.now().toString(),
+      id: Date.now(),
       type: highlightType,
       playerName: playerName,
       minute: minuteNum,
@@ -141,7 +141,7 @@ const HighlightForm = ({ reservationId, onSave, onCancel }: HighlightFormProps) 
           min="1" 
           max="90" 
           value={minute}
-          onChange={(e) => setMinute(parseInt(e.target.value) || 1)}
+          onChange={(e) => setMinute(e.target.value)}
           placeholder="Minute"
         />
       </div>

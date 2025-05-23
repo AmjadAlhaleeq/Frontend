@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,12 @@ import axios from "axios";
 /**
  * Player Profile Page Component
  * Displays user information, statistics, and achievements
+ * 
+ * Includes:
+ * - Basic user information
+ * - Player statistics
+ * - Badges and achievements
+ * - Profile editing functionality
  */
 const Profile = () => {
   const navigate = useNavigate();
@@ -53,6 +60,7 @@ const Profile = () => {
                   lastName: user.lastName,
                   age: user.age.toString(),
                   city: user.city,
+                  position: user.preferredPosition || "",
                   phoneNumber: user.phone,
                   avatarUrl: user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`
                 };
@@ -109,15 +117,16 @@ const Profile = () => {
       if (authToken) {
         try {
           // Extract just the fields we want to update
-          const { firstName, lastName, age, city, phoneNumber } = updatedData;
+          const { firstName, lastName, age, city, position, phoneNumber, bio } = updatedData;
           
           await axios.put("/users/profile", {
             firstName,
             lastName,
             age: Number(age),
             city,
+            preferredPosition: position, 
             phone: phoneNumber,
-            bio: `Football player from ${city}`
+            bio: bio || `Football player from ${city}`
           }, {
             headers: { Authorization: `Bearer ${authToken}` }
           });
@@ -154,19 +163,19 @@ const Profile = () => {
     { 
       title: "Goal Scorer",
       icon: <BadgePlus className="h-6 w-6 text-amber-500" />,
-      earned: userStats.goals >= 5,
+      earned: userStats.goalsScored >= 5,
       description: "Score 5 or more goals"
     },
     { 
       title: "MVP Star",
       icon: <Trophy className="h-6 w-6 text-amber-500" />,
-      earned: userStats.mvp >= 3,
+      earned: userStats.mvps >= 3,
       description: "Receive 3 or more MVP awards"
     },
     { 
       title: "Team Player",
       icon: <Award className="h-6 w-6 text-amber-500" />,
-      earned: userStats.matches >= 10,
+      earned: userStats.gamesPlayed >= 10,
       description: "Play in 10 or more games"
     },
   ];
@@ -268,6 +277,10 @@ const Profile = () => {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">City:</span>
                       <span className="font-medium">{currentUser.city || "Not specified"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Preferred position:</span>
+                      <span className="font-medium">{currentUser.position || "Not specified"}</span>
                     </div>
                   </div>
                   

@@ -1,63 +1,40 @@
+
 import React, { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  CalendarDays,
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Users,
-  UserPlus,
-  UserMinus,
-  ExternalLink,
-  FileText,
-  Eye,
-  Trash2,
-  Trophy,
-  AlertTriangle,
-  AlertCircle,
-  Loader,
-} from "lucide-react";
-import { format, parseISO, isAfter, isBefore, addHours } from "date-fns";
-import { Separator } from "@/components/ui/separator";
-import { Reservation } from "@/context/ReservationContext";
-import JoinGameConfirmationDialog from "@/components/reservations/JoinGameConfirmationDialog";
-import LeaveGameDialog from "@/components/reservations/LeaveGameDialog";
-import WaitlistConfirmationDialog from "@/components/reservations/WaitlistConfirmationDialog";
-import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
-import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { Reservation } from "@/context/ReservationContext";
+import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
+import SuspendPlayerDialog from "@/components/reservations/SuspendPlayerDialog";
+import { sendGameCancellationNotification, sendWaitingListNotification } from "@/utils/emailNotifications";
+import JoinGameConfirmationDialog from "./JoinGameConfirmationDialog";
+import LeaveGameDialog from "./LeaveGameDialog";
+import WaitlistConfirmationDialog from "./WaitlistConfirmationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
-  type: "upcoming" | "past";
+  type: "upcoming" | "past" | "admin";
   onJoinGame: () => void;
   onCancelReservation: () => void;
   onJoinWaitingList: () => void;
   onLeaveWaitingList: () => void;
   isUserJoined: boolean;
   isUserOnWaitingList: boolean;
-  hasUserJoinedOnDate: (dateString: string) => boolean;
+  hasUserJoinedOnDate: (date: string) => boolean;
   currentUserId: string;
-  isAdmin: boolean;
+  isAdmin?: boolean;
   onDeleteReservation?: (id: number) => void;
-  onAddSummary?: (reservation: Reservation) => void;
-  hasSummary?: boolean;
-  showWaitlist?: boolean;
 }
 
 /**
- * ReservationCard component for displaying a game reservation in the list
+ * ReservationCard component
+ * Displays details about a game reservation with actions based on user role
  */
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
@@ -70,512 +47,649 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   isUserOnWaitingList,
   hasUserJoinedOnDate,
   currentUserId,
-  isAdmin,
-  onDeleteReservation,
-  onAddSummary,
-  hasSummary,
-  showWaitlist = false,
+  isAdmin = false,
+  onDeleteReservation
 }) => {
-  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
-  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
-  const [isJoinWaitlistDialogOpen, setIsJoinWaitlistDialogOpen] = useState(false);
-  const [isLeaveWaitlistDialogOpen, setIsLeaveWaitlistDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const [isJoining, setIsJoining] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [isWaitlistJoining, setIsWaitlistJoining] = useState(false);
+  const [isWaitlistLeaving, setIsWaitlistLeaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [selectedPlayerName, setSelectedPlayerName] = useState<string>("");
+  const [selectedPlayerEmail, setSelectedPlayerEmail] = useState<string>("");
+  
+  // Dialog states
+  const [showJoinGameDialog, setShowJoinGameDialog] = useState(false);
+  const [showLeaveGameDialog, setShowLeaveGameDialog] = useState(false);
+  const [showJoinWaitlistDialog, setShowJoinWaitlistDialog] = useState(false);
+  const [showLeaveWaitlistDialog, setShowLeaveWaitlistDialog] = useState(false);
 
-  // Format dates and calculate time remaining
-  const formatDate = (dateString: string, includeWeekday = false) => {
+  // Format date with error handling
+  const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), includeWeekday ? 'EEEE, MMMM d' : 'MMMM d');
+      return format(parseISO(dateString), 'EEEE, MMMM d, yyyy');
     } catch (error) {
-      console.error("Error formatting date:", error);
+      console.error("Error parsing date:", error);
       return dateString;
     }
   };
-
-  // Parse the date and time strings to create a full Date object
-  const getGameDateTime = (): Date => {
+  
+  // Calculate if leaving game incurs a penalty (within 2 hours of start)
+  const isPenalty = () => {
     try {
-      // Extract hour and minute from time string (e.g., "14:30" -> 14, 30)
-      const [hour, minute] = reservation.time.split(':').map(Number);
+      // Parse date and time
       const gameDate = parseISO(reservation.date);
-      return new Date(
-        gameDate.getFullYear(),
-        gameDate.getMonth(),
-        gameDate.getDate(),
-        hour,
-        minute || 0
-      );
-    } catch (error) {
-      console.error("Error parsing game date and time:", error);
-      return new Date(); // Fallback to current time
-    }
-  };
-
-  // Check if the game is within 2 hours
-  const isWithinTwoHours = (): boolean => {
-    const gameDateTime = getGameDateTime();
-    const twoHoursBefore = addHours(new Date(), -2);
-    return isAfter(gameDateTime, new Date()) && isBefore(gameDateTime, twoHoursBefore);
-  };
-
-  // Calculate time remaining until game
-  const getTimeRemaining = (): string => {
-    try {
-      const gameDateTime = getGameDateTime();
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
       const now = new Date();
+      const hoursDifference = differenceInHours(gameDate, now);
       
-      if (isAfter(now, gameDateTime)) {
-        return "Game has started";
-      }
-
-      const diffMs = gameDateTime.getTime() - now.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      
-      if (diffHours > 24) {
-        const diffDays = Math.floor(diffHours / 24);
-        return `${diffDays} day${diffDays !== 1 ? 's' : ''} remaining`;
-      }
-      
-      return `${diffHours}h ${diffMinutes}m remaining`;
+      return hoursDifference < 2 && hoursDifference >= 0;
     } catch (error) {
-      console.error("Error calculating time remaining:", error);
-      return "Time unknown";
-    }
-  };
-
-  // Check if user has already joined a game on the same date
-  const hasConflict = !isUserJoined && 
-    !isAdmin && 
-    currentUserId && 
-    hasUserJoinedOnDate(reservation.date);
-
-  // Calculate the waitlist position if user is on waitlist
-  const getWaitlistPosition = (): number | null => {
-    if (!isUserOnWaitingList || !reservation.waitingList) return null;
-    return reservation.waitingList.indexOf(currentUserId) + 1;
-  };
-  
-  // Get color based on reservation status
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "open": return "bg-green-500 hover:bg-green-600";
-      case "full": return "bg-amber-500 hover:bg-amber-600";
-      case "completed": return "bg-blue-500 hover:bg-blue-600";
-      case "cancelled": return "bg-red-500 hover:bg-red-600";
-      default: return "bg-gray-500 hover:bg-gray-600";
+      console.error("Error calculating penalty:", error);
+      return false;
     }
   };
   
-  const handleViewDetails = () => {
-    navigate(`/reservation/${reservation.id}`);
-  };
-  
-  const handleDeleteReservation = async () => {
-    if (!onDeleteReservation) return;
-    
-    setIsProcessing(true);
-    
+  // Calculate time remaining until game
+  const getTimeToGame = () => {
     try {
-      onDeleteReservation(reservation.id);
-      toast({
-        title: "Reservation Deleted",
-        description: `"${reservation.title || reservation.pitchName}" has been deleted.`
-      });
+      // Parse date and time
+      const gameDate = parseISO(reservation.date);
+      const [hours, minutes] = reservation.time.split(':').map(Number);
+      
+      // Set time for the game
+      gameDate.setHours(hours || 0);
+      gameDate.setMinutes(minutes || 0);
+      
+      // Check if game is within 2 hours
+      const now = new Date();
+      return formatDistanceToNow(gameDate);
     } catch (error) {
+      console.error("Error calculating time to game:", error);
+      return "unknown time";
+    }
+  };
+
+  // Handle joining a game
+  const handleJoinGame = () => {
+    if (!currentUserId) {
       toast({
-        title: "Error",
-        description: "Failed to delete reservation.",
+        title: "Login Required",
+        description: "Please log in to join a game.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (hasUserJoinedOnDate(reservation.date) && !isUserJoined) {
+      toast({
+        title: "Already joined a game on this date",
+        description: "You can only join one game per day",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessing(false);
-      setIsDeleteDialogOpen(false);
+      return;
     }
+
+    // Show confirmation dialog
+    setShowJoinGameDialog(true);
   };
   
-  const handleJoinGame = async () => {
-    setIsProcessing(true);
+  // Confirm joining game
+  const confirmJoinGame = async () => {
+    setIsJoining(true);
+    setShowJoinGameDialog(false);
+    
     try {
-      onJoinGame();
+      await onJoinGame();
       toast({
         title: "Success!",
-        description: "You've joined the game"
+        description: "You've joined the game",
       });
     } catch (error) {
+      console.error("Error joining game:", error);
       toast({
-        title: "Error",
-        description: "Failed to join game.",
+        title: "Failed to join",
+        description: "There was a problem joining the game",
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
-      setIsJoinDialogOpen(false);
-    }
-  };
-  
-  const handleLeaveGame = async () => {
-    setIsProcessing(true);
-    try {
-      onCancelReservation();
-      toast({
-        title: "Left Game",
-        description: "You've left the game"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to leave game.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-      setIsLeaveDialogOpen(false);
-    }
-  };
-  
-  const handleJoinWaitlist = async () => {
-    setIsProcessing(true);
-    try {
-      onJoinWaitingList();
-      toast({
-        title: "Joined Waitlist",
-        description: "You've been added to the waiting list"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to join waiting list.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-      setIsJoinWaitlistDialogOpen(false);
-    }
-  };
-  
-  const handleLeaveWaitlist = async () => {
-    setIsProcessing(true);
-    try {
-      onLeaveWaitingList();
-      toast({
-        title: "Left Waitlist",
-        description: "You've been removed from the waiting list"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to leave waiting list.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-      setIsLeaveWaitlistDialogOpen(false);
-    }
-  };
-  
-  const handleAddSummary = () => {
-    if (onAddSummary) {
-      onAddSummary(reservation);
+      setIsJoining(false);
     }
   };
 
-  const waitlistPosition = getWaitlistPosition();
-  const isPenalty = isWithinTwoHours();
-  const timeRemaining = getTimeRemaining();
+  // Handle leaving a game
+  const handleCancelReservation = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to leave this game.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Show confirmation dialog with penalty warning if applicable
+    setShowLeaveGameDialog(true);
+  };
+  
+  // Confirm leaving game
+  const confirmLeaveGame = async () => {
+    setIsLeaving(true);
+    setShowLeaveGameDialog(false);
+    
+    try {
+      await onCancelReservation();
+      
+      // If there are people on the waiting list, send notification
+      if (reservation.waitingList && reservation.waitingList.length > 0) {
+        // In a real app, you'd get the emails from user profiles
+        // For demo, we'll create dummy emails from user IDs
+        const waitingListEmails = reservation.waitingList.map(userId => {
+          // This is a dummy implementation - in real app, get actual emails
+          return `player-${userId}@example.com`;
+        });
+        
+        // Create join URL - in real app this would point to your app with appropriate params
+        const joinUrl = `${window.location.origin}/reservations?game=${reservation.id}&action=join`;
+        
+        // Send notification to waiting list
+        await sendWaitingListNotification(
+          {
+            id: reservation.id,
+            title: reservation.title || reservation.pitchName,
+            date: formatDate(reservation.date),
+            time: reservation.time,
+            location: reservation.location || ""
+          },
+          waitingListEmails,
+          joinUrl
+        );
+      }
+      
+      toast({
+        title: "Reservation cancelled",
+        description: "You've left the game",
+      });
+    } catch (error) {
+      console.error("Error leaving game:", error);
+      toast({
+        title: "Failed to leave",
+        description: "There was a problem cancelling your reservation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
+  // Handle joining waiting list
+  const handleJoinWaitingList = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Only allow joining waitlist if the game is full
+    if (reservation.status !== 'full') {
+      toast({
+        title: "Game not full",
+        description: "You can only join the waiting list when the game is full.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Max waiting list of 3 people
+    if (reservation.waitingList && reservation.waitingList.length >= 3) {
+      toast({
+        title: "Waiting List Full",
+        description: "The waiting list is limited to 3 players.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Show confirmation dialog
+    setShowJoinWaitlistDialog(true);
+  };
+  
+  // Confirm joining waitlist
+  const confirmJoinWaitlist = async () => {
+    setIsWaitlistJoining(true);
+    setShowJoinWaitlistDialog(false);
+    
+    try {
+      await onJoinWaitingList();
+      toast({
+        title: "Added to waiting list",
+        description: "You've been added to the waiting list",
+      });
+    } catch (error) {
+      console.error("Error joining waiting list:", error);
+      toast({
+        title: "Failed to join",
+        description: "There was a problem joining the waiting list",
+        variant: "destructive",
+      });
+    } finally {
+      setIsWaitlistJoining(false);
+    }
+  };
+
+  // Handle leaving waiting list
+  const handleLeaveWaitingList = () => {
+    if (!currentUserId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to leave the waiting list.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Show confirmation dialog
+    setShowLeaveWaitlistDialog(true);
+  };
+  
+  // Confirm leaving waitlist
+  const confirmLeaveWaitlist = async () => {
+    setIsWaitlistLeaving(true);
+    setShowLeaveWaitlistDialog(false);
+    
+    try {
+      await onLeaveWaitingList();
+      toast({
+        title: "Removed from waiting list",
+        description: "You've been removed from the waiting list",
+      });
+    } catch (error) {
+      console.error("Error leaving waiting list:", error);
+      toast({
+        title: "Failed to leave",
+        description: "There was a problem leaving the waiting list",
+        variant: "destructive",
+      });
+    } finally {
+      setIsWaitlistLeaving(false);
+    }
+  };
+
+  // Handle deleting a reservation (admin only)
+  const handleDeleteReservation = () => {
+    if (!onDeleteReservation) return;
+    
+    setShowDeleteDialog(true);
+  };
+  
+  // Confirm deleting reservation
+  const confirmDeleteReservation = async () => {
+    if (!onDeleteReservation) return;
+    
+    setIsDeleting(true);
+    try {
+      // Get emails for all players in the lineup
+      const playerEmails = reservation.lineup && reservation.lineup.map(player => {
+        // This is a dummy implementation - in real app, get actual emails
+        return `player-${player.userId}@example.com`;
+      });
+      
+      // Send cancellation emails
+      await sendGameCancellationNotification(
+        {
+          title: reservation.title || reservation.pitchName,
+          date: formatDate(reservation.date),
+          time: reservation.time,
+          location: reservation.location || ""
+        },
+        playerEmails
+      );
+      
+      // Delete the reservation
+      onDeleteReservation(reservation.id);
+      
+      toast({
+        title: "Reservation deleted",
+        description: "The reservation has been deleted and players notified",
+      });
+      
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error("Error deleting reservation:", error);
+      toast({
+        title: "Failed to delete",
+        description: "There was a problem deleting the reservation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Open suspend player dialog
+  const openSuspendDialog = (userId: string, playerName: string) => {
+    setSelectedPlayerId(userId);
+    setSelectedPlayerName(playerName || "Player");
+    // In a real app, get the actual email from user profile
+    setSelectedPlayerEmail(`player-${userId}@example.com`);
+    setShowSuspendDialog(true);
+  };
+
+  // Calculate percentage of players joined vs max players
+  const playerCountPercentage = Math.min(
+    Math.round((reservation.playersJoined / reservation.maxPlayers) * 100),
+    100
+  );
+
+  // Get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "open":
+        return "bg-green-500 hover:bg-green-600";
+      case "full":
+        return "bg-amber-500 hover:bg-amber-600";
+      case "completed":
+        return "bg-blue-500 hover:bg-blue-600";
+      case "cancelled":
+        return "bg-red-500 hover:bg-red-600";
+      default:
+        return "bg-gray-500 hover:bg-gray-600";
+    }
+  };
 
   return (
-    <>
-      <Card className="overflow-hidden transition hover:shadow-md">
-        <CardHeader className="p-4 pb-2">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <CardTitle className="flex items-start">
-                <span className="text-lg font-semibold line-clamp-1">
-                  {reservation.title || reservation.pitchName}
-                </span>
-              </CardTitle>
-              <CardDescription className="flex items-center">
-                <CalendarDays className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                {formatDate(reservation.date, true)}
-              </CardDescription>
-            </div>
-            <Badge className={getStatusColor(reservation.status)}>
-              {reservation.status}
-            </Badge>
+    <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-md">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl">
+              {reservation.title || reservation.pitchName}
+            </CardTitle>
+            <CardDescription>
+              {formatDate(reservation.date)}
+            </CardDescription>
           </div>
-        </CardHeader>
-        
-        <CardContent className="p-4 pt-2 space-y-2.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-gray-500" />
-              <span className="text-sm">{reservation.time}</span>
+          <Badge className={getStatusColor(reservation.status)}>{reservation.status}</Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pb-2">
+        <div className="space-y-3">
+          {/* Pitch image - smaller size for better UX */}
+          {reservation.imageUrl && (
+            <div className="aspect-video h-28 w-full rounded-md overflow-hidden mb-2">
+              <img 
+                src={reservation.imageUrl} 
+                alt={reservation.title || reservation.pitchName}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="flex items-center">
-              <Users className="h-4 w-4 mr-2 text-gray-500" />
-              <span className="text-sm">{reservation.playersJoined} / {reservation.maxPlayers} players</span>
-            </div>
-            {reservation.city && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm">{reservation.city}</span>
-              </div>
-            )}
-            {reservation.location && (
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-teal-600 dark:hover:text-teal-400 truncate"
-                >
-                  {reservation.location}
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* User status indicators */}
-          {(isUserJoined || isUserOnWaitingList || hasConflict) && (
-            <>
-              <Separator className="my-2" />
-              <div className="flex items-center">
-                {isUserJoined && (
-                  <div className="flex items-center text-green-600 dark:text-green-400 text-xs font-medium">
-                    <User className="h-3.5 w-3.5 mr-1.5" />
-                    You're in this game
-                  </div>
-                )}
-                {isUserOnWaitingList && (
-                  <div className="flex items-center text-amber-600 dark:text-amber-400 text-xs font-medium">
-                    <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
-                    Waitlist position: {waitlistPosition}
-                  </div>
-                )}
-                {hasConflict && !isUserJoined && !isUserOnWaitingList && (
-                  <div className="flex items-center text-amber-600 dark:text-amber-400 text-xs font-medium">
-                    <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                    You're already in another game on this date
-                  </div>
-                )}
-              </div>
-            </>
           )}
           
-          {/* Completed game summary teaser */}
-          {reservation.status === "completed" && reservation.summary && (
-            <>
-              <Separator className="my-2" />
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-md">
-                <div className="flex items-center text-blue-700 dark:text-blue-400 text-xs font-medium mb-1">
-                  <Trophy className="h-3.5 w-3.5 mr-1.5" />
-                  Game Summary
-                </div>
-                {reservation.summary.finalScore && (
-                  <div className="text-sm font-medium">Score: {reservation.summary.finalScore}</div>
-                )}
-              </div>
-            </>
-          )}
+          <div className="flex items-center text-sm">
+            <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+            <span>{reservation.time}</span>
+          </div>
           
-          {/* Waitlist indicator */}
-          {(showWaitlist || isAdmin) && reservation.waitingList && reservation.waitingList.length > 0 && (
-            <>
-              <Separator className="my-2" />
-              <div className="flex items-center text-amber-600 dark:text-amber-400 text-xs font-medium">
-                <Users className="h-3.5 w-3.5 mr-1.5" />
-                {reservation.waitingList.length} player{reservation.waitingList.length !== 1 ? 's' : ''} on waitlist
-              </div>
-            </>
-          )}
-        </CardContent>
-        
-        <CardFooter className="p-4 pt-2 flex flex-wrap gap-2">
-          {type === "upcoming" ? (
-            <>
-              {/* Button for joining a game */}
-              {!isUserJoined && reservation.status === "open" && !isAdmin && currentUserId && (
-                <Button 
-                  onClick={() => {
-                    if (hasConflict) {
-                      toast({
-                        title: "Schedule Conflict",
-                        description: "You already have a game on this date.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    setIsJoinDialogOpen(true);
-                  }}
-                  size="sm"
-                  disabled={hasConflict || isProcessing}
-                  className="bg-teal-600 hover:bg-teal-700 text-white"
-                >
-                  {isProcessing ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-1.5" />
-                      Join Game
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {/* Button for leaving a game */}
-              {isUserJoined && !isAdmin && (
-                <Button 
-                  onClick={() => setIsLeaveDialogOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="text-red-500 hover:text-red-600"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <UserMinus className="h-4 w-4 mr-1.5" />
-                      Leave Game
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {/* Button for joining waitlist */}
-              {!isUserJoined && !isUserOnWaitingList && reservation.status === "full" && !isAdmin && currentUserId && (
-                <Button 
-                  onClick={() => setIsJoinWaitlistDialogOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-400/50 dark:hover:bg-amber-900/20"
-                  disabled={hasConflict || isProcessing}
-                >
-                  {isProcessing ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Users className="h-4 w-4 mr-1.5" />
-                      Join Waitlist
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {/* Button for leaving waitlist */}
-              {isUserOnWaitingList && !isAdmin && (
-                <Button 
-                  onClick={() => setIsLeaveWaitlistDialogOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-400/50 dark:hover:bg-amber-900/20"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <UserMinus className="h-4 w-4 mr-1.5" />
-                      Leave Waitlist
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
-          ) : (
-            // Past game actions
-            isAdmin && !hasSummary && (
-              <Button
-                onClick={handleAddSummary}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+          <div className="flex items-center text-sm">
+            <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+            <span>{reservation.location || reservation.pitchName}</span>
+            {reservation.locationLink && (
+              <a 
+                href={reservation.locationLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-2 text-teal-600 hover:text-teal-700"
               >
-                <FileText className="h-4 w-4 mr-1.5" />
-                Add Summary
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          
+          <div className="flex items-center text-sm">
+            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+            <span>{reservation.city || "N/A"}</span>
+          </div>
+          
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>
+                  {reservation.playersJoined} / {reservation.maxPlayers} players
+                </span>
+              </div>
+              
+              <span className="text-xs text-muted-foreground">
+                {reservation.playersJoined === reservation.maxPlayers ? "Full" : 
+                  `${reservation.maxPlayers - reservation.playersJoined} spots left`}
+              </span>
+            </div>
+            <div className="w-full">
+              <Progress 
+                value={playerCountPercentage} 
+                className="h-1.5"
+              />
+            </div>
+          </div>
+          
+          {/* Only show waiting list for full games */}
+          {reservation.status === 'full' && reservation.waitingList && reservation.waitingList.length > 0 && (
+            <div className="flex items-center text-xs text-muted-foreground">
+              <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" />
+              <span>{reservation.waitingList.length} on waiting list</span>
+            </div>
+          )}
+          
+          {/* Player lineup (admin view) */}
+          {isAdmin && reservation.lineup && reservation.lineup.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h4 className="text-sm font-medium">Players:</h4>
+              <div className="flex flex-wrap gap-1">
+                {reservation.lineup.map((player) => (
+                  <TooltipProvider key={player.userId}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8 border border-muted">
+                            <AvatarFallback className="text-xs">
+                              {player.playerName?.substring(0, 2) || player.userId.substring(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-100 hover:bg-red-200 p-0"
+                              onClick={() => openSuspendDialog(player.userId, player.playerName || "Player")}
+                            >
+                              <Ban className="h-3 w-3 text-red-600" />
+                              <span className="sr-only">Suspend player</span>
+                            </Button>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-xs">
+                          <p className="font-medium">{player.playerName || "Player"}</p>
+                          <p className="text-muted-foreground">Status: {player.status}</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex justify-between pt-2">
+        {type === "upcoming" && !isAdmin && (
+          <>
+            {isUserJoined ? (
+              <Button 
+                variant="outline" 
+                className="w-full text-red-600 hover:text-red-700"
+                onClick={handleCancelReservation}
+                disabled={isLeaving}
+              >
+                {isLeaving ? (
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <UserMinus className="mr-2 h-4 w-4" />
+                )}
+                {isLeaving ? "Leaving..." : "Leave Game"}
               </Button>
-            )
-          )}
-          
-          {/* Common buttons for all types */}
+            ) : reservation.status === "full" ? (
+              isUserOnWaitingList ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleLeaveWaitingList}
+                  disabled={isWaitlistLeaving}
+                >
+                  {isWaitlistLeaving ? (
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserMinus className="mr-2 h-4 w-4" />
+                  )}
+                  {isWaitlistLeaving ? "Leaving..." : "Leave Waiting List"}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleJoinWaitingList}
+                  disabled={isWaitlistJoining}
+                >
+                  {isWaitlistJoining ? (
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="mr-2 h-4 w-4" />
+                  )}
+                  {isWaitlistJoining ? "Joining..." : "Join Waiting List"}
+                </Button>
+              )
+            ) : hasUserJoinedOnDate(reservation.date) && !isUserJoined ? (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                disabled={true}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Already Joined Game on This Date
+              </Button>
+            ) : (
+              <Button 
+                variant="default" 
+                className="w-full bg-teal-600 hover:bg-teal-700"
+                onClick={handleJoinGame}
+                disabled={isJoining}
+              >
+                {isJoining ? (
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="mr-2 h-4 w-4" />
+                )}
+                {isJoining ? "Joining..." : "Join Game"}
+              </Button>
+            )}
+          </>
+        )}
+        
+        {/* Admin delete button */}
+        {isAdmin && (
           <Button 
-            onClick={handleViewDetails}
-            size="sm"
-            variant="outline"
+            variant="outline" 
+            className="w-full text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+            onClick={handleDeleteReservation}
+            disabled={isDeleting}
           >
-            <Eye className="h-4 w-4 mr-1.5" />
-            View Details
+            {isDeleting ? (
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
+            {isDeleting ? "Deleting..." : "Delete Reservation"}
           </Button>
-          
-          {/* Admin delete button */}
-          {isAdmin && onDeleteReservation && (
-            <Button 
-              onClick={() => setShowDeleteDialog(true)}
-              size="sm"
-              variant="outline"
-              className="text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-1.5" />
-              Delete
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
+        )}
+      </CardFooter>
       
-      {/* Join Game Confirmation Dialog */}
-      <JoinGameConfirmationDialog
-        isOpen={isJoinDialogOpen}
-        onClose={() => setIsJoinDialogOpen(false)}
-        onConfirm={handleJoinGame}
+      {/* Dialogs */}
+      <JoinGameConfirmationDialog 
+        isOpen={showJoinGameDialog}
+        onClose={() => setShowJoinGameDialog(false)}
+        onConfirm={confirmJoinGame}
         gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date, true)}
+        gameDate={formatDate(reservation.date)}
         gameTime={reservation.time}
       />
       
-      {/* Leave Game Dialog */}
       <LeaveGameDialog 
-        isOpen={isLeaveDialogOpen}
-        onClose={() => setIsLeaveDialogOpen(false)}
-        onConfirm={handleLeaveGame}
+        isOpen={showLeaveGameDialog}
+        onClose={() => setShowLeaveGameDialog(false)}
+        onConfirm={confirmLeaveGame}
         gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date, true)}
+        gameDate={formatDate(reservation.date)}
         gameTime={reservation.time}
-        isPenalty={isPenalty}
-        timeToGame={timeRemaining}
+        isPenalty={isPenalty()}
+        timeToGame={getTimeToGame()}
       />
       
-      {/* Waitlist Confirmation Dialog */}
-      <WaitlistConfirmationDialog 
-        isOpen={isJoinWaitlistDialogOpen}
-        onClose={() => setIsJoinWaitlistDialogOpen(false)}
-        onConfirm={handleJoinWaitlist}
-        gameTitle={reservation.title || reservation.pitchName}
+      <WaitlistConfirmationDialog
+        isOpen={showJoinWaitlistDialog}
+        onClose={() => setShowJoinWaitlistDialog(false)}
+        onConfirm={confirmJoinWaitlist}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
         isJoining={true}
       />
       
-      {/* Leave Waitlist Confirmation Dialog */}
-      <WaitlistConfirmationDialog 
-        isOpen={isLeaveWaitlistDialogOpen}
-        onClose={() => setIsLeaveWaitlistDialogOpen(false)}
-        onConfirm={handleLeaveWaitlist}
-        gameTitle={reservation.title || reservation.pitchName}
+      <WaitlistConfirmationDialog
+        isOpen={showLeaveWaitlistDialog}
+        onClose={() => setShowLeaveWaitlistDialog(false)}
+        onConfirm={confirmLeaveWaitlist}
+        gameName={reservation.title || reservation.pitchName}
+        gameDate={formatDate(reservation.date)}
+        gameTime={reservation.time}
         isJoining={false}
       />
       
       {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog 
+      <DeleteConfirmationDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        onConfirm={handleDeleteReservation}
+        onConfirm={confirmDeleteReservation}
         itemName={reservation.title || reservation.pitchName}
         itemType="reservation"
       />
-    </>
+      
+      {/* Suspend Player Dialog */}
+      {showSuspendDialog && (
+        <SuspendPlayerDialog
+          isOpen={showSuspendDialog}
+          onClose={() => setShowSuspendDialog(false)}
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          playerEmail={selectedPlayerEmail}
+        />
+      )}
+    </Card>
   );
 };
 
