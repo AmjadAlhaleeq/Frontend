@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -73,11 +74,11 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="email" className="text-right text-sm font-medium leading-none text-gray-800 dark:text-gray-100 col-span-1">
+            <label htmlFor="target-reservation" className="text-right text-sm font-medium leading-none text-gray-800 dark:text-gray-100 col-span-1">
               Target Reservation
             </label>
-            <Select onValueChange={(value) => setTargetReservation(reservations.find(r => r.id === Number(value)) || null)} className="col-span-3">
-              <SelectTrigger>
+            <Select onValueChange={(value) => setTargetReservation(reservations.find(r => r.id === Number(value)) || null)}>
+              <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select a reservation to transfer to" />
               </SelectTrigger>
               <SelectContent>

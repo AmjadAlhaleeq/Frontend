@@ -39,24 +39,15 @@ export interface ReservationSummary {
   reservationId?: number;
 }
 
+export type HighlightType = "goal" | "assist" | "yellowCard" | "redCard" | "save" | "other";
+
 export interface Highlight {
   id: string;
-  reservationId: number;
   playerId: string;
   playerName: string;
   type: HighlightType;
-  timestamp: string;
+  minute: number;
   description?: string;
-}
-
-export enum HighlightType {
-  GOAL = "goal",
-  ASSIST = "assist",
-  SAVE = "save",
-  RED_CARD = "red_card",
-  YELLOW_CARD = "yellow_card",
-  INJURY = "injury",
-  OTHER = "other"
 }
 
 export interface UserStats {
