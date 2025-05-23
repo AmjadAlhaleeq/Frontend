@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -82,6 +81,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [isJoinWaitlistDialogOpen, setIsJoinWaitlistDialogOpen] = useState(false);
   const [isLeaveWaitlistDialogOpen, setIsLeaveWaitlistDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -327,16 +327,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               </div>
             )}
             {reservation.location && (
-              <div className="flex items-start sm:items-center">
-                <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5 sm:mt-0" />
-                <a 
-                  href={reservation.location}
-                  target="_blank" 
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`}
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-500 hover:underline flex items-center"
+                  className="hover:text-teal-600 dark:hover:text-teal-400 truncate"
                 >
-                  View on Maps
-                  <ExternalLink className="h-3 w-3 ml-1" />
+                  {reservation.location}
                 </a>
               </div>
             )}
@@ -516,7 +515,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           {/* Admin delete button */}
           {isAdmin && onDeleteReservation && (
             <Button 
-              onClick={() => setIsDeleteDialogOpen(true)}
+              onClick={() => setShowDeleteDialog(true)}
               size="sm"
               variant="outline"
               className="text-red-500 hover:text-red-600"
@@ -570,12 +569,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog 
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
         onConfirm={handleDeleteReservation}
         itemName={reservation.title || reservation.pitchName}
         itemType="reservation"
-        isDeleting={isProcessing}
       />
     </>
   );

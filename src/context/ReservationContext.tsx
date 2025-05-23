@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { format, parseISO, isAfter } from 'date-fns';
 
@@ -20,6 +19,7 @@ export interface Reservation {
   waitingList?: string[];
   summary?: ReservationSummary;
   duration?: string;
+  highlights?: Highlight[];
 }
 
 export interface Player {
@@ -37,6 +37,26 @@ export interface ReservationSummary {
   bestDefenderPlayerId?: string;
   matchNotes?: string;
   reservationId?: number;
+}
+
+export interface Highlight {
+  id: string;
+  reservationId: number;
+  playerId: string;
+  playerName: string;
+  type: HighlightType;
+  timestamp: string;
+  description?: string;
+}
+
+export enum HighlightType {
+  GOAL = "goal",
+  ASSIST = "assist",
+  SAVE = "save",
+  RED_CARD = "red_card",
+  YELLOW_CARD = "yellow_card",
+  INJURY = "injury",
+  OTHER = "other"
 }
 
 export interface UserStats {
@@ -86,6 +106,8 @@ export interface ReservationContextType {
   editReservation: (id: number, updatedData: Partial<Reservation>) => void;
   getUserStats: (userId: string) => UserStats;
   navigateToReservation: (pitchName: string) => void;
+  addHighlight: (highlight: Omit<Highlight, "id">) => void;
+  deleteHighlight: (reservationId: number, highlightId: string) => void;
 }
 
 const ReservationContext = createContext<ReservationContextType | undefined>(
@@ -321,6 +343,40 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
   
+  // Add highlight to a reservation
+  const addHighlight = (highlight: Omit<Highlight, "id">) => {
+    setReservations(prevReservations => {
+      return prevReservations.map(res => {
+        if (res.id === highlight.reservationId) {
+          const newHighlight = {
+            ...highlight,
+            id: Date.now().toString(), // Simple ID generation
+          };
+          return {
+            ...res,
+            highlights: [...(res.highlights || []), newHighlight]
+          };
+        }
+        return res;
+      });
+    });
+  };
+  
+  // Delete highlight from a reservation
+  const deleteHighlight = (reservationId: number, highlightId: string) => {
+    setReservations(prevReservations => {
+      return prevReservations.map(res => {
+        if (res.id === reservationId && res.highlights) {
+          return {
+            ...res,
+            highlights: res.highlights.filter(h => h.id !== highlightId)
+          };
+        }
+        return res;
+      });
+    });
+  };
+  
   // Mock navigation function
   const navigateToReservation = (pitchName: string) => {
     console.log(`Navigating to reservations for pitch: ${pitchName}`);
@@ -372,7 +428,9 @@ export const ReservationProvider: React.FC<{ children: React.ReactNode }> = ({
     addReservationSummary,
     editReservation,
     getUserStats,
-    navigateToReservation
+    navigateToReservation,
+    addHighlight,
+    deleteHighlight
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -155,19 +154,19 @@ const Profile = () => {
     { 
       title: "Goal Scorer",
       icon: <BadgePlus className="h-6 w-6 text-amber-500" />,
-      earned: userStats.goalsScored >= 5,
+      earned: userStats.goals >= 5,
       description: "Score 5 or more goals"
     },
     { 
       title: "MVP Star",
       icon: <Trophy className="h-6 w-6 text-amber-500" />,
-      earned: userStats.mvps >= 3,
+      earned: userStats.mvp >= 3,
       description: "Receive 3 or more MVP awards"
     },
     { 
       title: "Team Player",
       icon: <Award className="h-6 w-6 text-amber-500" />,
-      earned: userStats.gamesPlayed >= 10,
+      earned: userStats.matches >= 10,
       description: "Play in 10 or more games"
     },
   ];

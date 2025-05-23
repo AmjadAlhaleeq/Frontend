@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +35,11 @@ const SuspendPlayerForm: React.FC<SuspendPlayerFormProps> = ({
     const reservation = reservations.find(r => r.id === reservationId);
     if (reservation && reservation.lineup) {
       // Extract player names from lineup
-      const players = reservation.lineup
-        .filter(player => player.status === 'joined' && player.playerName)
+      const playersJoined = reservation.lineup?.filter(
+        (player) => player.status === 'confirmed'
+      ) || [];
+      
+      const players = playersJoined
         .map(player => ({
           id: player.userId || `player-${Math.random().toString(36).substring(2, 9)}`, // Ensure ID is never empty
           name: player.playerName || `Player ${player.userId}`

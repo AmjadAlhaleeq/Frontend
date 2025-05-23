@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +29,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   
   // Get user's reservations
   const userReservations = reservations.filter(res => 
-    res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined')
+    res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'confirmed')
   );
 
   // Keep only upcoming
@@ -315,7 +314,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
             isOpen={showJoinWaitlistDialog}
             onClose={() => setShowJoinWaitlistDialog(false)}
             onConfirm={confirmJoinWaitlist}
-            gameName={selectedReservation.title || selectedReservation.pitchName}
+            gameTitle={selectedReservation.title || selectedReservation.pitchName}
             gameDate={formatDate(selectedReservation.date)}
             gameTime={selectedReservation.time}
             isJoining={true}
@@ -325,7 +324,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
             isOpen={showLeaveWaitlistDialog}
             onClose={() => setShowLeaveWaitlistDialog(false)}
             onConfirm={confirmLeaveWaitlist}
-            gameName={selectedReservation.title || selectedReservation.pitchName}
+            gameTitle={selectedReservation.title || selectedReservation.pitchName}
             gameDate={formatDate(selectedReservation.date)}
             gameTime={selectedReservation.time}
             isJoining={false}
