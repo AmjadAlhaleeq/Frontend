@@ -22,7 +22,7 @@ interface GameDetailsDialogProps {
   onClose: () => void;
   reservation: Reservation;
   isAdmin?: boolean;
-  onStatusChange?: (status: 'open' | 'full' | 'completed' | 'cancelled') => void;
+  onStatusChange?: (status: 'upcoming' | 'completed' | 'cancelled') => void;
   currentUserId: string;
   actualMaxPlayers: number;
   showAdminControls?: boolean;
@@ -89,8 +89,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             <div className="flex justify-between items-center">
               <h3 className="font-medium text-lg">Game Information</h3>
               <Badge className={`${
-                reservation.status === 'open' ? 'bg-green-500' : 
-                reservation.status === 'full' ? 'bg-amber-500' :
+                reservation.status === 'upcoming' ? 'bg-green-500' : 
                 reservation.status === 'completed' ? 'bg-blue-500' :
                 'bg-red-500'
               }`}>

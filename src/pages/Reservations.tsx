@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -67,7 +68,7 @@ const Reservations = () => {
     getReservationsForDate,
     updateReservationStatus,
     deleteReservation,
-    setReservations, // Added to initialize from localStorage
+    setReservations,
   } = useReservation();
 
   useEffect(() => {
@@ -138,12 +139,12 @@ const Reservations = () => {
       // For current date
       const dateString = format(currentDate, 'yyyy-MM-dd');
       const filtered = reservations.filter(
-        res => res.date === dateString && (res.status === "open" || res.status === "full")
+        res => res.date === dateString && res.status === "upcoming"
       );
       gamesToShow = filtered;
     } else {
       gamesToShow = reservations.filter(
-        (res) => (res.status === "open" || res.status === "full") && 
+        (res) => res.status === "upcoming" && 
                  new Date(res.date) >= today
       );
     }
@@ -261,9 +262,9 @@ const Reservations = () => {
       return;
     }
     
-    // Only allow joining waiting list for full games
+    // Only allow joining waiting list for games at max capacity
     const reservation = reservations.find(r => r.id === reservationId);
-    if (reservation && reservation.status !== 'full') {
+    if (reservation && reservation.lineup && reservation.lineup.length < calculateActualMaxPlayers(reservation.maxPlayers)) {
       toast({
         title: "Game not full",
         description: "You can only join the waiting list when the game is full.",
@@ -398,7 +399,6 @@ const Reservations = () => {
 
   // Handle suspending a player
   const suspendPlayer = (userId: string, reason: string, duration: number) => {
-    // Implementation would typically involve API calls or context methods
     console.log(`Suspending player ${userId} for ${duration} days for reason: ${reason}`);
     toast({
       title: "Player Suspended",
@@ -528,7 +528,7 @@ const Reservations = () => {
                   onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
                   onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
                   isUserJoined={isUserJoinedFunction}
-                  isFull={reservation.status === "full"}
+                  isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
                   suspendPlayer={userRole === 'admin' ? suspendPlayer : undefined}
                   kickPlayerFromGame={userRole === 'admin' ? kickPlayerFromGame : undefined}
                   onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}

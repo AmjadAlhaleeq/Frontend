@@ -63,8 +63,8 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                   <div className="flex justify-between mb-2">
                     <h4 className="font-medium">{game.title || game.pitchName}</h4>
                     <Badge className={
-                      game.status === 'open' ? "bg-green-500" : 
-                      game.status === 'full' ? "bg-amber-500" : "bg-gray-500"
+                      game.status === 'upcoming' ? "bg-green-500" : 
+                      game.status === 'completed' ? "bg-blue-500" : "bg-gray-500"
                     }>
                       {game.status}
                     </Badge>
@@ -84,7 +84,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Users className="h-3.5 w-3.5 mr-1.5" />
-                      {game.lineup?.length || 0}/{game.maxPlayers} {/* Show current players and max */}
+                      {game.lineup?.length || 0}/{game.maxPlayers}
                     </div>
                   </div>
                 </div>

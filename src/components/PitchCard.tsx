@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, MapPin, Star, Users } from "lucide-react";
 import { useReservation } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
-// Separator removed as past reservations are removed
-// import { Separator } from "@/components/ui/separator";
 
 interface PitchCardProps {
   id: number;
@@ -31,15 +29,14 @@ const PitchCard: React.FC<PitchCardProps> = ({
   availability
 }) => {
   const [showReservations, setShowReservations] = useState(false);
-  const { reservations } = useReservation(); // navigateToReservation removed if not used
+  const { reservations } = useReservation();
   const navigate = useNavigate();
 
   // Filter reservations for this pitch
   const pitchReservations = reservations.filter(res => res.pitchName === name);
-  const upcomingReservations = pitchReservations.filter(res => res.status === "open" || res.status === "full");
-  // pastReservations removed
+  const upcomingReservations = pitchReservations.filter(res => res.status === "upcoming");
 
-  const formatDate = (dateString: string) => { // Added type for dateString
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       weekday: "short",
       month: "short", 
@@ -147,8 +144,6 @@ const PitchCard: React.FC<PitchCardProps> = ({
             ) : (
               <p className="text-xs text-gray-500 italic p-2">No upcoming games at this pitch</p>
             )}
-
-            {/* PastReservations section removed */}
           </div>
         )}
       </CardContent>

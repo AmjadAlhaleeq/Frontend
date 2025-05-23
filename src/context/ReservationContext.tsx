@@ -202,7 +202,7 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         imageUrl: pitch.image,
         additionalImages: pitch.additionalImages || [],
         playersJoined: 0,
-        status: "upcoming" as "upcoming" | "completed" | "cancelled", // Updated status
+        status: "upcoming" as "upcoming" | "completed" | "cancelled",
         lineup: [],
         waitingList: []
       };
@@ -251,13 +251,12 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
             playerName: playerName || `Player ${userId.substring(0, 4)}`,
             status: 'joined',
             joinedAt: new Date().toISOString(),
-            role: `Player ${(reservation.lineup?.length || 0) + 1}` // Assign player role
+            role: `Player ${(reservation.lineup?.length || 0) + 1}`
           };
 
           const updatedLineup = reservation.lineup ? [...reservation.lineup, newPlayer] : [newPlayer];
           const playersJoined = updatedLineup.length;
           
-          // Check if waiting list should be activated (when max players reached)
           let updatedWaitingList = reservation.waitingList || [];
           
           return { 
@@ -265,6 +264,60 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
             lineup: updatedLineup, 
             playersJoined,
             waitingList: updatedWaitingList
+          };
+        }
+        return reservation;
+      });
+    });
+  };
+
+  const cancelReservation = (id: number, userId: string) => {
+    setReservations(prev => {
+      return prev.map(reservation => {
+        if (reservation.id === id) {
+          const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
+          const playersJoined = updatedLineup.length;
+          
+          return {
+            ...reservation,
+            lineup: updatedLineup,
+            playersJoined
+          };
+        }
+        return reservation;
+      });
+    });
+  };
+
+  const isUserJoined = (reservationId: number, userId: string): boolean => {
+    const reservation = reservations.find(res => res.id === reservationId);
+    return reservation?.lineup?.some(player => player.userId === userId) || false;
+  };
+
+  const joinWaitingList = (id: number, userId: string) => {
+    setReservations(prev => {
+      return prev.map(reservation => {
+        if (reservation.id === id) {
+          const currentWaitingList = reservation.waitingList || [];
+          if (!currentWaitingList.includes(userId)) {
+            return {
+              ...reservation,
+              waitingList: [...currentWaitingList, userId]
+            };
+          }
+        }
+        return reservation;
+      });
+    });
+  };
+
+  const leaveWaitingList = (id: number, userId: string) => {
+    setReservations(prev => {
+      return prev.map(reservation => {
+        if (reservation.id === id && reservation.waitingList) {
+          return {
+            ...reservation,
+            waitingList: reservation.waitingList.filter(id => id !== userId)
           };
         }
         return reservation;
@@ -284,7 +337,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const navigateToReservation = (pitchName: string) => {
-    // Placeholder for navigation logic
     console.log(`Navigating to reservation for pitch: ${pitchName}`);
   };
 
@@ -305,7 +357,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     setReservations((prev) => {
       return prev.map((reservation) => {
         if (reservation.id === reservationId) {
-          // Update the reservation with the summary and update player stats
           const updatedLineup = reservation.lineup?.map(player => {
             const updatedPlayer = playerStats.find(p => p.userId === player.userId);
             return updatedPlayer || player;
@@ -322,7 +373,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
       });
     });
     
-    // Update player stats in localStorage
     playerStats.forEach(player => {
       if (player.attended) {
         updatePlayerStats(player.userId, {
@@ -337,7 +387,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const updatePlayerStats = (userId: string, newStats: any) => {
-    // Get existing user stats from localStorage
     try {
       const userStatsString = localStorage.getItem(`userStats_${userId}`);
       let userStats = userStatsString ? JSON.parse(userStatsString) : {
@@ -351,17 +400,14 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         draws: 0
       };
       
-      // Update stats
       Object.entries(newStats).forEach(([key, value]) => {
         if (typeof value === 'number') {
           userStats[key] = (userStats[key] || 0) + value;
         }
       });
       
-      // Save back to localStorage
       localStorage.setItem(`userStats_${userId}`, JSON.stringify(userStats));
       
-      // Dispatch an event for other components to know stats were updated
       window.dispatchEvent(new CustomEvent('playerStatsUpdated', { 
         detail: { userId, stats: userStats } 
       }));
@@ -373,13 +419,10 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  // Email notification function (placeholder for API integration)
   const sendEmailNotification = (email: string, type: 'suspension' | 'kick' | 'deletion', details: any) => {
     console.log(`Sending ${type} email to ${email}:`, details);
-    // This will be implemented with actual email API
   };
 
-  // Enhanced suspend player function with email notification
   const suspendPlayer = (userId: string, reason: string, duration: number) => {
     const now = new Date();
     const endDate = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000));
@@ -399,7 +442,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
       suspensions.push(suspension);
       localStorage.setItem('playerSuspensions', JSON.stringify(suspensions));
       
-      // Get player email for notification
       const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
       if (playerEmail) {
         sendEmailNotification(playerEmail, 'suspension', { reason, duration, endDate: endDate.toISOString() });
@@ -416,7 +458,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  // Enhanced kick player function with email notification
   const kickPlayerFromGame = (reservationId: number, userId: string) => {
     setReservations((prev) => {
       return prev.map((reservation) => {
@@ -424,7 +465,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
           const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
           const playersJoined = updatedLineup.length;
           
-          // Get player email for notification
           const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
           if (playerEmail) {
             sendEmailNotification(playerEmail, 'kick', { 
@@ -527,7 +567,6 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         navigateToReservation,
         hasUserJoinedOnDate,
         getReservationsForDate,
-        // New functions
         updateGameSummary,
         updatePlayerStats,
         suspendPlayer,

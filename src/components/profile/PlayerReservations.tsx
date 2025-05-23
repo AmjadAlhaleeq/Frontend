@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,7 +37,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   today.setHours(0, 0, 0, 0);
 
   const upcomingReservations = userReservations.filter(res => 
-    (res.status === 'open' || res.status === 'full') && 
+    res.status === "upcoming" && 
     new Date(res.date) >= today
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -198,10 +197,10 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
         <Badge 
           className={cn(
             "text-xs",
-            reservation.status === 'open' 
+            reservation.status === 'upcoming' 
               ? "bg-green-500" 
-              : reservation.status === 'full' 
-              ? "bg-orange-500" 
+              : reservation.status === 'completed' 
+              ? "bg-blue-500" 
               : "bg-gray-500"
           )}
         >
