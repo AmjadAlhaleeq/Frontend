@@ -1,10 +1,7 @@
 
-// This is the Leaderboards.tsx page. It handles UI and logic for Leaderboards.
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Award,
@@ -12,21 +9,20 @@ import {
   Medal,
   Goal,
   ShieldCheck,
-  Zap,
+  Target,
   Users,
   Star,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { generateRandomPlayers } from "@/utils/playerGenerator";
+import WinClasses from "@/components/leaderboards/WinClasses";
 
-const currentSeasonData = generateRandomPlayers(10);
-const lastSeasonData = generateRandomPlayers(5);
+const overallData = generateRandomPlayers(10);
 
 const Leaderboards = () => {
   const [selectedMetric, setSelectedMetric] = useState<string>("mvps");
-  const [season, setSeason] = useState<"current" | "last">("current");
 
-  const sortPlayers = (players: typeof currentSeasonData) => {
+  const sortPlayers = (players: typeof overallData) => {
     const sorted = [...players];
     switch (selectedMetric) {
       case "goals":
@@ -37,8 +33,8 @@ const Leaderboards = () => {
         return sorted.sort((a, b) => b.mvps - a.mvps);
       case "cleanSheets":
         return sorted.sort((a, b) => b.cleanSheets - a.cleanSheets);
-      case "tackles":
-        return sorted.sort((a, b) => b.tackles - a.tackles);
+      case "interceptions":
+        return sorted.sort((a, b) => (b as any).interceptions - (a as any).interceptions);
       default:
         return sorted;
     }
@@ -54,15 +50,14 @@ const Leaderboards = () => {
         return <Award className="h-4 w-4" />;
       case "cleanSheets":
         return <ShieldCheck className="h-4 w-4" />;
-      case "tackles":
-        return <Zap className="h-4 w-4" />;
+      case "interceptions":
+        return <Target className="h-4 w-4" />;
       default:
         return <Star className="h-4 w-4" />;
     }
   };
 
-  const currentData = season === "current" ? currentSeasonData : lastSeasonData;
-  const sortedPlayers = sortPlayers(currentData);
+  const sortedPlayers = sortPlayers(overallData);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -81,80 +76,76 @@ const Leaderboards = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          Track top performers across seasons.
+          Track top performers across all games.
         </motion.p>
       </div>
 
-      <Tabs
-        defaultValue="current"
-        value={season}
-        onValueChange={(val: "current" | "last") => setSeason(val)}
-        className="w-full"
-      >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <TabsList>
-            <TabsTrigger value="current">Current Season</TabsTrigger>
-            <TabsTrigger value="last">Last Season</TabsTrigger>
-          </TabsList>
-
-          <div className="flex flex-wrap gap-2">
-            {[
-              {
-                key: "goals",
-                label: "Goals",
-                icon: <Goal className="h-4 w-4 mr-1" />,
-              },
-              {
-                key: "assists",
-                label: "Assists",
-                icon: <Users className="h-4 w-4 mr-1" />,
-              },
-              {
-                key: "mvps",
-                label: "MVPs",
-                icon: <Award className="h-4 w-4 mr-1" />,
-              },
-              {
-                key: "cleanSheets",
-                label: "Clean Sheets",
-                icon: <ShieldCheck className="h-4 w-4 mr-1" />,
-              },
-              {
-                key: "tackles",
-                label: "Tackles",
-                icon: <Zap className="h-4 w-4 mr-1" />,
-              },
-            ].map((metric) => (
-              <Button
-                key={metric.key}
-                variant="outline"
-                size="sm"
-                className={selectedMetric === metric.key ? "bg-secondary" : ""}
-                onClick={() => setSelectedMetric(metric.key)}
-              >
-                {metric.icon}
-                {metric.label}
-              </Button>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Win Classes */}
+        <div className="lg:col-span-1">
+          <WinClasses />
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={season + selectedMetric}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            <TabsContent value={season} className="space-y-4">
+        {/* Right Column: Overall Leaderboard */}
+        <div className="lg:col-span-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h2 className="text-2xl font-bold">Overall Top 10</h2>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                {
+                  key: "goals",
+                  label: "Goals",
+                  icon: <Goal className="h-4 w-4 mr-1" />,
+                },
+                {
+                  key: "assists",
+                  label: "Assists",
+                  icon: <Users className="h-4 w-4 mr-1" />,
+                },
+                {
+                  key: "mvps",
+                  label: "MVPs",
+                  icon: <Award className="h-4 w-4 mr-1" />,
+                },
+                {
+                  key: "cleanSheets",
+                  label: "Clean Sheets",
+                  icon: <ShieldCheck className="h-4 w-4 mr-1" />,
+                },
+                {
+                  key: "interceptions",
+                  label: "Interceptions",
+                  icon: <Target className="h-4 w-4 mr-1" />,
+                },
+              ].map((metric) => (
+                <Button
+                  key={metric.key}
+                  variant="outline"
+                  size="sm"
+                  className={selectedMetric === metric.key ? "bg-secondary" : ""}
+                  onClick={() => setSelectedMetric(metric.key)}
+                >
+                  {metric.icon}
+                  {metric.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedMetric}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
               <Card>
                 <CardHeader>
                   <CardTitle className="text-xl">
-                    {season === "current"
-                      ? "Current Season Top 10"
-                      : "Last Season Top 5"}
+                    Overall Top 10 Players
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -218,8 +209,8 @@ const Leaderboards = () => {
                                   ? player.mvps
                                   : selectedMetric === "cleanSheets"
                                   ? player.cleanSheets
-                                  : selectedMetric === "tackles"
-                                  ? player.tackles
+                                  : selectedMetric === "interceptions"
+                                  ? Math.floor(Math.random() * 15) + 5 // Generate random interceptions
                                   : player.points}
                               </span>
                             </div>
@@ -230,10 +221,10 @@ const Leaderboards = () => {
                   </ScrollArea>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </motion.div>
-        </AnimatePresence>
-      </Tabs>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 };
