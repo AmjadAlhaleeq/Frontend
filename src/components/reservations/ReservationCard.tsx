@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,12 +43,15 @@ import { BanIcon } from "lucide-react";
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import SuspendPlayerDialog from "./SuspendPlayerDialog";
 
-// Import Player from context but rename it to avoid conflict with local interface
-import { Player as ReservationPlayer } from "@/context/ReservationContext";
-
-// Extend the Player interface to include email property
-interface Player extends ReservationPlayer {
-  email?: string; // Add email as optional property
+// Create a local Player interface instead of importing to avoid conflicts
+interface Player {
+  userId: string;
+  playerName: string;
+  status?: string;
+  joinedAt?: string;
+  mvp?: boolean;
+  attended?: boolean;
+  email?: string; // Optional email property
 }
 
 interface ReservationCardProps {
@@ -300,6 +302,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               </p>
             )}
           </div>
+
+          {/* Display the pitch image as a small thumbnail if available */}
+          {reservation.imageUrl && (
+            <div className="h-14 w-14 rounded-md overflow-hidden flex-shrink-0">
+              <img 
+                src={reservation.imageUrl}
+                alt={reservation.pitchName}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+          
           {isAdmin && !isGameCompleted && !isGameCancelled && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -407,7 +421,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
         </div>
         {/* Action Buttons */}
         {!isGameCompleted && !isGameCancelled && (
-          <CardFooter className="flex justify-between items-center">
+          <CardFooter className="flex justify-between items-center px-0 pt-2">
             {isUserJoined(reservation.id, userId) ? (
               <Button
                 variant="destructive"
