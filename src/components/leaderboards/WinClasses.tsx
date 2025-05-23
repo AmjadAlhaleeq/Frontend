@@ -10,13 +10,12 @@ interface WinClassProps {
   gamesPlayed: number;
   wins: number;
   winClass: string;
-  winRate: number;
   position: number;
 }
 
 /**
  * Win Classes component for Leaderboards
- * Shows different player achievement levels based on win rate
+ * Shows different player achievement levels based on number of wins
  */
 const WinClasses: React.FC = () => {
   // Sample win classes data (in a real app, this would come from an API or context)
@@ -26,7 +25,6 @@ const WinClasses: React.FC = () => {
       gamesPlayed: 45,
       wins: 31,
       winClass: "Master",
-      winRate: 68.9,
       position: 1
     },
     {
@@ -34,7 +32,6 @@ const WinClasses: React.FC = () => {
       gamesPlayed: 38,
       wins: 24,
       winClass: "Expert",
-      winRate: 63.2,
       position: 2
     },
     {
@@ -42,7 +39,6 @@ const WinClasses: React.FC = () => {
       gamesPlayed: 42,
       wins: 24,
       winClass: "Expert",
-      winRate: 57.1,
       position: 3
     },
     {
@@ -50,7 +46,6 @@ const WinClasses: React.FC = () => {
       gamesPlayed: 32,
       wins: 17,
       winClass: "Professional",
-      winRate: 53.1,
       position: 4
     },
     {
@@ -58,7 +53,6 @@ const WinClasses: React.FC = () => {
       gamesPlayed: 39,
       wins: 20,
       winClass: "Professional",
-      winRate: 51.3,
       position: 5
     }
   ];
@@ -161,12 +155,12 @@ const WinClasses: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Progress
-                    value={player.winRate}
-                    max={100}
+                    value={player.wins}
+                    max={player.gamesPlayed > 0 ? player.gamesPlayed : 1}
                     className={`h-2 w-full ${colors.progress}`}
                   />
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[40px] text-right">
-                    {player.winRate}%
+                    {player.wins} W
                   </span>
                 </div>
               </div>
