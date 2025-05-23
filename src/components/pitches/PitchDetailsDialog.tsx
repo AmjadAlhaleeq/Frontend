@@ -34,14 +34,10 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showFullGallery, setShowFullGallery] = useState(false);
   
-  // Sample gallery photos (would come from pitch.galleryImages in production)
-  const galleryPhotos = [
-    pitch.image,
-    // These would be populated from actual gallery images in a real implementation
-    "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    "https://images.unsplash.com/photo-1518604666860-9ed391f76460?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=876&q=80"
-  ];
+  // Use pitch's additionalImages if available, otherwise just use the main image
+  const galleryPhotos = pitch.additionalImages && pitch.additionalImages.length > 0
+    ? [pitch.image, ...pitch.additionalImages]
+    : [pitch.image];
   
   const nextPhoto = () => {
     setCurrentPhotoIndex((prev) => (prev + 1) % galleryPhotos.length);

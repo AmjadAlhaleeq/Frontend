@@ -83,18 +83,49 @@ const AddPitch = () => {
       .map(([key]) => key);
     
     setTimeout(() => {
+      // Make sure to save all uploaded images (including additional ones)
+      const filteredImages = pitchData.images.filter(img => img);
+      
       addPitch({
         name: pitchData.name,
         location: pitchData.location,
         city: pitchData.city,
-        image: pitchData.images[0], // Primary image
-        additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
+        image: filteredImages[0], // Primary image
+        additionalImages: filteredImages.slice(1), // All other images as additional images
         playersPerSide: Number(pitchData.playersPerSide),
         description: pitchData.description,
         price: 0, // Default price as it's removed
         facilities: facilitiesArray,
         type: pitchData.type, // New: indoor/outdoor type
       });
+      
+      // Also save images to localStorage
+      try {
+        const storedPitches = localStorage.getItem('pitches');
+        if (storedPitches) {
+          const parsedPitches = JSON.parse(storedPitches);
+          const updatedPitches = [...parsedPitches];
+          // Find the highest ID to generate a new one
+          const highestId = updatedPitches.reduce((max, pitch) => pitch.id > max ? pitch.id : max, 0);
+          // Add the new pitch with all images
+          updatedPitches.push({
+            id: highestId + 1,
+            name: pitchData.name,
+            location: pitchData.location,
+            city: pitchData.city,
+            image: filteredImages[0],
+            additionalImages: filteredImages.slice(1),
+            playersPerSide: Number(pitchData.playersPerSide),
+            description: pitchData.description,
+            price: 0,
+            facilities: facilitiesArray,
+            type: pitchData.type,
+          });
+          localStorage.setItem('pitches', JSON.stringify(updatedPitches));
+        }
+      } catch (error) {
+        console.error("Error saving pitch to localStorage:", error);
+      }
       
       toast({
         title: "Success!",
@@ -231,7 +262,7 @@ const AddPitch = () => {
     }
   };
 
-  // Preview section
+  // Preview section with updated image handling
   const previewPitch = {
     name: pitchData.name || "Pitch Name",
     location: pitchData.location || "https://maps.google.com",

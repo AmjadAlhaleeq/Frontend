@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Edit3, Trash2, CalendarIcon, Users, ExternalLink } from "lucide-react";
+import { MapPin, Trash2, CalendarIcon, Users, ExternalLink } from "lucide-react";
 import { Pitch } from "@/context/ReservationContext";
 
 interface PitchCardProps {
@@ -114,14 +114,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
           
           {isAdmin && (
             <div className="flex gap-2">
-              <Button 
-                onClick={onEditClick}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-              >
-                <Edit3 className="h-4 w-4" />
-              </Button>
+              {/* Edit button removed as requested */}
               <Button 
                 onClick={onDeleteClick}
                 variant="outline"
