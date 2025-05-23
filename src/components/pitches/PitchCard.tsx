@@ -44,6 +44,19 @@ const PitchCard: React.FC<PitchCardProps> = ({
           <h3 className="font-semibold text-white text-lg line-clamp-1">
             {pitch.name}
           </h3>
+          {/* Display pitch type badge */}
+          {pitch.type && (
+            <Badge 
+              variant="outline" 
+              className={`mt-1 text-xs ${
+                pitch.type === 'indoor' 
+                  ? 'bg-purple-600/80 hover:bg-purple-600 text-white border-purple-400' 
+                  : 'bg-green-600/80 hover:bg-green-600 text-white border-green-400'
+              }`}
+            >
+              {pitch.type === 'indoor' ? 'Indoor' : 'Outdoor'}
+            </Badge>
+          )}
         </div>
       </div>
       
@@ -81,11 +94,8 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </div>
         </div>
         
-        {/* Price and players info */}
+        {/* Players info */}
         <div className="flex justify-between items-center mb-3 text-sm">
-          <div className="font-medium">
-            ${pitch.price} <span className="text-gray-500 font-normal">/ hour</span>
-          </div>
           <div className="flex items-center text-gray-600">
             <Users className="h-4 w-4 mr-1" />
             {pitch.playersPerSide}v{pitch.playersPerSide}

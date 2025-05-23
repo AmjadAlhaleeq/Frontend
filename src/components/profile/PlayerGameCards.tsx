@@ -32,9 +32,18 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
   const formatGameDate = (dateStr: string) => {
     return format(parseISO(dateStr), 'EEE, MMM d');
   };
+
+  // Function to show game details
+  const showGameDetails = (gameId: number) => {
+    // Dispatch an event to show game details
+    const event = new CustomEvent('showGameDetails', { detail: { gameId } });
+    window.dispatchEvent(event);
+    // Navigate to reservations page
+    navigate('/reservations');
+  };
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-1 gap-6"> {/* Changed to md:grid-cols-1 as only one card remains */}
+    <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
       {/* Upcoming Games Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -49,10 +58,10 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                 <div 
                   key={game.id}
                   className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-                  onClick={() => navigate('/reservations')} // Or dispatch event to show details
+                  onClick={() => showGameDetails(game.id)}
                 >
                   <div className="flex justify-between mb-2">
-                    <h4 className="font-medium">{game.pitchName}</h4>
+                    <h4 className="font-medium">{game.title || game.pitchName}</h4>
                     <Badge className={
                       game.status === 'open' ? "bg-green-500" : 
                       game.status === 'full' ? "bg-amber-500" : "bg-gray-500"
@@ -67,7 +76,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Clock className="h-3.5 w-3.5 mr-1.5" />
-                      {game.time}
+                      {game.startTime || game.time.split(' - ')[0]}
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <MapPin className="h-3.5 w-3.5 mr-1.5" />
@@ -75,7 +84,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Users className="h-3.5 w-3.5 mr-1.5" />
-                      {game.playersJoined}/{game.maxPlayers + 2} {/* Assuming +2 subs is standard display */}
+                      {game.lineup?.length || 0}/{game.maxPlayers} {/* Show current players and max */}
                     </div>
                   </div>
                 </div>
@@ -99,8 +108,6 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
           </Button>
         </CardFooter>
       </Card>
-      
-      {/* Game History Card Removed */}
     </div>
   );
 };

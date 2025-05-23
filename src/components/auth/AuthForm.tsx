@@ -38,7 +38,7 @@ const loginSchema = z.object({
     .min(6, { message: "Password must be at least 6 characters" }),
 });
 
-// Define the schema for registration
+// Define the schema for registration - Simplified by removing preferred position and bio
 const registerSchema = z
   .object({
     name: z.string().min(2, { message: "Name must be at least 2 characters" }),

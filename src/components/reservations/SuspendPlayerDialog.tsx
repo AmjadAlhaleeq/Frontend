@@ -1,166 +1,161 @@
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Ban } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useReservation } from "@/context/ReservationContext";
-import { sendPlayerSuspensionNotification } from "@/utils/emailNotifications";
-import { format, addDays } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Ban, AlertTriangle } from "lucide-react";
 
 interface SuspendPlayerDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  playerId: string;
+  onSuspend: (reason: string, duration: number) => void;
   playerName: string;
   playerEmail: string;
 }
 
+// Suspension reasons
+const SUSPENSION_REASONS = [
+  "No-show without notification",
+  "Repeated cancellations",
+  "Unsportsmanlike conduct",
+  "Aggressive behavior",
+  "Payment issues",
+  "Other (please specify)"
+];
+
+// Suspension durations in days
+const SUSPENSION_DURATIONS = [
+  { value: 7, label: "1 week" },
+  { value: 14, label: "2 weeks" },
+  { value: 30, label: "1 month" },
+  { value: 90, label: "3 months" },
+  { value: 180, label: "6 months" },
+  { value: 365, label: "1 year" }
+];
+
 /**
- * Dialog component for suspending a player
- * Used by admins to suspend players with a reason and duration
- * Sends a notification email to the suspended player
+ * SuspendPlayerDialog component
+ * Allows admins to suspend players with a reason and duration
  */
 const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
   isOpen,
   onClose,
-  playerId,
+  onSuspend,
   playerName,
   playerEmail
 }) => {
-  const [duration, setDuration] = useState<number>(7);
-  const [reason, setReason] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string | undefined>();
+  const [customReason, setCustomReason] = useState("");
+  const [suspensionDuration, setSuspensionDuration] = useState<string>("7");
   
-  const { toast } = useToast();
-  const { suspendPlayer } = useReservation();
-  
-  const handleSuspend = async () => {
-    if (!reason.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a reason for suspension",
-        variant: "destructive",
-      });
+  const handleSuspend = () => {
+    // Determine the reason text
+    const finalReason = selectedReason === "Other (please specify)" 
+      ? customReason 
+      : selectedReason || "";
+    
+    if (!finalReason) {
+      // Could add validation here
       return;
     }
     
-    setIsSubmitting(true);
+    // Call the onSuspend handler with the reason and duration
+    onSuspend(finalReason, parseInt(suspensionDuration));
     
-    try {
-      // Calculate end date for email notification
-      const endDate = format(addDays(new Date(), duration), "MMMM d, yyyy");
-      
-      // Call the context function to suspend player
-      suspendPlayer(playerId, duration, reason);
-      
-      // Send email notification to the player
-      await sendPlayerSuspensionNotification(
-        playerEmail, 
-        { duration, reason, endDate }
-      );
-      
-      toast({
-        title: "Player suspended",
-        description: `${playerName} has been suspended for ${duration} days and notified via email.`,
-      });
-      
-      onClose();
-    } catch (error) {
-      console.error("Error suspending player:", error);
-      toast({
-        title: "Action failed",
-        description: "Failed to suspend player. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Reset the form
+    setSelectedReason(undefined);
+    setCustomReason("");
+    setSuspensionDuration("7");
+    onClose();
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center text-red-600">
-            <Ban className="mr-2 h-5 w-5" />
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center text-red-600">
+            <AlertTriangle className="h-5 w-5 mr-2" />
             Suspend Player
-          </DialogTitle>
-          <DialogDescription>
-            This will temporarily block {playerName} from joining games for {duration} days.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md flex items-start space-x-2 mb-4">
-          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-          <div className="text-sm text-red-700 dark:text-red-300">
-            A notification email will be sent to {playerEmail} explaining the suspension.
-          </div>
-        </div>
-        
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="duration">Suspension Duration</Label>
-            <Select 
-              value={duration.toString()} 
-              onValueChange={(value) => setDuration(parseInt(value, 10))}
-            >
-              <SelectTrigger id="duration">
-                <SelectValue placeholder="Select duration" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 day</SelectItem>
-                <SelectItem value="3">3 days</SelectItem>
-                <SelectItem value="7">7 days</SelectItem>
-                <SelectItem value="14">14 days</SelectItem>
-                <SelectItem value="30">30 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="reason">Reason for Suspension</Label>
-            <Textarea
-              id="reason"
-              placeholder="Explain why this player is being suspended"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              required
-            />
-          </div>
-        </div>
-        
-        <DialogFooter className="sm:justify-between">
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={isSubmitting}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <div className="mb-4">
+              <p>You are about to suspend player:</p>
+              <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md my-2">
+                <p className="font-medium">{playerName}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{playerEmail}</p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This player will be unable to join games for the selected duration.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="suspensionReason" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Reason for suspension*
+                </label>
+                <Select value={selectedReason} onValueChange={setSelectedReason}>
+                  <SelectTrigger id="suspensionReason">
+                    <SelectValue placeholder="Select a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUSPENSION_REASONS.map(reason => (
+                      <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {selectedReason === "Other (please specify)" && (
+                  <Textarea
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    placeholder="Please provide details..."
+                    className="mt-2"
+                  />
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="suspensionDuration" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Suspension duration*
+                </label>
+                <Select value={suspensionDuration} onValueChange={setSuspensionDuration}>
+                  <SelectTrigger id="suspensionDuration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUSPENSION_DURATIONS.map(duration => (
+                      <SelectItem key={duration.value} value={duration.value.toString()}>
+                        {duration.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleSuspend}
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSuspend} 
-            variant="destructive"
-            disabled={isSubmitting || !reason.trim()}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="mr-2">Suspending...</span>
-                <span className="animate-spin">⏳</span>
-              </>
-            ) : (
-              <>Confirm Suspension</>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <Ban className="h-4 w-4 mr-1.5" />
+            Suspend Player
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +10,21 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Available facilities for selection
+// Available facilities for selection - Updated with new structure
 const AVAILABLE_FACILITIES = [
+  { id: "water", label: "Water" },
+  { id: "cafeteria", label: "Cafeteria" },
+  { id: "lockers", label: "Lockers" },
+  { id: "bathrooms", label: "Bathrooms" },
   { id: "parking", label: "Parking" },
-  { id: "changing_rooms", label: "Changing Rooms" },
-  { id: "showers", label: "Showers" },
-  { id: "floodlights", label: "Floodlights" },
-  { id: "cafe", label: "Cafe/Refreshments" },
   { id: "wifi", label: "WiFi" },
 ];
 
@@ -31,9 +37,9 @@ const AddPitch = () => {
     images: ["", "", "", ""], // Array to store up to 4 images
     playersPerSide: "",
     description: "",
-    price: "",
-    facilities: [] as string[],
-    openingHours: "9:00 AM - 10:00 PM"
+    // Removed: price and openingHours
+    facilities: {} as Record<string, boolean>, // Changed to object with boolean values
+    type: "outdoor" // New: default to outdoor
   });
   
   // For image preview and slider functionality
@@ -51,7 +57,7 @@ const AddPitch = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.price) {
+    if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.type) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
@@ -71,18 +77,23 @@ const AddPitch = () => {
     
     setIsSubmitting(true);
     
+    // Convert facilities object to array format expected by the context
+    const facilitiesArray = Object.entries(pitchData.facilities)
+      .filter(([_, value]) => value)
+      .map(([key]) => key);
+    
     setTimeout(() => {
       addPitch({
-          name: pitchData.name,
-          location: pitchData.location,
-          city: pitchData.city,
-          image: pitchData.images[0], // Primary image
-          additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
-          playersPerSide: Number(pitchData.playersPerSide),
-          description: pitchData.description,
-          price: Number(pitchData.price),
-          facilities: pitchData.facilities,
-          openingHours: pitchData.openingHours
+        name: pitchData.name,
+        location: pitchData.location,
+        city: pitchData.city,
+        image: pitchData.images[0], // Primary image
+        additionalImages: pitchData.images.slice(1).filter(img => img), // Additional images
+        playersPerSide: Number(pitchData.playersPerSide),
+        description: pitchData.description,
+        price: 0, // Default price as it's removed
+        facilities: facilitiesArray,
+        type: pitchData.type, // New: indoor/outdoor type
       });
       
       toast({
@@ -102,14 +113,44 @@ const AddPitch = () => {
     }));
   };
 
+  const handleTypeChange = (value: string) => {
+    setPitchData(prev => ({
+      ...prev,
+      type: value
+    }));
+  };
+
   const handleFacilityChange = (facilityId: string, checked: boolean) => {
     setPitchData(prev => ({
       ...prev,
-      facilities: checked 
-        ? [...prev.facilities, facilityId]
-        : prev.facilities.filter(id => id !== facilityId)
+      facilities: {
+        ...prev.facilities,
+        [facilityId]: checked
+      }
     }));
   };
+
+  // Initialize facilities with default values
+  React.useEffect(() => {
+    const initialFacilities = AVAILABLE_FACILITIES.reduce((acc, facility) => {
+      // Set default values based on your requirements
+      const defaultValues: Record<string, boolean> = {
+        water: true,
+        cafeteria: true,
+        lockers: true,
+        bathrooms: true,
+        parking: false,
+        wifi: true
+      };
+      acc[facility.id] = defaultValues[facility.id] !== undefined ? defaultValues[facility.id] : false;
+      return acc;
+    }, {} as Record<string, boolean>);
+    
+    setPitchData(prev => ({
+      ...prev,
+      facilities: initialFacilities
+    }));
+  }, []);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,9 +240,10 @@ const AddPitch = () => {
     additionalImages: pitchData.images.slice(1).filter(img => img),
     playersPerSide: Number(pitchData.playersPerSide) || 5,
     description: pitchData.description || "Pitch description...",
-    price: Number(pitchData.price) || 0,
-    facilities: pitchData.facilities,
-    openingHours: pitchData.openingHours
+    type: pitchData.type || "outdoor",
+    facilities: Object.entries(pitchData.facilities)
+      .filter(([_, value]) => value)
+      .map(([key]) => key),
   };
 
   return (
@@ -321,30 +363,21 @@ const AddPitch = () => {
                   />
                 </div>
                 
+                {/* New: Indoor/Outdoor selector */}
                 <div className="space-y-2">
-                  <label htmlFor="price" className="text-sm font-medium">Price per Hour*</label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={pitchData.price}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g., 20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="openingHours" className="text-sm font-medium">Opening Hours</label>
-                  <Input
-                    id="openingHours"
-                    name="openingHours"
-                    value={pitchData.openingHours}
-                    onChange={handleChange}
-                    placeholder="e.g., 9:00 AM - 10:00 PM"
-                  />
+                  <label htmlFor="type" className="text-sm font-medium">Pitch Type*</label>
+                  <Select 
+                    value={pitchData.type} 
+                    onValueChange={handleTypeChange}
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="indoor">Indoor</SelectItem>
+                      <SelectItem value="outdoor">Outdoor</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
@@ -361,6 +394,7 @@ const AddPitch = () => {
                 <p className="text-xs text-gray-500">Paste a Google Maps link to the pitch location</p>
               </div>
               
+              {/* Updated: Facilities checkboxes */}
               <div className="space-y-2">
                 <div className="mb-2">
                   <label className="text-sm font-medium">Facilities Available</label>
@@ -371,7 +405,7 @@ const AddPitch = () => {
                     <div key={facility.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={facility.id} 
-                        checked={pitchData.facilities.includes(facility.id)}
+                        checked={pitchData.facilities[facility.id] || false}
                         onCheckedChange={(checked) => {
                           handleFacilityChange(facility.id, checked === true);
                         }}
@@ -453,6 +487,17 @@ const AddPitch = () => {
                   </div>
                 </div>
                 
+                {/* Type badge */}
+                <div className="mb-3">
+                  <span className={`inline-block px-2 py-1 text-xs rounded ${
+                    previewPitch.type === 'indoor' 
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' 
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  }`}>
+                    {previewPitch.type === 'indoor' ? 'Indoor' : 'Outdoor'}
+                  </span>
+                </div>
+                
                 {/* Facilities */}
                 <div className="mb-3">
                   <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
@@ -460,7 +505,7 @@ const AddPitch = () => {
                     {previewPitch.facilities && previewPitch.facilities.length > 0 ? (
                       previewPitch.facilities.map((facility, index) => (
                         <span key={index} className="inline-block bg-gray-100 dark:bg-gray-800 text-xs px-2 py-1 rounded">
-                          {facility.replace('_', ' ')}
+                          {AVAILABLE_FACILITIES.find(f => f.id === facility)?.label || facility}
                         </span>
                       ))
                     ) : (
@@ -469,18 +514,11 @@ const AddPitch = () => {
                   </div>
                 </div>
                 
-                {/* Price and players info */}
+                {/* Players info */}
                 <div className="flex justify-between items-center mb-3 text-sm">
-                  <div className="font-medium">
-                    ${previewPitch.price} <span className="text-gray-500 font-normal">/ hour</span>
-                  </div>
                   <div className="text-gray-600">
                     {previewPitch.playersPerSide}v{previewPitch.playersPerSide}
                   </div>
-                </div>
-                
-                <div className="mb-2 text-xs text-gray-500">
-                  {previewPitch.openingHours}
                 </div>
                 
                 {/* Description preview */}
