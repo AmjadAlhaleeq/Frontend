@@ -1,9 +1,9 @@
+
 import React, { useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -17,27 +17,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Clock, Users, Trash2 } from "lucide-react";
 import GameSummaryDialog from "./GameSummaryDialog";
 
-// Import Player from context but rename it to avoid conflict with local interface
+// Import Player from context
 import { Player as ReservationPlayer } from "@/context/ReservationContext";
 
-// Extend the Player interface to include email property
 interface Player extends ReservationPlayer {
-  email?: string; // Add email as optional property
+  email?: string;
 }
 
 interface ReservationCardProps {
@@ -54,85 +43,6 @@ interface ReservationCardProps {
   kickPlayerFromGame?: (reservationId: number, userId: string) => void;
   onDeleteReservation?: (id: number) => void;
 }
-
-interface PlayerDetailsDialogProps {
-  player: Player;
-  isOpen: boolean;
-  onClose: () => void;
-  userRole: string;
-}
-
-const PlayerDetailsDialog: React.FC<PlayerDetailsDialogProps> = ({
-  player,
-  isOpen,
-  onClose,
-  userRole
-}) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
-              <AvatarFallback>{player.playerName.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            {player.playerName}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Status:</span>
-              <Badge className="ml-2" variant={player.status === 'joined' ? 'default' : 'secondary'}>
-                {player.status}
-              </Badge>
-            </div>
-            <div>
-              <span className="font-medium">Joined:</span>
-              <span className="ml-2">{player.joinedAt ? new Date(player.joinedAt).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-          
-          {/* Player Stats Section */}
-          <Separator />
-          <div className="space-y-3">
-            <h4 className="font-medium">Player Stats</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Games Played:</span>
-                <div className="font-medium">12</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Win Rate:</span>
-                <div className="font-medium">75%</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Goals Scored:</span>
-                <div className="font-medium">8</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">MVP Awards:</span>
-                <div className="font-medium">3</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badges Section */}
-          <Separator />
-          <div className="space-y-3">
-            <h4 className="font-medium">Badges</h4>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Top Scorer</Badge>
-              <Badge variant="outline">Team Player</Badge>
-              <Badge variant="outline">Regular</Badge>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
@@ -151,22 +61,20 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [playerName, setPlayerName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
 
   const { updateGameSummary } = useReservation();
 
-  // Determine if game is completed based on time
+  // Determine game status based on time
   const determineGameStatus = () => {
     try {
       const gameDate = new Date(reservation.date);
-      const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || [0, 0];
+      const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || 
+                                      reservation.time?.split(' - ')[0].split(':').map(Number) || [0, 0];
       const gameStartTime = new Date(gameDate);
       gameStartTime.setHours(startHour, startMinute, 0, 0);
       
-      // Add duration to get end time (assuming duration is in hours)
+      // Add duration to get end time
       const gameEndTime = new Date(gameStartTime);
       gameEndTime.setHours(gameStartTime.getHours() + (reservation.duration || 2));
       
@@ -177,10 +85,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       } else if (now >= gameEndTime) {
         return 'completed';
       } else {
-        return 'in-progress'; // Currently playing
+        return 'in-progress';
       }
     } catch (error) {
-      // Fallback to reservation status if date parsing fails
       console.error("Error determining game status:", error);
       return reservation.status || 'upcoming';
     }
@@ -190,11 +97,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const isGameCompleted = gameStatus === 'completed';
   const isGameUpcoming = gameStatus === 'upcoming';
   const isAdmin = userRole === "admin";
-
-  // Get pitch photos (assuming we have them in the reservation or use defaults)
-  const pitchPhotos = reservation.additionalImages && reservation.additionalImages.length > 0
-    ? [reservation.imageUrl, ...reservation.additionalImages].filter(Boolean)
-    : [reservation.imageUrl || `https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=400&fit=crop&crop=center`];
 
   const handleJoin = async () => {
     setIsJoining(true);
@@ -250,11 +152,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     });
   };
 
-  const handlePlayerClick = (player: Player) => {
-    setSelectedPlayer(player);
-    setIsPlayerDialogOpen(true);
-  };
-
   const handleUpdateSummary = (reservationId: number, summary: any, playerStats: any[]) => {
     updateGameSummary(reservationId, summary, playerStats);
     setShowSummaryDialog(false);
@@ -262,256 +159,209 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   const isUserInWaitingList = reservation.waitingList?.includes(userId);
 
-  const getPlayerAvatar = (player: Player) => {
-    const nameParts = player.playerName.split(" ");
-    const initials = nameParts.map((part) => part[0].toUpperCase()).join("");
-
-    return (
-      <Avatar className="h-8 w-8 cursor-pointer" onClick={() => handlePlayerClick(player)}>
-        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
-        <AvatarFallback>{initials}</AvatarFallback>
-      </Avatar>
-    );
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long", 
+      day: "numeric",
+      year: "numeric"
+    });
   };
 
-  const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % pitchPhotos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + pitchPhotos.length) % pitchPhotos.length);
+  const formatTime = () => {
+    if (reservation.startTime && reservation.duration) {
+      const [startHour, startMinute] = reservation.startTime.split(':').map(Number);
+      const endHour = startHour + reservation.duration;
+      const endMinute = startMinute;
+      return `${reservation.startTime} - ${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+    }
+    return reservation.time;
   };
 
   return (
     <>
-      <Card className="bg-white dark:bg-gray-800 overflow-hidden">
-        <div className="flex">
-          {/* Pitch Photo Section */}
-          <div className="relative w-48 h-48 flex-shrink-0">
-            <img
-              src={pitchPhotos[currentPhotoIndex]}
-              alt={reservation.pitchName}
-              className="w-full h-full object-cover"
-            />
-            {pitchPhotos.length > 1 && (
-              <>
-                <button
-                  onClick={prevPhoto}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={nextPhoto}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                  {pitchPhotos.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${
-                        index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+      <Card className="bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700">
+        {/* Header with football background */}
+        <div className="relative h-32 bg-gradient-to-r from-green-600 to-green-700 overflow-hidden">
+          <div 
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage: `url('https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=200&fit=crop&crop=center')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-green-600/80 to-green-700/80" />
+          
+          {/* Status Badge */}
+          <div className="absolute top-4 right-4">
+            <Badge 
+              className={`${
+                gameStatus === 'upcoming' ? 'bg-green-500 hover:bg-green-600' : 
+                gameStatus === 'completed' ? 'bg-blue-500 hover:bg-blue-600' :
+                gameStatus === 'in-progress' ? 'bg-orange-500 hover:bg-orange-600' :
+                'bg-red-500 hover:bg-red-600'
+              } text-white font-semibold px-3 py-1`}
+            >
+              {gameStatus}
+            </Badge>
           </div>
 
-          {/* Content Section */}
-          <CardContent className="flex-1 p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {reservation.title || reservation.pitchName}
-                </h2>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {reservation.date}
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Clock className="h-4 w-4 mr-2" />
-                    {reservation.startTime} ({reservation.duration}h)
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {reservation.location}
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Users className="h-4 w-4 mr-2" />
-                    {reservation.lineup?.length || 0}/{reservation.maxPlayers}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Status Badge (replaces three dots) */}
-              <Badge 
-                className={`${
-                  gameStatus === 'upcoming' ? 'bg-green-500' : 
-                  gameStatus === 'completed' ? 'bg-blue-500' :
-                  gameStatus === 'in-progress' ? 'bg-orange-500' :
-                  'bg-red-500'
-                }`}
-              >
-                {gameStatus}
-              </Badge>
-            </div>
-
-            <Separator className="my-3" />
-
-            {/* Players Section */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Players Joined:
-              </h3>
-              {reservation.lineup && reservation.lineup.length > 0 ? (
-                <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
-                  <div className="p-2 space-y-2">
-                    {reservation.lineup.map((player) => (
-                      <div 
-                        key={player.userId} 
-                        className="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => handlePlayerClick(player)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          {getPlayerAvatar(player)}
-                          <p className="text-sm text-gray-800 dark:text-gray-100">
-                            {player.playerName}
-                          </p>
-                          {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center border rounded-md">
-                  No players have joined yet.
-                </p>
-              )}
-
-              {/* Waiting List for Admin */}
-              {isAdmin && reservation.waitingList && reservation.waitingList.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-                    Waiting List ({reservation.waitingList.length}):
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {reservation.waitingList.map((waitingUserId, index) => (
-                      <Badge key={waitingUserId} variant="outline" className="text-xs">
-                        Player {index + 1}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-4">
-              {isAdmin ? (
-                // Admin Actions
-                <div className="flex gap-2">
-                  {isGameUpcoming ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          Delete Reservation
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this reservation? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDeleteReservation?.(reservation.id)}
-                            className="bg-red-500 hover:bg-red-600"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : isGameCompleted ? (
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => setShowSummaryDialog(true)}
-                      className="bg-teal-600 hover:bg-teal-700"
-                    >
-                      Add Summary
-                    </Button>
-                  ) : null}
-                </div>
-              ) : (
-                // Player Actions (only show for non-completed games)
-                !isGameCompleted && (
-                  <>
-                    {isUserJoined(reservation.id, userId) ? (
-                      <Button
-                        variant="destructive"
-                        onClick={handleCancel}
-                        disabled={isCancelling}
-                        size="sm"
-                      >
-                        {isCancelling ? "Cancelling..." : "Cancel Reservation"}
-                      </Button>
-                    ) : isFull ? (
-                      !isUserInWaitingList ? (
-                        <Button variant="secondary" onClick={handleJoinWaitingList} size="sm">
-                          Join Waiting List
-                        </Button>
-                      ) : (
-                        <Button variant="secondary" onClick={handleLeaveWaitingList} size="sm">
-                          Leave Waiting List
-                        </Button>
-                      )
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          type="text"
-                          placeholder="Your Name"
-                          value={playerName}
-                          onChange={(e) => setPlayerName(e.target.value)}
-                          className="max-w-[120px] h-8"
-                        />
-                        <Button 
-                          onClick={handleJoin} 
-                          disabled={isJoining} 
-                          size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          {isJoining ? "Joining..." : "Join Game"}
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )
-              )}
-            </div>
-          </CardContent>
+          {/* Game Title */}
+          <div className="absolute bottom-4 left-4 text-white">
+            <h2 className="text-xl font-bold">
+              {reservation.title || reservation.pitchName}
+            </h2>
+            <p className="text-green-100 text-sm">
+              {formatDate(reservation.date)}
+            </p>
+          </div>
         </div>
-      </Card>
 
-      {/* Player Details Dialog */}
-      {selectedPlayer && (
-        <PlayerDetailsDialog
-          player={selectedPlayer}
-          isOpen={isPlayerDialogOpen}
-          onClose={() => setIsPlayerDialogOpen(false)}
-          userRole={userRole}
-        />
-      )}
+        <CardContent className="p-4 space-y-4">
+          {/* Game Details */}
+          <div className="space-y-3">
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <Clock className="h-4 w-4 mr-3 text-green-600" />
+              <span className="font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                {formatTime()}
+              </span>
+            </div>
+
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <MapPin className="h-4 w-4 mr-3" />
+              <span>{reservation.location}</span>
+            </div>
+
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <Users className="h-4 w-4 mr-3" />
+              <span>
+                {reservation.lineup?.length || 0} / {reservation.maxPlayers} players
+              </span>
+              <span className="ml-auto text-blue-500 font-medium">
+                {reservation.maxPlayers - (reservation.lineup?.length || 0)} spots left
+              </span>
+            </div>
+          </div>
+
+          {/* Players List */}
+          {reservation.lineup && reservation.lineup.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                Players Joined:
+              </h4>
+              <ScrollArea className="h-20 rounded-md border dark:border-gray-700">
+                <div className="p-2 flex flex-wrap gap-2">
+                  {reservation.lineup.map((player) => (
+                    <div 
+                      key={player.userId} 
+                      className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700 rounded-full px-2 py-1"
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
+                        <AvatarFallback className="text-xs">{player.playerName.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-gray-700 dark:text-gray-200">
+                        {player.playerName}
+                      </span>
+                      {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="pt-2">
+            {isAdmin ? (
+              // Admin Actions
+              <div className="w-full">
+                {isGameUpcoming ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="destructive" 
+                        className="w-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Reservation
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this reservation? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDeleteReservation?.(reservation.id)}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : isGameCompleted ? (
+                  <Button 
+                    onClick={() => setShowSummaryDialog(true)}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    Add Summary
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              // Player Actions (only show for non-completed games)
+              !isGameCompleted && (
+                <>
+                  {isUserJoined(reservation.id, userId) ? (
+                    <Button
+                      variant="destructive"
+                      onClick={handleCancel}
+                      disabled={isCancelling}
+                      className="w-full"
+                    >
+                      {isCancelling ? "Cancelling..." : "Cancel Reservation"}
+                    </Button>
+                  ) : isFull ? (
+                    !isUserInWaitingList ? (
+                      <Button variant="secondary" onClick={handleJoinWaitingList} className="w-full">
+                        Join Waiting List
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" onClick={handleLeaveWaitingList} className="w-full">
+                        Leave Waiting List
+                      </Button>
+                    )
+                  ) : (
+                    <div className="space-y-2">
+                      <Input
+                        type="text"
+                        placeholder="Your Name"
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        className="w-full"
+                      />
+                      <Button 
+                        onClick={handleJoin} 
+                        disabled={isJoining} 
+                        className="w-full bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        {isJoining ? "Joining..." : "Join Game"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Game Summary Dialog */}
       {showSummaryDialog && isGameCompleted && (
