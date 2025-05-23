@@ -1,9 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Trash2, CalendarIcon, Users, ExternalLink } from "lucide-react";
+import { MapPin, Trash2, CalendarIcon, Users, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { Pitch } from "@/context/ReservationContext";
 
 interface PitchCardProps {
@@ -18,28 +18,85 @@ interface PitchCardProps {
 /**
  * PitchCard component
  * Displays a card with pitch information and action buttons
+ * Now supports multiple images with navigation
  */
 const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
   isAdmin,
   onViewDetails,
   onBookPitch,
-  onEditClick,
   onDeleteClick
 }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Get all images for this pitch
+  const allImages = [
+    pitch.image,
+    ...(pitch.additionalImages || [])
+  ].filter(Boolean);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-      {/* Card image */}
+      {/* Card image with navigation for multiple images */}
       <div 
-        className="h-48 relative cursor-pointer" 
+        className="h-48 relative cursor-pointer group" 
         onClick={onViewDetails}
       >
         <img 
-          src={pitch.image}
+          src={allImages[currentImageIndex] || pitch.image}
           alt={pitch.name} 
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
+        
+        {/* Image navigation - only show if more than 1 image */}
+        {allImages.length > 1 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            {/* Image indicators */}
+            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-1">
+              {allImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(index);
+                  }}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <h3 className="font-semibold text-white text-lg line-clamp-1">
             {pitch.name}
@@ -102,7 +159,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </div>
         </div>
         
-        {/* Action buttons */}
+        {/* Action buttons - removed edit button */}
         <div className="flex gap-2">
           <Button 
             onClick={onBookPitch} 
@@ -113,17 +170,14 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </Button>
           
           {isAdmin && (
-            <div className="flex gap-2">
-              {/* Edit button removed as requested */}
-              <Button 
-                onClick={onDeleteClick}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 text-red-500 hover:text-red-600 hover:border-red-300"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button 
+              onClick={onDeleteClick}
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 text-red-500 hover:text-red-600 hover:border-red-300"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </CardContent>

@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,12 +35,11 @@ const AddPitch = () => {
     location: "", // Google Maps link
     city: "",
     image: "",
-    images: ["", "", "", ""], // Array to store up to 4 images
+    images: ["", "", ""], // Array to store up to 3 images
     playersPerSide: "",
     description: "",
-    // Removed: price and openingHours
     facilities: {} as Record<string, boolean>, // Changed to object with boolean values
-    type: "outdoor" // New: default to outdoor
+    type: "" // Required: indoor/outdoor
   });
   
   // For image preview and slider functionality
@@ -60,7 +60,7 @@ const AddPitch = () => {
     if (!pitchData.name || !pitchData.location || !pitchData.city || !pitchData.playersPerSide || !pitchData.type) {
       toast({
         title: "Missing Fields",
-        description: "Please fill all required fields.",
+        description: "Please fill all required fields including pitch type.",
         variant: "destructive"
       });
       return;
@@ -96,7 +96,7 @@ const AddPitch = () => {
         description: pitchData.description,
         price: 0, // Default price as it's removed
         facilities: facilitiesArray,
-        type: pitchData.type, // New: indoor/outdoor type
+        type: pitchData.type, // Required: indoor/outdoor type
       });
       
       // Also save images to localStorage
@@ -164,7 +164,7 @@ const AddPitch = () => {
   // Initialize facilities with default values
   React.useEffect(() => {
     const initialFacilities = AVAILABLE_FACILITIES.reduce((acc, facility) => {
-      // Set default values based on your requirements
+      // Set default values - all true except parking
       const defaultValues: Record<string, boolean> = {
         water: true,
         cafeteria: true,
@@ -285,10 +285,10 @@ const AddPitch = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Multiple Image Upload Section */}
+              {/* Multiple Image Upload Section - Up to 3 images */}
               <div className="space-y-2">
-                <label htmlFor="image-upload" className="text-sm font-medium">Pitch Images (Up to 4)</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <label htmlFor="image-upload" className="text-sm font-medium">Pitch Images (Up to 3)</label>
+                <div className="grid grid-cols-3 gap-3">
                   {pitchData.images.map((image, index) => (
                     <div 
                       key={index} 
@@ -394,15 +394,16 @@ const AddPitch = () => {
                   />
                 </div>
                 
-                {/* New: Indoor/Outdoor selector */}
+                {/* Required: Indoor/Outdoor selector */}
                 <div className="space-y-2">
                   <label htmlFor="type" className="text-sm font-medium">Pitch Type*</label>
                   <Select 
                     value={pitchData.type} 
                     onValueChange={handleTypeChange}
+                    required
                   >
                     <SelectTrigger id="type">
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="Select type*" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="indoor">Indoor</SelectItem>
@@ -425,7 +426,7 @@ const AddPitch = () => {
                 <p className="text-xs text-gray-500">Paste a Google Maps link to the pitch location</p>
               </div>
               
-              {/* Updated: Facilities checkboxes */}
+              {/* Facilities checkboxes - all default true except parking */}
               <div className="space-y-2">
                 <div className="mb-2">
                   <label className="text-sm font-medium">Facilities Available</label>
