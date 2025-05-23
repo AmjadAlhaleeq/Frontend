@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
 import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
@@ -378,27 +379,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
-  // Handle suspending a player (add this function)
-  const handleSuspendPlayer = async (playerId: string, reason: string) => {
-    try {
-      // In a real app, this would call an API to suspend the player
-      console.log("Suspending player:", playerId, "with reason:", reason);
-      toast({
-        title: "Player Suspended",
-        description: "The player has been suspended successfully",
-      });
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Error suspending player:", error);
-      toast({
-        title: "Error",
-        description: "Failed to suspend player. Please try again.",
-        variant: "destructive"
-      });
-      return Promise.reject(error);
-    }
-  };
-
   // Open suspend player dialog
   const openSuspendDialog = (userId: string, playerName: string) => {
     setSelectedPlayerId(userId);
@@ -707,7 +687,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
           playerEmail={selectedPlayerEmail}
-          onSuspend={handleSuspendPlayer}
         />
       )}
     </Card>

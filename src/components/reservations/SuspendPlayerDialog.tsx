@@ -1,76 +1,50 @@
 
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader, ShieldAlert, User } from "lucide-react";
+import { AlertTriangle, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Define player interface since it's missing from ReservationContext
-interface Player {
-  userId: string;
-  playerName?: string;
-  status: 'joined' | 'waiting';
-}
+import { useReservation } from "@/context/ReservationContext";
+import { sendPlayerSuspensionNotification } from "@/utils/emailNotifications";
+import { format, addDays } from "date-fns";
 
 interface SuspendPlayerDialogProps {
-  players?: Player[]; // Make this optional to support both usage patterns
-  playerId?: string;  // Add this to support direct player ID passing
-  playerName?: string; // Add player name for direct access
-  playerEmail?: string; // Add player email for direct access
   isOpen: boolean;
   onClose: () => void;
-  onSuspend: (playerId: string, reason: string) => Promise<void>;
+  playerId: string;
+  playerName: string;
+  playerEmail: string;
 }
 
 /**
- * SuspendPlayerDialog Component
- * Used by admins to suspend players after a game is completed
+ * Dialog component for suspending a player
+ * Used by admins to suspend players with a reason and duration
+ * Sends a notification email to the suspended player
  */
 const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
-  players = [],
-  playerId: initialPlayerId = "",
-  playerName: initialPlayerName = "",
   isOpen,
   onClose,
-  onSuspend
+  playerId,
+  playerName,
+  playerEmail
 }) => {
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(initialPlayerId);
+  const [duration, setDuration] = useState<number>(7);
   const [reason, setReason] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
+  const { suspendPlayer } = useReservation();
   
-  // If we have a direct playerId passed, use that (for backward compatibility)
-  React.useEffect(() => {
-    if (initialPlayerId) {
-      setSelectedPlayerId(initialPlayerId);
-    }
-  }, [initialPlayerId]);
-  
-  const handleSubmit = async () => {
-    if (!selectedPlayerId) {
-      toast({
-        title: "No player selected",
-        description: "Please select a player to suspend",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleSuspend = async () => {
     if (!reason.trim()) {
       toast({
-        title: "Reason required",
-        description: "Please provide a reason for the suspension",
-        variant: "destructive"
+        title: "Missing information",
+        description: "Please provide a reason for suspension",
+        variant: "destructive",
       });
       return;
     }
@@ -78,22 +52,30 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      await onSuspend(selectedPlayerId, reason);
+      // Calculate end date for email notification
+      const endDate = format(addDays(new Date(), duration), "MMMM d, yyyy");
+      
+      // Call the context function to suspend player
+      suspendPlayer(playerId, duration, reason);
+      
+      // Send email notification to the player
+      await sendPlayerSuspensionNotification(
+        playerEmail, 
+        { duration, reason, endDate }
+      );
+      
       toast({
-        title: "Player Suspended",
-        description: "The player has been suspended successfully",
+        title: "Player suspended",
+        description: `${playerName} has been suspended for ${duration} days and notified via email.`,
       });
       
-      // Reset form and close dialog
-      setSelectedPlayerId("");
-      setReason("");
       onClose();
     } catch (error) {
       console.error("Error suspending player:", error);
       toast({
-        title: "Error",
+        title: "Action failed",
         description: "Failed to suspend player. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -101,75 +83,79 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <ShieldAlert className="h-5 w-5 mr-2 text-red-500" />
+          <DialogTitle className="flex items-center text-red-600">
+            <Ban className="mr-2 h-5 w-5" />
             Suspend Player
           </DialogTitle>
+          <DialogDescription>
+            This will temporarily block {playerName} from joining games for {duration} days.
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="player-select">Select Player*</Label>
-            {/* Show selection dropdown only if we have a player list and no direct player ID */}
-            {players.length > 0 && !initialPlayerId ? (
-              <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                <SelectTrigger id="player-select">
-                  <SelectValue placeholder="Select a player" />
-                </SelectTrigger>
-                <SelectContent>
-                  {players.map(player => (
-                    <SelectItem key={player.userId} value={player.userId}>
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2 text-gray-500" />
-                        {player.playerName || `Player ${player.userId.slice(0, 4)}`}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              // Just show the player name if it's directly passed
-              <div className="px-3 py-2 border rounded-md flex items-center">
-                <User className="h-4 w-4 mr-2 text-gray-500" />
-                {initialPlayerName || `Player ${selectedPlayerId.slice(0, 4)}`}
-              </div>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="suspension-reason">Reason for Suspension*</Label>
-            <Textarea
-              id="suspension-reason"
-              placeholder="Explain why this player is being suspended..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">
-              This information will be visible to the player and administrators.
-            </p>
+        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md flex items-start space-x-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+          <div className="text-sm text-red-700 dark:text-red-300">
+            A notification email will be sent to {playerEmail} explaining the suspension.
           </div>
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="duration">Suspension Duration</Label>
+            <Select 
+              value={duration.toString()} 
+              onValueChange={(value) => setDuration(parseInt(value, 10))}
+            >
+              <SelectTrigger id="duration">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 day</SelectItem>
+                <SelectItem value="3">3 days</SelectItem>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="14">14 days</SelectItem>
+                <SelectItem value="30">30 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="reason">Reason for Suspension</Label>
+            <Textarea
+              id="reason"
+              placeholder="Explain why this player is being suspended"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              required
+            />
+          </div>
+        </div>
+        
+        <DialogFooter className="sm:justify-between">
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button 
-            variant="destructive" 
-            onClick={handleSubmit}
-            disabled={isSubmitting || !selectedPlayerId || !reason.trim()}
+            onClick={handleSuspend} 
+            variant="destructive"
+            disabled={isSubmitting || !reason.trim()}
+            className="bg-red-600 hover:bg-red-700"
           >
             {isSubmitting ? (
               <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
+                <span className="mr-2">Suspending...</span>
+                <span className="animate-spin">⏳</span>
               </>
             ) : (
-              "Suspend Player"
+              <>Confirm Suspension</>
             )}
           </Button>
         </DialogFooter>

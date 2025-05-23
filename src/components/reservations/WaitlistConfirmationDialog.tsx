@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { UserPlus, UserMinus, AlertTriangle, Calendar, Clock } from "lucide-react";
+import { UserPlus, UserMinus } from "lucide-react";
 
 interface WaitlistConfirmationDialogProps {
   isOpen: boolean;

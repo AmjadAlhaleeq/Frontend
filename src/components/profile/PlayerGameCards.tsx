@@ -1,30 +1,23 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Calendar, Clock, MapPin, Users, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isAfter } from "date-fns";
 import { Reservation } from "@/context/ReservationContext";
-import ReservationCard from "@/components/reservations/ReservationCard";
 
 interface PlayerGameCardsProps {
   reservations: Reservation[];
   userId: string;
-  onJoinGame?: (reservationId: number) => void;
-  onCancelReservation?: (reservationId: number) => void;
 }
 
 /**
  * PlayerGameCards component
  * Displays upcoming games for a player
  */
-const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ 
-  reservations, 
-  userId,
-  onJoinGame,
-  onCancelReservation
-}) => {
+const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId }) => {
   const navigate = useNavigate();
   
   const today = new Date();
@@ -36,8 +29,12 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({
     )
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
     
+  const formatGameDate = (dateStr: string) => {
+    return format(parseISO(dateStr), 'EEE, MMM d');
+  };
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-1 gap-6"> {/* Changed to md:grid-cols-1 as only one card remains */}
       {/* Upcoming Games Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -49,20 +46,39 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({
           {upcomingGames.length > 0 ? (
             <div className="space-y-4">
               {upcomingGames.slice(0, 3).map(game => (
-                <ReservationCard
+                <div 
                   key={game.id}
-                  reservation={game}
-                  type="upcoming"
-                  onJoinGame={onJoinGame ? () => onJoinGame(game.id) : undefined}
-                  onCancelReservation={onCancelReservation ? () => onCancelReservation(game.id) : undefined}
-                  onJoinWaitingList={() => {}} // Add empty function for required prop
-                  onLeaveWaitingList={() => {}} // Add empty function for required prop
-                  isUserJoined={true} // We know the user is joined because of the filter above
-                  isUserOnWaitingList={false} // We know the user is not on the waitlist because they're joined
-                  hasUserJoinedOnDate={() => false} // This is not relevant in this context
-                  currentUserId={userId}
-                  isAdmin={false} // User view
-                />
+                  className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                  onClick={() => navigate('/reservations')} // Or dispatch event to show details
+                >
+                  <div className="flex justify-between mb-2">
+                    <h4 className="font-medium">{game.pitchName}</h4>
+                    <Badge className={
+                      game.status === 'open' ? "bg-green-500" : 
+                      game.status === 'full' ? "bg-amber-500" : "bg-gray-500"
+                    }>
+                      {game.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                      {formatGameDate(game.date)}
+                    </div>
+                    <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <Clock className="h-3.5 w-3.5 mr-1.5" />
+                      {game.time}
+                    </div>
+                    <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                      {game.location || "Location not specified"}
+                    </div>
+                    <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <Users className="h-3.5 w-3.5 mr-1.5" />
+                      {game.playersJoined}/{game.maxPlayers + 2} {/* Assuming +2 subs is standard display */}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -83,6 +99,8 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({
           </Button>
         </CardFooter>
       </Card>
+      
+      {/* Game History Card Removed */}
     </div>
   );
 };

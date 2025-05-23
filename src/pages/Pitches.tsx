@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Edit3, Trash2 } from "lucide-react";
+import { Search, MapPin, Plus, Edit3, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation, Pitch } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
@@ -133,7 +133,15 @@ const Pitches = () => {
             />
           </div>
 
-          {/* Add Pitch button removed for regular admin profile */}
+          {userRole === 'admin' && (
+            <Button
+              onClick={handleAddPitch}
+              className="bg-[#0F766E] hover:bg-[#0d6d66]"
+            >
+              <Plus size={18} className="mr-2" />
+              Add Pitch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -144,8 +152,17 @@ const Pitches = () => {
           </div>
           <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">No pitches found</h3>
           <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md mx-auto">
-            Try adjusting your search or check back later for new pitches.
+            Try adjusting your search or add a new pitch if you have admin privileges.
           </p>
+          {userRole === 'admin' && (
+            <Button 
+              onClick={handleAddPitch} 
+              className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm"
+            >
+              Add New Pitch
+              <Plus className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
