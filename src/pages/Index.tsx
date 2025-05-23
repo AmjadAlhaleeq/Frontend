@@ -5,6 +5,7 @@ import Home from "./Home";
 import Profile from "./Profile";
 import Pitches from "./Pitches";
 import Reservations from "./Reservations";
+import ReservationDetail from "./ReservationDetail";
 import Leaderboards from "./Leaderboards";
 import AboutPage from "./AboutPage";
 import Faq from "./Faq";
@@ -57,6 +58,7 @@ const Index = () => {
       console.log("User logged in, refreshing the page");
       // When user logs in successfully, we don't need to reload the whole page
       // The navbar and other components will be updated through the loginStatusChanged event
+      navigate("/profile");
     };
     
     // Handle logout event listener
@@ -85,6 +87,7 @@ const Index = () => {
         <Route path="/my-bookings" element={<PageTransition><MyBookings /></PageTransition>} />
         <Route path="/pitches" element={<PageTransition><Pitches /></PageTransition>} />
         <Route path="/reservations" element={<PageTransition><Reservations /></PageTransition>} />
+        <Route path="/reservations/:id" element={<PageTransition><ReservationDetail /></PageTransition>} />
         <Route path="/leaderboards" element={<PageTransition><Leaderboards /></PageTransition>} />
         <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
         <Route path="/faq" element={<PageTransition><Faq /></PageTransition>} />

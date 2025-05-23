@@ -14,12 +14,6 @@ import axios from "axios";
 /**
  * Player Profile Page Component
  * Displays user information, statistics, and achievements
- * 
- * Includes:
- * - Basic user information
- * - Player statistics
- * - Badges and achievements
- * - Profile editing functionality
  */
 const Profile = () => {
   const navigate = useNavigate();
@@ -60,7 +54,6 @@ const Profile = () => {
                   lastName: user.lastName,
                   age: user.age.toString(),
                   city: user.city,
-                  position: user.preferredPosition || "",
                   phoneNumber: user.phone,
                   avatarUrl: user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`
                 };
@@ -117,16 +110,15 @@ const Profile = () => {
       if (authToken) {
         try {
           // Extract just the fields we want to update
-          const { firstName, lastName, age, city, position, phoneNumber, bio } = updatedData;
+          const { firstName, lastName, age, city, phoneNumber } = updatedData;
           
           await axios.put("/users/profile", {
             firstName,
             lastName,
             age: Number(age),
             city,
-            preferredPosition: position, 
             phone: phoneNumber,
-            bio: bio || `Football player from ${city}`
+            bio: `Football player from ${city}`
           }, {
             headers: { Authorization: `Bearer ${authToken}` }
           });
@@ -277,10 +269,6 @@ const Profile = () => {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">City:</span>
                       <span className="font-medium">{currentUser.city || "Not specified"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Preferred position:</span>
-                      <span className="font-medium">{currentUser.position || "Not specified"}</span>
                     </div>
                   </div>
                   

@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { format, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
-import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban } from "lucide-react";
+import { MapPin, Users, Calendar, Clock, AlertTriangle, UserPlus, UserMinus, ExternalLink, Trash2, Loader, Ban, FileText, EyeIcon, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Reservation } from "@/context/ReservationContext";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 import SuspendPlayerDialog from "@/components/reservations/SuspendPlayerDialog";
-import { sendGameCancellationNotification, sendWaitingListNotification } from "@/utils/emailNotifications";
 import JoinGameConfirmationDialog from "./JoinGameConfirmationDialog";
 import LeaveGameDialog from "./LeaveGameDialog";
 import WaitlistConfirmationDialog from "./WaitlistConfirmationDialog";
+import KickPlayerDialog from "./KickPlayerDialog";
+import { useNavigate } from "react-router-dom";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -30,6 +31,9 @@ interface ReservationCardProps {
   currentUserId: string;
   isAdmin?: boolean;
   onDeleteReservation?: (id: number) => void;
+  onAddSummary?: (reservation: Reservation) => void;
+  hasSummary?: boolean;
+  showWaitlist?: boolean;
 }
 
 /**
@@ -48,9 +52,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   hasUserJoinedOnDate,
   currentUserId,
   isAdmin = false,
-  onDeleteReservation
+  onDeleteReservation,
+  onAddSummary,
+  hasSummary = false,
+  showWaitlist = false
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isJoining, setIsJoining] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isWaitlistJoining, setIsWaitlistJoining] = useState(false);
@@ -58,6 +66,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+  const [showKickDialog, setShowKickDialog] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>("");
   const [selectedPlayerEmail, setSelectedPlayerEmail] = useState<string>("");
@@ -83,7 +92,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     try {
       // Parse date and time
       const gameDate = parseISO(reservation.date);
-      const [hours, minutes] = reservation.time.split(':').map(Number);
+      const startTime = reservation.time.split(' - ')[0];
+      const [hours, minutes] = startTime.split(':').map(Number);
       
       // Set time for the game
       gameDate.setHours(hours || 0);
@@ -105,7 +115,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     try {
       // Parse date and time
       const gameDate = parseISO(reservation.date);
-      const [hours, minutes] = reservation.time.split(':').map(Number);
+      const startTime = reservation.time.split(' - ')[0];
+      const [hours, minutes] = startTime.split(':').map(Number);
       
       // Set time for the game
       gameDate.setHours(hours || 0);
@@ -189,33 +200,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     
     try {
       await onCancelReservation();
-      
-      // If there are people on the waiting list, send notification
-      if (reservation.waitingList && reservation.waitingList.length > 0) {
-        // In a real app, you'd get the emails from user profiles
-        // For demo, we'll create dummy emails from user IDs
-        const waitingListEmails = reservation.waitingList.map(userId => {
-          // This is a dummy implementation - in real app, get actual emails
-          return `player-${userId}@example.com`;
-        });
-        
-        // Create join URL - in real app this would point to your app with appropriate params
-        const joinUrl = `${window.location.origin}/reservations?game=${reservation.id}&action=join`;
-        
-        // Send notification to waiting list
-        await sendWaitingListNotification(
-          {
-            id: reservation.id,
-            title: reservation.title || reservation.pitchName,
-            date: formatDate(reservation.date),
-            time: reservation.time,
-            location: reservation.location || ""
-          },
-          waitingListEmails,
-          joinUrl
-        );
-      }
-      
       toast({
         title: "Reservation cancelled",
         description: "You've left the game",
@@ -341,30 +325,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     
     setIsDeleting(true);
     try {
-      // Get emails for all players in the lineup
-      const playerEmails = reservation.lineup && reservation.lineup.map(player => {
-        // This is a dummy implementation - in real app, get actual emails
-        return `player-${player.userId}@example.com`;
-      });
-      
-      // Send cancellation emails
-      await sendGameCancellationNotification(
-        {
-          title: reservation.title || reservation.pitchName,
-          date: formatDate(reservation.date),
-          time: reservation.time,
-          location: reservation.location || ""
-        },
-        playerEmails
-      );
-      
       // Delete the reservation
       onDeleteReservation(reservation.id);
-      
-      toast({
-        title: "Reservation deleted",
-        description: "The reservation has been deleted and players notified",
-      });
       
       setShowDeleteDialog(false);
     } catch (error) {
@@ -379,6 +341,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
+  // Handle adding game summary (admin only)
+  const handleAddSummary = () => {
+    if (!onAddSummary) return;
+    
+    onAddSummary(reservation);
+  };
+
   // Open suspend player dialog
   const openSuspendDialog = (userId: string, playerName: string) => {
     setSelectedPlayerId(userId);
@@ -386,6 +355,48 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // In a real app, get the actual email from user profile
     setSelectedPlayerEmail(`player-${userId}@example.com`);
     setShowSuspendDialog(true);
+  };
+  
+  // Open kick player dialog
+  const openKickDialog = (userId: string, playerName: string) => {
+    setSelectedPlayerId(userId);
+    setSelectedPlayerName(playerName || "Player");
+    // In a real app, get the actual email from user profile
+    setSelectedPlayerEmail(`player-${userId}@example.com`);
+    setShowKickDialog(true);
+  };
+  
+  // Handle suspending a player
+  const handleSuspendPlayer = (playerId: string, reason: string, duration: string) => {
+    // In a real app, you would call an API to suspend the player
+    console.log(`Suspending player ${playerId} for ${duration} because: ${reason}`);
+    
+    toast({
+      title: "Player suspended",
+      description: `${selectedPlayerName} has been suspended for ${duration}.`,
+    });
+  };
+  
+  // Handle kicking a player from a game
+  const handleKickPlayer = (playerId: string, reason: string) => {
+    // In a real app, you would call an API to kick the player from the game
+    console.log(`Kicking player ${playerId} from game because: ${reason}`);
+    
+    // Remove player from lineup
+    const updatedLineup = reservation.lineup?.filter(p => p.userId !== playerId) || [];
+    
+    // Note: In a real app, you would update the reservation in your backend and then update the state
+    
+    toast({
+      title: "Player removed",
+      description: `${selectedPlayerName} has been removed from the game.`,
+    });
+  };
+  
+  // Navigate to reservation detail page
+  const navigateToReservationDetail = () => {
+    // Example: Navigate to a detailed reservation page
+    navigate(`/reservations/${reservation.id}`);
   };
 
   // Calculate percentage of players joined vs max players
@@ -487,10 +498,40 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </div>
           
           {/* Only show waiting list for full games */}
-          {reservation.status === 'full' && reservation.waitingList && reservation.waitingList.length > 0 && (
+          {(reservation.status === 'full' && reservation.waitingList && reservation.waitingList.length > 0) && (
             <div className="flex items-center text-xs text-muted-foreground">
               <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" />
               <span>{reservation.waitingList.length} on waiting list</span>
+            </div>
+          )}
+          
+          {/* Show waiting list users for admin */}
+          {(isAdmin && showWaitlist && reservation.waitingList && reservation.waitingList.length > 0) && (
+            <div className="mt-2 border-t pt-2">
+              <h5 className="text-xs font-medium mb-1.5 flex items-center">
+                <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" /> 
+                Waiting List:
+              </h5>
+              <div className="flex flex-wrap gap-1">
+                {reservation.waitingList.map((userId) => (
+                  <TooltipProvider key={userId}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="relative">
+                          <Avatar className="h-6 w-6 border border-muted">
+                            <AvatarFallback className="text-xs">
+                              {userId.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">User: {userId}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ))}
+              </div>
             </div>
           )}
           
@@ -510,15 +551,26 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                             </AvatarFallback>
                           </Avatar>
                           {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-100 hover:bg-red-200 p-0"
-                              onClick={() => openSuspendDialog(player.userId, player.playerName || "Player")}
-                            >
-                              <Ban className="h-3 w-3 text-red-600" />
-                              <span className="sr-only">Suspend player</span>
-                            </Button>
+                            <div className="absolute -top-1 -right-1 flex space-x-0.5">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 rounded-full bg-amber-100 hover:bg-amber-200 p-0"
+                                onClick={() => openKickDialog(player.userId, player.playerName || "Player")}
+                              >
+                                <UserMinus className="h-3 w-3 text-amber-600" />
+                                <span className="sr-only">Kick player</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 rounded-full bg-red-100 hover:bg-red-200 p-0"
+                                onClick={() => openSuspendDialog(player.userId, player.playerName || "Player")}
+                              >
+                                <Ban className="h-3 w-3 text-red-600" />
+                                <span className="sr-only">Suspend player</span>
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </TooltipTrigger>
@@ -611,82 +663,139 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </>
         )}
         
-        {/* Admin delete button */}
-        {isAdmin && (
-          <Button 
-            variant="outline" 
-            className="w-full text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-            onClick={handleDeleteReservation}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
+        {/* Admin buttons for upcoming games */}
+        {isAdmin && type === "upcoming" && (
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              onClick={navigateToReservationDetail}
+              className="flex-1 mr-2"
+            >
+              <EyeIcon className="mr-2 h-4 w-4" />
+              View Details
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+              onClick={handleDeleteReservation}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        )}
+        
+        {/* Admin buttons for completed games */}
+        {isAdmin && type === "past" && (
+          <div className="flex justify-between w-full">
+            {onAddSummary && (
+              <Button
+                variant={hasSummary ? "outline" : "default"}
+                className={hasSummary ? "flex-1 mr-2" : "flex-1 mr-2 bg-teal-600 hover:bg-teal-700"}
+                onClick={handleAddSummary}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                {hasSummary ? "Edit Summary" : "Add Summary"}
+              </Button>
             )}
-            {isDeleting ? "Deleting..." : "Delete Reservation"}
+            <Button 
+              variant="outline" 
+              className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+              onClick={handleDeleteReservation}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        )}
+        
+        {/* Non-admin view of completed games */}
+        {!isAdmin && type === "past" && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={navigateToReservationDetail}
+          >
+            <EyeIcon className="mr-2 h-4 w-4" />
+            View Details
           </Button>
         )}
       </CardFooter>
-      
-      {/* Dialogs */}
-      <JoinGameConfirmationDialog 
-        isOpen={showJoinGameDialog}
-        onClose={() => setShowJoinGameDialog(false)}
+
+      {/* Confirmation Dialogs */}
+      <JoinGameConfirmationDialog
+        open={showJoinGameDialog}
+        onOpenChange={setShowJoinGameDialog}
         onConfirm={confirmJoinGame}
-        gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date)}
+        gameTitle={reservation.title || reservation.pitchName}
         gameTime={reservation.time}
+        gameDate={formatDate(reservation.date)}
       />
       
-      <LeaveGameDialog 
-        isOpen={showLeaveGameDialog}
-        onClose={() => setShowLeaveGameDialog(false)}
+      <LeaveGameDialog
+        open={showLeaveGameDialog}
+        onOpenChange={setShowLeaveGameDialog}
         onConfirm={confirmLeaveGame}
-        gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date)}
-        gameTime={reservation.time}
+        gameTitle={reservation.title || reservation.pitchName}
         isPenalty={isPenalty()}
-        timeToGame={getTimeToGame()}
       />
       
       <WaitlistConfirmationDialog
-        isOpen={showJoinWaitlistDialog}
-        onClose={() => setShowJoinWaitlistDialog(false)}
+        open={showJoinWaitlistDialog}
+        onOpenChange={setShowJoinWaitlistDialog}
         onConfirm={confirmJoinWaitlist}
-        gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date)}
-        gameTime={reservation.time}
+        gameTitle={reservation.title || reservation.pitchName}
         isJoining={true}
       />
       
       <WaitlistConfirmationDialog
-        isOpen={showLeaveWaitlistDialog}
-        onClose={() => setShowLeaveWaitlistDialog(false)}
+        open={showLeaveWaitlistDialog}
+        onOpenChange={setShowLeaveWaitlistDialog}
         onConfirm={confirmLeaveWaitlist}
-        gameName={reservation.title || reservation.pitchName}
-        gameDate={formatDate(reservation.date)}
-        gameTime={reservation.time}
+        gameTitle={reservation.title || reservation.pitchName}
         isJoining={false}
       />
       
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        onConfirm={confirmDeleteReservation}
-        itemName={reservation.title || reservation.pitchName}
-        itemType="reservation"
-      />
+      {showDeleteDialog && (
+        <DeleteConfirmationDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={confirmDeleteReservation}
+          itemName={reservation.title || reservation.pitchName}
+          itemType="reservation"
+        />
+      )}
       
-      {/* Suspend Player Dialog */}
       {showSuspendDialog && (
         <SuspendPlayerDialog
-          isOpen={showSuspendDialog}
-          onClose={() => setShowSuspendDialog(false)}
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
-          playerEmail={selectedPlayerEmail}
+          email={selectedPlayerEmail}
+          open={showSuspendDialog}
+          onOpenChange={setShowSuspendDialog}
+          onSuspend={handleSuspendPlayer}
+        />
+      )}
+      
+      {showKickDialog && (
+        <KickPlayerDialog
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          email={selectedPlayerEmail}
+          gameTitle={reservation.title || reservation.pitchName}
+          open={showKickDialog}
+          onOpenChange={setShowKickDialog}
+          onKick={handleKickPlayer}
         />
       )}
     </Card>

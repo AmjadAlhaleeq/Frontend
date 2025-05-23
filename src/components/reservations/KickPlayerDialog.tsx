@@ -3,34 +3,34 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Ban, Loader } from "lucide-react";
+import { UserMinus, Loader } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-interface SuspendPlayerDialogProps {
+interface KickPlayerDialogProps {
   playerId: string;
   playerName: string;
   email: string;
+  gameTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuspend: (playerId: string, reason: string, duration: string) => void;
+  onKick: (playerId: string, reason: string) => void;
 }
 
 /**
- * Dialog for suspending players from games with reason and duration
+ * Dialog for kicking players from a specific game with reason
  */
-const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
+const KickPlayerDialog: React.FC<KickPlayerDialogProps> = ({
   playerId,
   playerName,
   email,
+  gameTitle,
   open,
   onOpenChange,
-  onSuspend
+  onKick
 }) => {
   const { toast } = useToast();
   const [reason, setReason] = useState("");
-  const [duration, setDuration] = useState("1_game");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,7 +38,7 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
     if (!reason.trim()) {
       toast({
         title: "Missing reason",
-        description: "Please provide a reason for suspension",
+        description: "Please provide a reason for removing this player",
         variant: "destructive"
       });
       return;
@@ -47,16 +47,16 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      onSuspend(playerId, reason, duration);
+      onKick(playerId, reason);
       toast({
-        title: "Player suspended",
-        description: `${playerName} has been suspended successfully.`,
+        title: "Player removed",
+        description: `${playerName} has been removed from the game.`,
       });
       onOpenChange(false);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to suspend player. Please try again.",
+        description: "Failed to remove player. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -68,7 +68,6 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
   const handleCloseChange = (isOpen: boolean) => {
     if (!isOpen) {
       setReason("");
-      setDuration("1_game");
     }
     onOpenChange(isOpen);
   };
@@ -78,8 +77,8 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center text-xl">
-            <Ban className="mr-2 h-5 w-5 text-red-500" />
-            Suspend Player
+            <UserMinus className="mr-2 h-5 w-5 text-red-500" />
+            Remove Player from Game
           </DialogTitle>
         </DialogHeader>
         
@@ -90,33 +89,16 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
             <p className="text-xs text-muted-foreground">{email}</p>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="suspensionDuration">Suspension Duration</Label>
-            <Select
-              value={duration}
-              onValueChange={setDuration}
-              required
-            >
-              <SelectTrigger id="suspensionDuration">
-                <SelectValue placeholder="Select duration" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1_game">1 Game</SelectItem>
-                <SelectItem value="2_games">2 Games</SelectItem>
-                <SelectItem value="3_games">3 Games</SelectItem>
-                <SelectItem value="1_week">1 Week</SelectItem>
-                <SelectItem value="2_weeks">2 Weeks</SelectItem>
-                <SelectItem value="1_month">1 Month</SelectItem>
-                <SelectItem value="permanent">Permanent Ban</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Game:</p>
+            <p className="text-sm">{gameTitle}</p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="suspensionReason">Reason for Suspension</Label>
+            <Label htmlFor="kickReason">Reason for Removal</Label>
             <Textarea
-              id="suspensionReason"
-              placeholder="Please provide a detailed reason for suspension..."
+              id="kickReason"
+              placeholder="Please provide a reason for removing this player..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               required
@@ -146,8 +128,8 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
                   </>
                 ) : (
                   <>
-                    <Ban className="mr-2 h-4 w-4" />
-                    Suspend Player
+                    <UserMinus className="mr-2 h-4 w-4" />
+                    Remove Player
                   </>
                 )}
               </Button>
@@ -159,4 +141,4 @@ const SuspendPlayerDialog: React.FC<SuspendPlayerDialogProps> = ({
   );
 };
 
-export default SuspendPlayerDialog;
+export default KickPlayerDialog;
