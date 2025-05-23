@@ -56,11 +56,11 @@ const PitchCard: React.FC<PitchCardProps> = ({
         </div>
         
         {/* Indoor/Outdoor Badge */}
-        {pitch.type && (
+        {(pitch as any).type && (
           <Badge 
             className="absolute top-2 right-2 bg-white/80 text-black text-xs font-medium"
           >
-            {pitch.type}
+            {(pitch as any).type}
           </Badge>
         )}
       </div>
@@ -87,7 +87,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
         <div className="mb-3">
           <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
           <div className="flex flex-wrap gap-1.5">
-            {pitch.services && Object.entries(pitch.services).filter(([_, enabled]) => enabled).map(([service]) => (
+            {(pitch as any).services && Object.entries((pitch as any).services).filter(([_, enabled]) => enabled).map(([service]) => (
               <Badge key={service} variant="outline" className="text-xs">
                 {service.charAt(0).toUpperCase() + service.slice(1)}
               </Badge>

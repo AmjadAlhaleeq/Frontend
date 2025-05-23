@@ -12,8 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader, ShieldAlert, User } from "lucide-react";
-import { Player } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
+
+// Define player interface since it's missing from ReservationContext
+interface Player {
+  userId: string;
+  playerName?: string;
+  status: 'joined' | 'waiting';
+}
 
 interface SuspendPlayerDialogProps {
   players: Player[];

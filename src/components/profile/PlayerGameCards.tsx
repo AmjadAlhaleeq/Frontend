@@ -1,10 +1,9 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ChevronRight } from "lucide-react";
 import { format, parseISO, isAfter } from "date-fns";
 import { Reservation } from "@/context/ReservationContext";
 import ReservationCard from "@/components/reservations/ReservationCard";
@@ -61,7 +60,6 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({
                   hasUserJoinedOnDate={() => false} // This is not relevant in this context
                   currentUserId={userId}
                   isAdmin={false} // User view
-                  compact={true} // Use compact view for the profile page
                 />
               ))}
             </div>

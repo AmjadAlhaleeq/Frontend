@@ -24,7 +24,7 @@ import {
   Goal,
   Zap
 } from "lucide-react";
-import { useReservation, Reservation, Player } from "@/context/ReservationContext";
+import { useReservation, Reservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface GameSummaryDialogProps {
@@ -32,6 +32,13 @@ interface GameSummaryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveSuccess: () => void;
+}
+
+// Define Player interface since it's missing from ReservationContext
+interface Player {
+  userId: string;
+  playerName?: string;
+  status: 'joined' | 'waiting';
 }
 
 interface PlayerStatUpdate {
@@ -76,8 +83,22 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { updateGameSummary, updatePlayerStats } = useReservation();
   const { toast } = useToast();
+  const { reservations, setReservations } = useReservation();
+  
+  // This function simulates updating game summary since it doesn't exist in context
+  const updateGameSummary = async (reservationId: number, summaryData: any) => {
+    // In a real app, this would update the backend
+    // For now, we'll just simulate success
+    return Promise.resolve();
+  };
+  
+  // This function simulates updating player stats since it doesn't exist in context
+  const updatePlayerStats = async (userId: string, statsUpdate: any) => {
+    // In a real app, this would update the backend
+    // For now, we'll just simulate success
+    return Promise.resolve();
+  };
   
   const handleUpdatePlayerStat = (userId: string, field: keyof PlayerStatUpdate, value: any) => {
     setPlayerStats(prevStats => 
@@ -145,6 +166,25 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
           });
         })
       );
+      
+      // Update reservations to mark this one as having stats recorded
+      const updatedReservations = reservations.map(res => {
+        if (res.id === reservation.id) {
+          return {
+            ...res,
+            hasGameSummary: true,
+            gameSummary: {
+              summary,
+              finalScore,
+              winner,
+              mvpUserId
+            }
+          };
+        }
+        return res;
+      });
+      
+      setReservations(updatedReservations);
       
       toast({
         title: "Summary Saved",

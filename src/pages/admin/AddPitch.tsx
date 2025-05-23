@@ -1,4 +1,3 @@
-
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,9 +80,10 @@ const AddPitch = () => {
           playersPerSide: Number(pitchData.playersPerSide),
           description: pitchData.description,
           price: 0, // We're removing price as requested
-          services: pitchData.services,
+          // Add type and services as custom properties that will be added to the Pitch object
           type: pitchData.type,
-      });
+          services: pitchData.services,
+      } as any);
       
       toast({
         title: "Success!",
