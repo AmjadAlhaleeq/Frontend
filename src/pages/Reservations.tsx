@@ -498,16 +498,16 @@ const Reservations = () => {
                 <ReservationCard
                   key={reservation.id}
                   reservation={reservation}
-                  type="upcoming"
-                  onJoinGame={() => handleJoinGame(reservation.id)}
-                  onCancelReservation={() => handleCancelReservation(reservation.id)}
-                  onJoinWaitingList={() => handleJoinWaitingList(reservation.id)}
-                  onLeaveWaitingList={() => handleLeaveWaitingList(reservation.id)}
+                  userId={currentUserId || ""}
+                  userRole={userRole || "player"}
+                  onJoin={(id, playerName) => handleJoinGame(id)}
+                  onCancel={(id, userId) => handleCancelReservation(id)}
+                  onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
+                  onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
                   isUserJoined={isUserJoinedFunction} // Use the function instead of boolean
-                  isUserOnWaitingList={currentUserId ? reservation.waitingList?.includes(currentUserId) || false : false}
-                  hasUserJoinedOnDate={(dateString) => currentUserId ? hasUserJoinedOnDateFixed(dateString, currentUserId) : false}
-                  currentUserId={currentUserId || ""} 
-                  isAdmin={userRole === 'admin'}
+                  isFull={reservation.status === "full"}
+                  suspendPlayer={userRole === 'admin' ? suspendPlayer : undefined}
+                  kickPlayerFromGame={userRole === 'admin' ? kickPlayerFromGame : undefined}
                   onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
                 />
               ))}

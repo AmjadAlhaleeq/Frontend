@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,16 +41,15 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { BanIcon } from "lucide-react";
-import { useReservation, Reservation, Player } from "@/context/ReservationContext";
+import { useReservation, Reservation } from "@/context/ReservationContext";
 import SuspendPlayerDialog from "./SuspendPlayerDialog";
 
-// Update the Player interface to include email property if it's not already defined
-interface Player {
-  userId: string;
-  playerName: string;
-  status: string;
+// Import Player from context but rename it to avoid conflict with local interface
+import { Player as ReservationPlayer } from "@/context/ReservationContext";
+
+// Extend the Player interface to include email property
+interface Player extends ReservationPlayer {
   email?: string; // Add email as optional property
-  mvp?: boolean;
 }
 
 interface ReservationCardProps {
@@ -64,7 +64,7 @@ interface ReservationCardProps {
   isFull: boolean;
   suspendPlayer?: (userId: string, reason: string, duration: number) => void;
   kickPlayerFromGame?: (reservationId: number, userId: string) => void;
-  onDeleteReservation?: (id: number) => void; // Add this prop
+  onDeleteReservation?: (id: number) => void;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
