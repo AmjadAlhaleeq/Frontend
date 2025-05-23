@@ -55,6 +55,8 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({
                   type="upcoming"
                   onJoinGame={onJoinGame ? () => onJoinGame(game.id) : undefined}
                   onCancelReservation={onCancelReservation ? () => onCancelReservation(game.id) : undefined}
+                  onJoinWaitingList={() => {}} // Add empty function for required prop
+                  onLeaveWaitingList={() => {}} // Add empty function for required prop
                   isUserJoined={true} // We know the user is joined because of the filter above
                   isUserOnWaitingList={false} // We know the user is not on the waitlist because they're joined
                   hasUserJoinedOnDate={() => false} // This is not relevant in this context
