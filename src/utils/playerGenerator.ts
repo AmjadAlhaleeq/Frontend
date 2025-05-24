@@ -15,6 +15,7 @@ export interface Player {
   cleanSheets: number;
   interceptions: number; // Changed from tackles to interceptions
   points: number;
+  wins: number; // Added wins (number, not percentage)
 }
 
 // Function to generate a random player
@@ -27,6 +28,8 @@ export const generateRandomPlayer = (): Player => {
   const mvps = faker.number.int({ min: 0, max: 10 });
   const cleanSheets = faker.number.int({ min: 0, max: 15 });
   const interceptions = faker.number.int({ min: 0, max: 30 }); // Changed from tackles to interceptions
+  // Generate wins (non-percentage, at most gamesPlayed)
+  const wins = faker.number.int({ min: 0, max: gamesPlayed });
 
   return {
     id: faker.string.uuid(),
@@ -38,7 +41,8 @@ export const generateRandomPlayer = (): Player => {
     mvps,
     cleanSheets,
     interceptions, // Changed from tackles to interceptions
-    points: goalsScored * 2 + assists + mvps * 3 + cleanSheets
+    points: goalsScored * 2 + assists + mvps * 3 + cleanSheets,
+    wins,
   };
 };
 
