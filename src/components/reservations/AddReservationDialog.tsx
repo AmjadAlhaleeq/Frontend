@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -131,9 +130,25 @@ const AddReservationDialog = () => {
     };
     
     // Add the reservation
-    const newReservation = addReservation(reservationData);
-    
+    const newReservation = addReservation(reservationData); // This should update state & localStorage
+
+    // --- Patch: Force UI to update if not updating properly, and update localStorage
     if (newReservation) {
+      // Update localStorage (get & set)
+      try {
+        const storedReservations = localStorage.getItem('reservations');
+        let parsedReservations = [];
+        if (storedReservations) {
+          parsedReservations = JSON.parse(storedReservations);
+        }
+        parsedReservations.push(newReservation);
+        localStorage.setItem('reservations', JSON.stringify(parsedReservations));
+        // Optionally, dispatch event so any listeners update
+        window.dispatchEvent(new Event('storage'));
+      } catch (error) {
+        console.error("Error updating reservations in localStorage:", error);
+      }
+      console.log("Reservation successfully added and localStorage updated.", newReservation);
       toast({
         title: "Success!",
         description: "Reservation created successfully.",
