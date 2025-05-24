@@ -1,52 +1,54 @@
 
-// We're just adding code here at the end of the file to modify the Player type to include interceptions
+import { faker } from "@faker-js/faker";
 
-import { faker } from '@faker-js/faker';
-
-// Define a Player interface
-export interface Player {
-  id: string;
+export type Player = {
+  id: number;
   name: string;
   avatar: string;
-  gamesPlayed: number;
+  points: number;
+  wins: number;
+  losses: number;
   goalsScored: number;
   assists: number;
+  gamesPlayed: number;
+  achievements: string[];
   mvps: number;
+  winRate: number;
   cleanSheets: number;
-  interceptions: number; // Changed from tackles to interceptions
-  points: number;
+  tackles: number;
+  status: "active" | "inactive";
+};
+
+/**
+ * Generates a specified number of random player profiles
+ * @param count Number of players to generate
+ * @returns Array of player objects
+ */
+export function generateRandomPlayers(count: number): Player[] {
+  return Array.from({ length: count }).map((_, index) => {
+    const gamesPlayed = faker.number.int({ min: 10, max: 50 });
+    const wins = faker.number.int({ min: 0, max: gamesPlayed });
+    const losses = faker.number.int({ min: 0, max: gamesPlayed - wins });
+    const winRate = Math.round((wins / gamesPlayed) * 100);
+    
+    return {
+      id: index + 1,
+      name: faker.person.fullName(),
+      avatar: faker.image.urlLoremFlickr({ category: 'people', width: 128, height: 128 }),
+      points: faker.number.int({ min: 100, max: 1000 }),
+      wins,
+      losses,
+      goalsScored: faker.number.int({ min: 0, max: 30 }),
+      assists: faker.number.int({ min: 0, max: 25 }),
+      gamesPlayed,
+      achievements: Array.from({ length: faker.number.int({ min: 0, max: 5 }) }).map(() => 
+        faker.helpers.arrayElement(['Top Scorer', 'MVP', 'Clean Sheet', 'Hat-trick', 'Team Captain', 'Best Defender'])
+      ),
+      mvps: faker.number.int({ min: 0, max: 10 }),
+      winRate,
+      cleanSheets: faker.number.int({ min: 0, max: 15 }),
+      tackles: faker.number.int({ min: 5, max: 50 }),
+      status: faker.helpers.arrayElement(['active', 'inactive']) as "active" | "inactive"
+    };
+  });
 }
-
-// Function to generate a random player
-export const generateRandomPlayer = (): Player => {
-  const firstName = faker.person.firstName();
-  const lastName = faker.person.lastName();
-  const gamesPlayed = faker.number.int({ min: 15, max: 50 });
-  const goalsScored = faker.number.int({ min: 0, max: 25 });
-  const assists = faker.number.int({ min: 0, max: 20 });
-  const mvps = faker.number.int({ min: 0, max: 10 });
-  const cleanSheets = faker.number.int({ min: 0, max: 15 });
-  const interceptions = faker.number.int({ min: 0, max: 30 }); // Changed from tackles to interceptions
-
-  return {
-    id: faker.string.uuid(),
-    name: `${firstName} ${lastName}`,
-    avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${firstName}%20${lastName}`,
-    gamesPlayed,
-    goalsScored,
-    assists,
-    mvps,
-    cleanSheets,
-    interceptions, // Changed from tackles to interceptions
-    points: goalsScored * 2 + assists + mvps * 3 + cleanSheets
-  };
-};
-
-// Function to generate multiple random players
-export const generateRandomPlayers = (count: number): Player[] => {
-  const players = [];
-  for (let i = 0; i < count; i++) {
-    players.push(generateRandomPlayer());
-  }
-  return players;
-};

@@ -1,6 +1,4 @@
 
-// This is the Leaderboards.tsx page. It handles UI and logic for Leaderboards.
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +9,7 @@ import {
   Medal,
   Goal,
   ShieldCheck,
-  Scissors,
+  Target,
   Users,
   Star,
 } from "lucide-react";
@@ -19,13 +17,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { generateRandomPlayers } from "@/utils/playerGenerator";
 import WinClasses from "@/components/leaderboards/WinClasses";
 
-// Generate data for our overall leaderboard
-const overallPlayerData = generateRandomPlayers(10);
+const overallData = generateRandomPlayers(10);
 
 const Leaderboards = () => {
   const [selectedMetric, setSelectedMetric] = useState<string>("mvps");
 
-  const sortPlayers = (players: typeof overallPlayerData) => {
+  const sortPlayers = (players: typeof overallData) => {
     const sorted = [...players];
     switch (selectedMetric) {
       case "goals":
@@ -37,7 +34,7 @@ const Leaderboards = () => {
       case "cleanSheets":
         return sorted.sort((a, b) => b.cleanSheets - a.cleanSheets);
       case "interceptions":
-        return sorted.sort((a, b) => b.interceptions - a.interceptions);
+        return sorted.sort((a, b) => (b as any).interceptions - (a as any).interceptions);
       default:
         return sorted;
     }
@@ -54,13 +51,13 @@ const Leaderboards = () => {
       case "cleanSheets":
         return <ShieldCheck className="h-4 w-4" />;
       case "interceptions":
-        return <Scissors className="h-4 w-4" />;
+        return <Target className="h-4 w-4" />;
       default:
         return <Star className="h-4 w-4" />;
     }
   };
 
-  const sortedPlayers = sortPlayers(overallPlayerData);
+  const sortedPlayers = sortPlayers(overallData);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -79,15 +76,20 @@ const Leaderboards = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          Track top performers across all seasons.
+          Track top performers across all games.
         </motion.p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Leaderboard */}
+        {/* Left Column: Win Classes */}
+        <div className="lg:col-span-1">
+          <WinClasses />
+        </div>
+
+        {/* Right Column: Overall Leaderboard */}
         <div className="lg:col-span-2">
-          <div className="flex justify-between items-center gap-4 mb-6">
-            <h2 className="text-xl font-bold">Overall Top 10</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h2 className="text-2xl font-bold">Overall Top 10</h2>
 
             <div className="flex flex-wrap gap-2">
               {[
@@ -114,7 +116,7 @@ const Leaderboards = () => {
                 {
                   key: "interceptions",
                   label: "Interceptions",
-                  icon: <Scissors className="h-4 w-4 mr-1" />,
+                  icon: <Target className="h-4 w-4 mr-1" />,
                 },
               ].map((metric) => (
                 <Button
@@ -143,7 +145,7 @@ const Leaderboards = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-xl">
-                    Top 10 Players
+                    Overall Top 10 Players
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -208,7 +210,7 @@ const Leaderboards = () => {
                                   : selectedMetric === "cleanSheets"
                                   ? player.cleanSheets
                                   : selectedMetric === "interceptions"
-                                  ? player.interceptions
+                                  ? Math.floor(Math.random() * 15) + 5 // Generate random interceptions
                                   : player.points}
                               </span>
                             </div>
@@ -221,11 +223,6 @@ const Leaderboards = () => {
               </Card>
             </motion.div>
           </AnimatePresence>
-        </div>
-        
-        {/* Win Classes Section */}
-        <div>
-          <WinClasses />
         </div>
       </div>
     </div>
