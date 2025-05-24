@@ -1,4 +1,3 @@
-
 // This is the Leaderboards.tsx page. It handles UI and logic for Leaderboards.
 
 import { useState } from "react";
@@ -23,11 +22,14 @@ import WinClasses from "@/components/leaderboards/WinClasses";
 const overallPlayerData = generateRandomPlayers(10);
 
 const Leaderboards = () => {
-  const [selectedMetric, setSelectedMetric] = useState<string>("mvps");
+  const [selectedMetric, setSelectedMetric] = useState<string>("wins"); // default to wins
 
+  // Add "wins" to metric sorting!
   const sortPlayers = (players: typeof overallPlayerData) => {
     const sorted = [...players];
     switch (selectedMetric) {
+      case "wins":
+        return sorted.sort((a, b) => b.wins - a.wins);
       case "goals":
         return sorted.sort((a, b) => b.goalsScored - a.goalsScored);
       case "assists":
@@ -45,6 +47,8 @@ const Leaderboards = () => {
 
   const getMetricIcon = (metric: string) => {
     switch (metric) {
+      case "wins":
+        return <span className="mr-1">🏆</span>;
       case "goals":
         return <Goal className="h-4 w-4" />;
       case "assists":
@@ -59,6 +63,15 @@ const Leaderboards = () => {
         return <Star className="h-4 w-4" />;
     }
   };
+
+  const metrics = [
+    { key: "wins", label: "🏆 Wins", icon: <span className="mr-1">🏆</span> },
+    { key: "goals", label: "Goals", icon: <Goal className="h-4 w-4 mr-1" /> },
+    { key: "assists", label: "Assists", icon: <Users className="h-4 w-4 mr-1" /> },
+    { key: "mvps", label: "MVPs", icon: <Award className="h-4 w-4 mr-1" /> },
+    { key: "cleanSheets", label: "Clean Sheets", icon: <ShieldCheck className="h-4 w-4 mr-1" /> },
+    { key: "interceptions", label: "Interceptions", icon: <Scissors className="h-4 w-4 mr-1" /> }
+  ];
 
   const sortedPlayers = sortPlayers(overallPlayerData);
 
@@ -79,7 +92,7 @@ const Leaderboards = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          Track top performers across all seasons.
+          Track top performers across all time.
         </motion.p>
       </div>
 
@@ -87,36 +100,9 @@ const Leaderboards = () => {
         {/* Main Leaderboard */}
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center gap-4 mb-6">
-            <h2 className="text-xl font-bold">Overall Top 10</h2>
-
+            <h2 className="text-xl font-bold">Top 10 by {metrics.find(m => m.key === selectedMetric)?.label}</h2>
             <div className="flex flex-wrap gap-2">
-              {[
-                {
-                  key: "goals",
-                  label: "Goals",
-                  icon: <Goal className="h-4 w-4 mr-1" />,
-                },
-                {
-                  key: "assists",
-                  label: "Assists",
-                  icon: <Users className="h-4 w-4 mr-1" />,
-                },
-                {
-                  key: "mvps",
-                  label: "MVPs",
-                  icon: <Award className="h-4 w-4 mr-1" />,
-                },
-                {
-                  key: "cleanSheets",
-                  label: "Clean Sheets",
-                  icon: <ShieldCheck className="h-4 w-4 mr-1" />,
-                },
-                {
-                  key: "interceptions",
-                  label: "Interceptions",
-                  icon: <Scissors className="h-4 w-4 mr-1" />,
-                },
-              ].map((metric) => (
+              {metrics.map((metric) => (
                 <Button
                   key={metric.key}
                   variant="outline"
@@ -199,7 +185,9 @@ const Leaderboards = () => {
                             <div className="flex items-center justify-end gap-1">
                               {getMetricIcon(selectedMetric)}
                               <span className="text-lg font-bold">
-                                {selectedMetric === "goals"
+                                {selectedMetric === "wins"
+                                  ? player.wins
+                                  : selectedMetric === "goals"
                                   ? player.goalsScored
                                   : selectedMetric === "assists"
                                   ? player.assists
@@ -209,7 +197,8 @@ const Leaderboards = () => {
                                   ? player.cleanSheets
                                   : selectedMetric === "interceptions"
                                   ? player.interceptions
-                                  : player.points}
+                                  : player.points
+                                }
                               </span>
                             </div>
                           </div>

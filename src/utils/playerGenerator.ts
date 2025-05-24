@@ -13,7 +13,8 @@ export interface Player {
   assists: number;
   mvps: number;
   cleanSheets: number;
-  interceptions: number; // Changed from tackles to interceptions
+  interceptions: number;
+  wins: number; // <-- Added
   points: number;
 }
 
@@ -26,7 +27,8 @@ export const generateRandomPlayer = (): Player => {
   const assists = faker.number.int({ min: 0, max: 20 });
   const mvps = faker.number.int({ min: 0, max: 10 });
   const cleanSheets = faker.number.int({ min: 0, max: 15 });
-  const interceptions = faker.number.int({ min: 0, max: 30 }); // Changed from tackles to interceptions
+  const interceptions = faker.number.int({ min: 0, max: 30 });
+  const wins = faker.number.int({ min: 0, max: gamesPlayed }); // wins <= games played
 
   return {
     id: faker.string.uuid(),
@@ -37,7 +39,8 @@ export const generateRandomPlayer = (): Player => {
     assists,
     mvps,
     cleanSheets,
-    interceptions, // Changed from tackles to interceptions
+    interceptions,
+    wins,
     points: goalsScored * 2 + assists + mvps * 3 + cleanSheets
   };
 };

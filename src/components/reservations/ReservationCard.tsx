@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import GameSummaryDialog from "./GameSummaryDialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Import Player from context but rename it to avoid conflict with local interface
 import { Player as ReservationPlayer } from "@/context/ReservationContext";
@@ -60,6 +61,23 @@ interface PlayerDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   userRole: string;
+}
+
+// Email notification setup (placeholder function, ready for API)
+async function sendCancellationEmail(playerEmail: string, playerName: string, pitchName: string, date: string, startTime: string) {
+  // TODO: Connect to real email API or use your backend endpoint here.
+  // Placeholder: log outgoing email.
+  console.log(`Sending cancellation email to ${playerEmail} for reservation at ${pitchName} on ${date} at ${startTime}`);
+}
+
+// Utility to add minutes to a time string "HH:mm"
+function addMinutesToTime(startTime: string, minutesToAdd: number): string {
+  const [hour, min] = startTime.split(":").map(Number);
+  if (isNaN(hour) || isNaN(min)) return startTime;
+  const baseDate = new Date();
+  baseDate.setHours(hour, min, 0, 0);
+  baseDate.setMinutes(baseDate.getMinutes() + minutesToAdd);
+  return baseDate.toTimeString().slice(0, 5); // "HH:mm"
 }
 
 const PlayerDetailsDialog: React.FC<PlayerDetailsDialogProps> = ({
@@ -155,6 +173,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { updateGameSummary } = useReservation();
 
@@ -282,6 +301,38 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     setCurrentPhotoIndex((prev) => (prev - 1 + pitchPhotos.length) % pitchPhotos.length);
   };
 
+  const handleDeleteReservation = async () => {
+    setShowDeleteDialog(false);
+    // Call deletion
+    onDeleteReservation?.(reservation.id);
+
+    // Send email notifications to joined players, if emails exist
+    if (reservation.lineup && reservation.lineup.length > 0) {
+      reservation.lineup.forEach(player => {
+        // Looks for an email property on player (should be there if from signup)
+        if (player.email) {
+          sendCancellationEmail(
+            player.email,
+            player.playerName,
+            reservation.pitchName,
+            reservation.date,
+            reservation.startTime || reservation.time
+          );
+        }
+      });
+    }
+  };
+
+  // Correct end time calc (add duration in minutes to start time)
+  let startDisplay = reservation.startTime || reservation.time; // fallback to whatever is present
+  let endDisplay = startDisplay;
+  if (startDisplay && reservation.duration) {
+    const minutes = Number(reservation.duration);
+    if (!isNaN(minutes)) {
+      endDisplay = addMinutesToTime(startDisplay, minutes);
+    }
+  }
+
   return (
     <>
       <Card className="bg-white dark:bg-gray-800 overflow-hidden">
@@ -336,7 +387,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Clock className="h-4 w-4 mr-2" />
-                    {reservation.startTime} ({reservation.duration}h)
+                    Start: {startDisplay} | End: {endDisplay}
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <MapPin className="h-4 w-4 mr-2" />
@@ -364,95 +415,54 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
             <Separator className="my-3" />
 
-            {/* Players Section */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Players Joined:
-              </h3>
-              {reservation.lineup && reservation.lineup.length > 0 ? (
-                <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
-                  <div className="p-2 space-y-2">
-                    {reservation.lineup.map((player) => (
-                      <div 
-                        key={player.userId} 
-                        className="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => handlePlayerClick(player)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          {getPlayerAvatar(player)}
-                          <p className="text-sm text-gray-800 dark:text-gray-100">
-                            {player.playerName}
-                          </p>
-                          {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
+            {/* ADMIN ONLY: Expandable Accordion for Players Joined */}
+            {isAdmin && (
+              <Accordion type="single" collapsible className="mb-4">
+                <AccordionItem value="players">
+                  <AccordionTrigger className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Show Players Joined
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {reservation.lineup && reservation.lineup.length > 0 ? (
+                      <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
+                        <div className="p-2 space-y-2">
+                          {reservation.lineup.map((player) => (
+                            <div 
+                              key={player.userId} 
+                              className="flex items-center space-x-2 py-1 px-2 rounded"
+                            >
+                              {getPlayerAvatar(player)}
+                              <p className="text-sm text-gray-800 dark:text-gray-100">
+                                {player.playerName}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center border rounded-md">
-                  No players have joined yet.
-                </p>
-              )}
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 py-3 text-center border rounded-md">
+                        No players have joined yet.
+                      </p>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
 
-              {/* Waiting List for Admin */}
-              {isAdmin && reservation.waitingList && reservation.waitingList.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-                    Waiting List ({reservation.waitingList.length}):
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {reservation.waitingList.map((waitingUserId, index) => (
-                      <Badge key={waitingUserId} variant="outline" className="text-xs">
-                        Player {index + 1}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Remove "Players Joined" for all users, only admin can see in accordion */}
+            {/* ...rest of UI... */}
 
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-4">
+            <div className="flex flex-col items-stretch mt-4">
               {isAdmin ? (
                 // Admin Actions
-                <div className="flex gap-2">
-                  {isGameUpcoming ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          Delete Reservation
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this reservation? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDeleteReservation?.(reservation.id)}
-                            className="bg-red-500 hover:bg-red-600"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : isGameCompleted ? (
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => setShowSummaryDialog(true)}
-                      className="bg-teal-600 hover:bg-teal-700"
-                    >
-                      Add Summary
-                    </Button>
-                  ) : null}
-                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="w-full"
+                  size="lg"
+                >
+                  Delete Reservation
+                </Button>
               ) : (
                 // Player Actions (only show for non-completed games)
                 !isGameCompleted && (
@@ -502,6 +512,24 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </CardContent>
         </div>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this reservation? This action cannot be undone and will notify joined players.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteReservation} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Player Details Dialog */}
       {selectedPlayer && (

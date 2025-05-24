@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -206,14 +205,7 @@ const Navbar = () => {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {userRole === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin/add-pitch" className="cursor-pointer flex w-full items-center">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>Add Pitch</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  {/* Removed Add Pitch from dropdown */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-red-600 focus:text-red-600"
