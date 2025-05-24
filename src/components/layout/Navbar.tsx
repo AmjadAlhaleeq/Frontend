@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React, { useState, useEffect } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,127 +10,333 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// Removed: import { useAuth } from "@/context/AuthContext";
-// Removed: import { useRouter } from "next/navigation";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Menu, X, User, LogOut, Settings, Calendar } from "lucide-react";
+import LoginDialog from "../auth/LoginDialog";
+import LogoutConfirmationDialog from "../shared/LogoutConfirmationDialog";
+import Logo from "../shared/Logo";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-interface NavbarProps {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-    avatarUrl?: string | null;
-  };
-}
-
-// Removed all logout logic since AuthContext does not exist
-
-const NavbarProfileDropdown = ({ user }) => {
+const Navbar = () => {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
-  // Logout simply navigates to login (simulate logout)
-  const handleLogout = async () => {
+  const location = useLocation();
+
+  // Set active link styles
+  const getNavClassName = ({ isActive }: { isActive: boolean }) => {
+    return isActive
+      ? "font-medium text-teal-600 dark:text-teal-400"
+      : "text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400";
+  };
+
+  // Check login status on mount and when localStorage changes
+  useEffect(() => {
+    const checkLoginStatus = () => {
+      const storedUser = localStorage.getItem("currentUser");
+      const storedRole = localStorage.getItem("userRole");
+
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setCurrentUser(userData);
+          setIsLoggedIn(true);
+          setUserRole(storedRole);
+        } catch (e) {
+          console.error("Error parsing user data:", e);
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setUserRole(null);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setUserRole(null);
+      }
+    };
+
+    checkLoginStatus();
+
+    // Add event listener for localStorage changes
+    window.addEventListener("storage", checkLoginStatus);
+    
+    // Custom event for login status changes within the app
+    window.addEventListener("loginStatusChanged", checkLoginStatus);
+
+    return () => {
+      window.removeEventListener("storage", checkLoginStatus);
+      window.removeEventListener("loginStatusChanged", checkLoginStatus);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("isLoggedIn");
+    
+    // Update state
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setUserRole(null);
+    
+    // Close the dialog
+    setIsLogoutDialogOpen(false);
+    
+    // Show success message
     toast({
-      title: "Logged out",
-      description: "This is a simulated logout.",
+      title: "Logged out successfully",
+      description: "You have been logged out of your account",
     });
-    window.location.href = "/login";
+    
+    // Close mobile menu if open
+    setMobileMenuOpen(false);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event("loginStatusChanged"));
+    
+    // Navigate to home page
+    navigate('/');
+  };
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
+
+  // Handle successful login
+  const handleLoginSuccess = (role: 'admin' | 'player', userDetails?: any) => {
+    setIsLoggedIn(true);
+    setCurrentUser(userDetails);
+    setUserRole(role);
+    setIsLoginDialogOpen(false);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event("loginStatusChanged"));
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 z-30 py-2">
-      <div className="p-3 border-b flex items-center space-x-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={user.avatarUrl || ""} />
-          <AvatarFallback>{user.name?.charAt(0) ?? "U"}</AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="font-bold text-sm">{user.name}</div>
-          <div className="text-xs text-gray-600">{user.email}</div>
-        </div>
-      </div>
-      {/* Removed Add Pitch option */}
-      <Button variant="ghost" className="w-full justify-start px-4 py-2 text-red-500 hover:bg-red-50" onClick={handleLogout}>
-        <span className="mr-2">🔓</span>
-        Log out
-      </Button>
-    </div>
-  );
-};
-
-const Navbar: React.FC<NavbarProps> = ({ user }) => {
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const { toast } = useToast();
-
-  // Define handleLogout here for the dropdown in this component
-  const handleLogout = async () => {
-    toast({
-      title: "Logged out",
-      description: "This is a simulated logout.",
-    });
-    window.location.href = "/login";
-  };
-
-  return (
-    <nav className="bg-white dark:bg-gray-900 shadow">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <a href="/" className="text-xl font-bold text-gray-800 dark:text-white">
-                Football Reservations
-              </a>
-            </div>
+            <Link to="/" className="mr-6 flex items-center space-x-2">
+              <Logo />
+              <span className="font-bold inline-block sr-only">FootballApp</span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-6 text-sm">
+              <NavLink to="/" className={getNavClassName}>
+                Home
+              </NavLink>
+              <NavLink to="/pitches" className={getNavClassName}>
+                Pitches
+              </NavLink>
+              <NavLink to="/reservations" className={getNavClassName}>
+                Reservations
+              </NavLink>
+              <NavLink to="/leaderboards" className={getNavClassName}>
+                Leaderboards
+              </NavLink>
+              {/* Only show Add Pitch in mobile menu for admin */}
+            </nav>
           </div>
-          <div className="md:block">
-            <div className="ml-4 flex items-center md:ml-6">
-              {/* Use optional chaining for safety */}
-              {user?.name ? (
-                <div className="relative">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="ghost" className="flex items-center space-x-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatarUrl || ""} />
-                          <AvatarFallback>{user.name?.charAt(0) ?? "U"}</AvatarFallback>
-                        </Avatar>
-                        <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {user.name}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50" align="end">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <User className="mr-2 h-4 w-4" />
+
+          <div className="flex items-center gap-2">
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={currentUser?.avatarUrl}
+                        alt={currentUser?.firstName}
+                      />
+                      <AvatarFallback>
+                        {currentUser?.firstName?.[0]}
+                        {currentUser?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {currentUser?.firstName} {currentUser?.lastName}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {currentUser?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {userRole !== "admin" && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="cursor-pointer flex w-full items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-bookings" className="cursor-pointer flex w-full items-center">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          <span>My Bookings</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {userRole === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/add-pitch" className="cursor-pointer flex w-full items-center">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Add Pitch</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-red-600 focus:text-red-600"
+                    onClick={() => setIsLogoutDialogOpen(true)}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button 
+                variant="outline" 
+                className="text-sm"
+                onClick={() => setIsLoginDialogOpen(true)}
+              >
+                Login / Sign up
+              </Button>
+            )}
+
+            {/* Mobile menu button */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  aria-label="Toggle Menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="pr-0">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-4"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
+                  </Button>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-8">
+                  <NavLink
+                    to="/"
+                    className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Home
+                  </NavLink>
+                  <NavLink
+                    to="/pitches"
+                    className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Pitches
+                  </NavLink>
+                  <NavLink
+                    to="/reservations"
+                    className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Reservations
+                  </NavLink>
+                  <NavLink
+                    to="/leaderboards"
+                    className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Leaderboards
+                  </NavLink>
+                  {isLoggedIn && userRole !== "admin" && (
+                    <>
+                      <NavLink
+                        to="/profile"
+                        className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         Profile
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout}>
-                        Log Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : (
-                <div className="flex space-x-4">
-                  <a href="/login" className="text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400">
-                    Login
-                  </a>
-                  <a href="/register" className="text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400">
-                    Register
-                  </a>
-                </div>
-              )}
-            </div>
+                      </NavLink>
+                      <NavLink
+                        to="/my-bookings"
+                        className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        My Bookings
+                      </NavLink>
+                    </>
+                  )}
+                  {userRole === "admin" && (
+                    <NavLink
+                      to="/admin/add-pitch"
+                      className="flex items-center px-4 py-2 hover:bg-accent rounded-md"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Add Pitch
+                    </NavLink>
+                  )}
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
-    </nav>
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutConfirmationDialog
+        isOpen={isLogoutDialogOpen}
+        onClose={() => setIsLogoutDialogOpen(false)}
+        onConfirm={handleLogout}
+      />
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={isLoginDialogOpen}
+        onClose={() => setIsLoginDialogOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    </header>
   );
 };
 
 export default Navbar;
-

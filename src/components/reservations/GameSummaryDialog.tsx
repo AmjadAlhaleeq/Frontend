@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -12,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader, Save, Award, Star, ClipboardCheck } from "lucide-react";
+import { Loader, Save, Award, Star, ClipboardCheck, Scissors } from "lucide-react";
 import { Reservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge"; // <-- Add this import
 
 // Define the player type for summary
 interface Player {
@@ -23,9 +24,11 @@ interface Player {
   status: string;
   goals?: number;
   assists?: number;
+  interceptions?: number;
   cleansheet?: boolean;
   mvp?: boolean;
   attended?: boolean;
+  winner?: boolean;
 }
 
 interface GameSummaryDialogProps {
@@ -49,15 +52,18 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [homeScore, setHomeScore] = useState("0");
   const [awayScore, setAwayScore] = useState("0");
+  const [currentPlayerView, setCurrentPlayerView] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<Player[]>(() => {
     // Initialize player stats from lineup with default values
     return reservation.lineup?.map(player => ({
       ...player,
       goals: 0,
       assists: 0,
+      interceptions: 0,
       cleansheet: false,
       mvp: false,
-      attended: true
+      attended: true,
+      winner: false
     })) || [];
   });
 
@@ -101,6 +107,13 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Function to determine if home team won based on scores
+  const didHomeTeamWin = () => {
+    const homeScoreNum = parseInt(homeScore);
+    const awayScoreNum = parseInt(awayScore);
+    return homeScoreNum > awayScoreNum;
   };
 
   return (
@@ -147,92 +160,175 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
             </div>
           </div>
           
-          {/* Player Stats Section */}
-          <div>
-            <h3 className="font-medium mb-3">Player Statistics</h3>
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
-              {playerStats.map((player) => (
-                <div key={player.userId} className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
-                  <div className="flex justify-between mb-2">
-                    <h4 className="font-medium">{player.playerName}</h4>
-                    <div className="flex items-center">
-                      <Checkbox
-                        id={`attended-${player.userId}`}
-                        checked={player.attended}
-                        onCheckedChange={(checked) => 
-                          handlePlayerStatChange(player.userId, "attended", checked === true)
-                        }
-                      />
-                      <Label htmlFor={`attended-${player.userId}`} className="ml-2 text-sm">
-                        Attended
-                      </Label>
-                    </div>
-                  </div>
-                  
-                  {player.attended && (
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      <div className="space-y-1">
-                        <Label htmlFor={`goals-${player.userId}`} className="text-xs">Goals</Label>
-                        <Input
-                          id={`goals-${player.userId}`}
-                          type="number"
-                          min="0"
-                          value={player.goals}
-                          onChange={(e) => handlePlayerStatChange(
-                            player.userId, 
-                            "goals", 
-                            parseInt(e.target.value) || 0
-                          )}
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`assists-${player.userId}`} className="text-xs">Assists</Label>
-                        <Input
-                          id={`assists-${player.userId}`}
-                          type="number"
-                          min="0"
-                          value={player.assists}
-                          onChange={(e) => handlePlayerStatChange(
-                            player.userId, 
-                            "assists", 
-                            parseInt(e.target.value) || 0
-                          )}
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="flex items-center">
-                        <Checkbox
-                          id={`cleansheet-${player.userId}`}
-                          checked={player.cleansheet}
-                          onCheckedChange={(checked) => 
-                            handlePlayerStatChange(player.userId, "cleansheet", checked === true)
-                          }
-                        />
-                        <Label htmlFor={`cleansheet-${player.userId}`} className="ml-2 text-sm">
-                          Clean Sheet
-                        </Label>
-                      </div>
-                      <div className="flex items-center">
-                        <Checkbox
-                          id={`mvp-${player.userId}`}
-                          checked={player.mvp}
-                          onCheckedChange={(checked) => {
-                            // Only one player can be MVP
-                            if (checked) {
-                              setPlayerStats(prev => prev.map(p => ({
-                                ...p,
-                                mvp: p.userId === player.userId
-                              })));
-                            } else {
-                              handlePlayerStatChange(player.userId, "mvp", false);
+          {/* Player Selection Section */}
+          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+            <h3 className="font-medium mb-3">Select Player to Update Stats</h3>
+            <Select
+              value={currentPlayerView || ''}
+              onValueChange={(value) => setCurrentPlayerView(value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a player" />
+              </SelectTrigger>
+              <SelectContent>
+                {playerStats.map((player) => (
+                  <SelectItem key={player.userId} value={player.userId}>
+                    {player.playerName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Individual Player Stats Section */}
+          {currentPlayerView && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+              {playerStats.map((player) => {
+                if (player.userId === currentPlayerView) {
+                  return (
+                    <div key={player.userId}>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-medium text-lg">{player.playerName}</h3>
+                        <div className="flex items-center">
+                          <Checkbox
+                            id={`attended-${player.userId}`}
+                            checked={player.attended}
+                            onCheckedChange={(checked) => 
+                              handlePlayerStatChange(player.userId, "attended", checked === true)
                             }
-                          }}
-                        />
-                        <Label htmlFor={`mvp-${player.userId}`} className="ml-2 text-sm flex items-center">
-                          MVP <Star className="h-3 w-3 ml-1 text-yellow-400" />
-                        </Label>
+                          />
+                          <Label htmlFor={`attended-${player.userId}`} className="ml-2 text-sm">
+                            Attended
+                          </Label>
+                        </div>
                       </div>
+                      
+                      {player.attended && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label htmlFor={`goals-${player.userId}`} className="text-xs">Goals</Label>
+                              <Input
+                                id={`goals-${player.userId}`}
+                                type="number"
+                                min="0"
+                                value={player.goals}
+                                onChange={(e) => handlePlayerStatChange(
+                                  player.userId, 
+                                  "goals", 
+                                  parseInt(e.target.value) || 0
+                                )}
+                                className="h-8"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor={`assists-${player.userId}`} className="text-xs">Assists</Label>
+                              <Input
+                                id={`assists-${player.userId}`}
+                                type="number"
+                                min="0"
+                                value={player.assists}
+                                onChange={(e) => handlePlayerStatChange(
+                                  player.userId, 
+                                  "assists", 
+                                  parseInt(e.target.value) || 0
+                                )}
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-3">
+                            <div className="space-y-1">
+                              <Label htmlFor={`interceptions-${player.userId}`} className="text-xs flex items-center">
+                                Interceptions <Scissors className="h-3 w-3 ml-1" />
+                              </Label>
+                              <Input
+                                id={`interceptions-${player.userId}`}
+                                type="number"
+                                min="0"
+                                value={player.interceptions}
+                                onChange={(e) => handlePlayerStatChange(
+                                  player.userId, 
+                                  "interceptions", 
+                                  parseInt(e.target.value) || 0
+                                )}
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex items-center">
+                              <Checkbox
+                                id={`cleansheet-${player.userId}`}
+                                checked={player.cleansheet}
+                                onCheckedChange={(checked) => 
+                                  handlePlayerStatChange(player.userId, "cleansheet", checked === true)
+                                }
+                              />
+                              <Label htmlFor={`cleansheet-${player.userId}`} className="ml-2 text-sm">
+                                Clean Sheet
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id={`winner-${player.userId}`}
+                                checked={player.winner}
+                                onCheckedChange={(checked) => 
+                                  handlePlayerStatChange(player.userId, "winner", checked === true)
+                                }
+                              />
+                              <Label htmlFor={`winner-${player.userId}`} className="ml-2 text-sm">
+                                Winner
+                              </Label>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center pt-2">
+                            <Checkbox
+                              id={`mvp-${player.userId}`}
+                              checked={player.mvp}
+                              onCheckedChange={(checked) => {
+                                // Only one player can be MVP
+                                if (checked) {
+                                  setPlayerStats(prev => prev.map(p => ({
+                                    ...p,
+                                    mvp: p.userId === player.userId
+                                  })));
+                                } else {
+                                  handlePlayerStatChange(player.userId, "mvp", false);
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`mvp-${player.userId}`} className="ml-2 text-sm flex items-center">
+                              MVP <Star className="h-3 w-3 ml-1 text-yellow-400" />
+                            </Label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
+          
+          {/* Players Summary List */}
+          <div>
+            <h3 className="font-medium mb-3">Players Statistics</h3>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              {playerStats.map((player) => (
+                <div key={player.userId} className="bg-gray-50 dark:bg-gray-800/50 p-2 rounded-md flex justify-between items-center">
+                  <div className="flex items-center">
+                    <div className="font-medium">{player.playerName}</div>
+                    {player.mvp && <Badge className="ml-2 bg-yellow-500">MVP</Badge>}
+                    {!player.attended && <Badge className="ml-2 bg-red-500">Absent</Badge>}
+                  </div>
+                  {player.attended && (
+                    <div className="text-xs text-gray-600">
+                      G: {player.goals} | A: {player.assists} | Int: {player.interceptions || 0}
                     </div>
                   )}
                 </div>
