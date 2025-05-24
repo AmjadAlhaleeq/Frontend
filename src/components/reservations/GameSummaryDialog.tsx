@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import { Loader, Save, Award, Star, ClipboardCheck, Scissors } from "lucide-reac
 import { Reservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge"; // <-- Add this import
 
 // Define the player type for summary
 interface Player {
