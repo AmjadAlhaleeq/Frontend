@@ -1,3 +1,4 @@
+
 // This is the Leaderboards.tsx page. It handles UI and logic for Leaderboards.
 
 import { useState } from "react";
@@ -37,8 +38,6 @@ const Leaderboards = () => {
         return sorted.sort((a, b) => b.cleanSheets - a.cleanSheets);
       case "interceptions":
         return sorted.sort((a, b) => b.interceptions - a.interceptions);
-      case "wins":
-        return sorted.sort((a, b) => b.wins - a.wins);
       default:
         return sorted;
     }
@@ -56,8 +55,6 @@ const Leaderboards = () => {
         return <ShieldCheck className="h-4 w-4" />;
       case "interceptions":
         return <Scissors className="h-4 w-4" />;
-      case "wins":
-        return <Star className="h-4 w-4" />;
       default:
         return <Star className="h-4 w-4" />;
     }
@@ -74,7 +71,7 @@ const Leaderboards = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          Leaderboards (All Time)
+          Leaderboards
         </motion.h1>
         <motion.p
           className="text-muted-foreground max-w-2xl mx-auto"
@@ -90,8 +87,8 @@ const Leaderboards = () => {
         {/* Main Leaderboard */}
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center gap-4 mb-6">
-            <h2 className="text-xl font-bold">Top 10 Players (All Time)</h2>
-            {/* REMOVE SEASON TOGGLE: nothing to render here now */}
+            <h2 className="text-xl font-bold">Overall Top 10</h2>
+
             <div className="flex flex-wrap gap-2">
               {[
                 {
@@ -118,11 +115,6 @@ const Leaderboards = () => {
                   key: "interceptions",
                   label: "Interceptions",
                   icon: <Scissors className="h-4 w-4 mr-1" />,
-                },
-                {
-                  key: "wins",
-                  label: "Wins",
-                  icon: <Star className="h-4 w-4 mr-1" />,
                 },
               ].map((metric) => (
                 <Button
@@ -217,7 +209,7 @@ const Leaderboards = () => {
                                   ? player.cleanSheets
                                   : selectedMetric === "interceptions"
                                   ? player.interceptions
-                                  : player.wins}
+                                  : player.points}
                               </span>
                             </div>
                           </div>

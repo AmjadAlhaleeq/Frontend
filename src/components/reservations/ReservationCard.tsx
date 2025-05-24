@@ -155,7 +155,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
-  const [showPlayers, setShowPlayers] = useState(false);
 
   const { updateGameSummary } = useReservation();
 
@@ -335,26 +334,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                     <Calendar className="h-4 w-4 mr-2" />
                     {reservation.date}
                   </div>
-                  {/* Show start and end time */}
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Clock className="h-4 w-4 mr-2" />
-                    {/* Calculate end time */}
-                    {(() => {
-                      const [startH, startM = 0] = (reservation.startTime || '00:00').split(':').map(Number);
-                      const durationMin = (reservation.duration || 0) * 60;
-                      let endH = startH;
-                      let endM = startM + durationMin;
-                      endH += Math.floor(endM / 60);
-                      endM = endM % 60;
-                      // Format as hh:mm
-                      const pad = (x: number) => x.toString().padStart(2, '0');
-                      return (
-                        <>
-                          {reservation.startTime} ({reservation.duration}h) &nbsp;|&nbsp;
-                          End: {pad(endH)}:{pad(endM)}
-                        </>
-                      );
-                    })()}
+                    {reservation.startTime} ({reservation.duration}h)
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <MapPin className="h-4 w-4 mr-2" />
@@ -367,7 +349,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 </div>
               </div>
               
-              {/* Status Badge */}
+              {/* Status Badge (replaces three dots) */}
               <Badge 
                 className={`${
                   gameStatus === 'upcoming' ? 'bg-green-500' : 

@@ -204,7 +204,6 @@ const Navbar = () => {
                           <span>My Bookings</span>
                         </Link>
                       </DropdownMenuItem>
-                      {/* Removed Add Pitch from non-admin */}
                     </>
                   )}
                   {userRole === "admin" && (
