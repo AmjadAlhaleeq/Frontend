@@ -309,10 +309,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // Send email notifications to joined players, if emails exist
     if (reservation.lineup && reservation.lineup.length > 0) {
       reservation.lineup.forEach(player => {
-        // Looks for an email property on player (should be there if from signup)
-        if (player.email) {
+        // Try to get the email from localStorage based on userId
+        const emailFromStorage = localStorage.getItem(`playerEmail_${player.userId}`);
+        if (emailFromStorage) {
           sendCancellationEmail(
-            player.email,
+            emailFromStorage,
             player.playerName,
             reservation.pitchName,
             reservation.date,
