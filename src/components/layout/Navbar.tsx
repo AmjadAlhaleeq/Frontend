@@ -61,6 +61,16 @@ const NavbarProfileDropdown = ({ user }) => {
 
 const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Define handleLogout here for the dropdown in this component
+  const handleLogout = async () => {
+    toast({
+      title: "Logged out",
+      description: "This is a simulated logout.",
+    });
+    window.location.href = "/login";
+  };
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow">
@@ -123,3 +133,4 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
 };
 
 export default Navbar;
+
