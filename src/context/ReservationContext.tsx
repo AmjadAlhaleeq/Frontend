@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Define the player interface with role information
@@ -191,46 +190,7 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   });
   
   const [reservations, setReservations] = useState<Reservation[]>(() => {
-    const storedReservations = safeGetLocalStorage<Reservation[]>('reservations', []);
-    
-    // Add a test completed reservation if none exists with completed status
-    const hasCompletedReservation = storedReservations.some(r => r.status === "completed");
-    
-    if (!hasCompletedReservation && storedReservations.length < 50) {
-      // Create a completed reservation for testing
-      const testCompletedReservation: Reservation = {
-        id: 9999,
-        title: "Test Completed Game",
-        pitchName: "Central Park Pitch",
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
-        time: "18:00 - 19:30",
-        startTime: "18:00",
-        duration: 90,
-        location: "Downtown",
-        city: "New York",
-        maxPlayers: 12,
-        playersJoined: 8,
-        price: 25,
-        imageUrl: "/public/football-pitch-bg.jpg",
-        status: "completed",
-        lineup: [
-          { userId: "player1", playerName: "John Doe", status: "joined", role: "Forward" },
-          { userId: "player2", playerName: "Jane Smith", status: "joined", role: "Midfielder" },
-          { userId: "player3", playerName: "Mike Wilson", status: "joined", role: "Defender" },
-          { userId: "player4", playerName: "Sarah Connor", status: "joined", role: "Goalkeeper" },
-          { userId: "player5", playerName: "Tom Brady", status: "joined", role: "Forward" },
-          { userId: "player6", playerName: "Alex Morgan", status: "joined", role: "Midfielder" },
-          { userId: "player7", playerName: "David Beckham", status: "joined", role: "Midfielder" },
-          { userId: "player8", playerName: "Megan Rapinoe", status: "joined", role: "Forward" }
-        ],
-        waitingList: [],
-        description: "A completed test game for testing the Add Summary feature"
-      };
-      
-      return [...storedReservations, testCompletedReservation];
-    }
-    
-    return storedReservations;
+    return safeGetLocalStorage<Reservation[]>('reservations', []);
   });
 
   useEffect(() => {
