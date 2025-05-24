@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import GameSummaryDialog from "./GameSummaryDialog";
+import { sendGameCancellationNotification } from "@/utils/emailNotifications";
 
 // Import Player from context but rename it to avoid conflict with local interface
 import { Player as ReservationPlayer } from "@/context/ReservationContext";
@@ -155,8 +156,31 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPlayers, setShowPlayers] = useState(false);
 
   const { updateGameSummary } = useReservation();
+
+  // Calculate start and end time (duration is in hours, show min/hours intelligently)
+  const getStartEndTime = () => {
+    try {
+      // Assume startTime is "HH:mm", duration is number (hours, can be float)
+      const [startHour, startMinute] = reservation.startTime.split(':').map(Number);
+      const start = new Date(reservation.date);
+      start.setHours(startHour || 0, startMinute || 0, 0, 0);
+      const end = new Date(start);
+      // duration in hours, so convert to min to add correctly
+      if (reservation.duration) {
+        end.setMinutes(start.getMinutes() + reservation.duration * 60);
+      }
+      const fmt = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return { start: fmt(start), end: fmt(end) };
+    } catch (e) {
+      return { start: reservation.startTime, end: "?" };
+    }
+  };
+
+  const { start, end } = getStartEndTime();
 
   // Determine if game is completed based on time
   const determineGameStatus = () => {
@@ -260,6 +284,40 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     setShowSummaryDialog(false);
   };
 
+  const handleDeleteReservation = async () => {
+    setIsCancelling(true);
+    try {
+      // Send emails BEFORE deletion for demo purposes
+      if (reservation.lineup && reservation.lineup.length > 0) {
+        const emails = reservation.lineup
+          .map((p) => p.email).filter(Boolean);
+        await sendGameCancellationNotification(
+          {
+            title: reservation.title,
+            date: reservation.date,
+            time: reservation.startTime,
+            location: reservation.location
+          },
+          emails
+        );
+      }
+      onDeleteReservation?.(reservation.id);
+      toast({
+        title: "Reservation Deleted",
+        description: "All joined players have been notified by email.",
+      });
+    } catch (err) {
+      toast({
+        title: "Delete Failed",
+        description: "Could not notify players or delete reservation.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCancelling(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   const isUserInWaitingList = reservation.waitingList?.includes(userId);
 
   const getPlayerAvatar = (player: Player) => {
@@ -336,7 +394,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Clock className="h-4 w-4 mr-2" />
-                    {reservation.startTime} ({reservation.duration}h)
+                    {/* Show start and end */}
+                    {start} - {end} ({reservation.duration}h)
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <MapPin className="h-4 w-4 mr-2" />
@@ -364,84 +423,50 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
             <Separator className="my-3" />
 
-            {/* Players Section */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Players Joined:
-              </h3>
-              {reservation.lineup && reservation.lineup.length > 0 ? (
-                <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
-                  <div className="p-2 space-y-2">
-                    {reservation.lineup.map((player) => (
-                      <div 
-                        key={player.userId} 
-                        className="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => handlePlayerClick(player)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          {getPlayerAvatar(player)}
-                          <p className="text-sm text-gray-800 dark:text-gray-100">
-                            {player.playerName}
-                          </p>
-                          {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
+            {/* Only for Admin: Toggle section to show Players Joined */}
+            {isAdmin && (
+              <div>
+                <Button variant="secondary" size="sm" className="mb-2" onClick={() => setShowPlayers((s) => !s)}>
+                  {showPlayers ? "Hide Players" : "Show Players"}
+                </Button>
+                {showPlayers && (
+                  <ScrollArea className="h-[100px] rounded-md border dark:border-gray-700 mb-2">
+                    <div className="p-2 space-y-2">
+                      {reservation.lineup && reservation.lineup.map((player) => (
+                        <div 
+                          key={player.userId} 
+                          className="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => handlePlayerClick(player)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            {getPlayerAvatar(player)}
+                            <p className="text-sm text-gray-800 dark:text-gray-100">
+                              {player.playerName}
+                            </p>
+                            {player.mvp && <Badge className="ml-1 text-xs">MVP</Badge>}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center border rounded-md">
-                  No players have joined yet.
-                </p>
-              )}
-
-              {/* Waiting List for Admin */}
-              {isAdmin && reservation.waitingList && reservation.waitingList.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-                    Waiting List ({reservation.waitingList.length}):
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {reservation.waitingList.map((waitingUserId, index) => (
-                      <Badge key={waitingUserId} variant="outline" className="text-xs">
-                        Player {index + 1}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            )}
 
             {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-4">
+            <div className="flex flex-col items-stretch mt-4">
               {isAdmin ? (
                 // Admin Actions
                 <div className="flex gap-2">
                   {isGameUpcoming ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          Delete Reservation
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Reservation</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this reservation? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDeleteReservation?.(reservation.id)}
-                            className="bg-red-500 hover:bg-red-600"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="w-full py-2 text-base font-bold"
+                    >
+                      Delete Reservation
+                    </Button>
                   ) : isGameCompleted ? (
                     <Button 
                       variant="default" 
@@ -463,6 +488,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                         onClick={handleCancel}
                         disabled={isCancelling}
                         size="sm"
+                        className="w-full py-2 text-base font-bold"
                       >
                         {isCancelling ? "Cancelling..." : "Cancel Reservation"}
                       </Button>
@@ -522,6 +548,28 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           onUpdateSummary={handleUpdateSummary}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this reservation? This will notify all players via email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isCancelling}
+              onClick={handleDeleteReservation}
+            >
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
