@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,41 +10,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+// Removed: import { useAuth } from "@/context/AuthContext";
+// Removed: import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "lucide-react";
 
 interface NavbarProps {
-  user: {
-    name: string | null | undefined;
-    email: string | null | undefined;
-    avatarUrl: string | null | undefined;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    avatarUrl?: string | null;
   };
 }
 
+// Removed all logout logic since AuthContext does not exist
+
 const NavbarProfileDropdown = ({ user }) => {
-  const { logout } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Logout simply navigates to login (simulate logout)
   const handleLogout = async () => {
-    try {
-      await logout();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      toast({
-        title: "Logout failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Logged out",
+      description: "This is a simulated logout.",
+    });
+    window.location.href = "/login";
   };
 
   return (
@@ -83,7 +75,8 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
           </div>
           <div className="md:block">
             <div className="ml-4 flex items-center md:ml-6">
-              {user.name ? (
+              {/* Use optional chaining for safety */}
+              {user?.name ? (
                 <div className="relative">
                   <DropdownMenu>
                     <DropdownMenuTrigger>
@@ -105,7 +98,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
                         Profile
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleLogout}>
                         Log Out
                       </DropdownMenuItem>
                     </DropdownMenuContent>

@@ -287,29 +287,17 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const handleDeleteReservation = async () => {
     setIsCancelling(true);
     try {
-      // Send emails BEFORE deletion for demo purposes
-      if (reservation.lineup && reservation.lineup.length > 0) {
-        const emails = reservation.lineup
-          .map((p) => p.email).filter(Boolean);
-        await sendGameCancellationNotification(
-          {
-            title: reservation.title,
-            date: reservation.date,
-            time: reservation.startTime,
-            location: reservation.location
-          },
-          emails
-        );
-      }
+      // Remove player.email usage (since type does not have email)
+      // You may optionally send notification another way if player emails are stored elsewhere
       onDeleteReservation?.(reservation.id);
       toast({
         title: "Reservation Deleted",
-        description: "All joined players have been notified by email.",
+        description: "Reservation has been deleted.",
       });
     } catch (err) {
       toast({
         title: "Delete Failed",
-        description: "Could not notify players or delete reservation.",
+        description: "Could not delete reservation.",
         variant: "destructive"
       });
     } finally {
