@@ -187,60 +187,50 @@ const safeGetLocalStorage = <T,>(key: string, defaultValue: T): T => {
 
 export const ReservationProvider = ({ children }: { children: React.ReactNode }) => {
   const [pitches, setPitches] = useState<Pitch[]>(() => {
-    return safeGetLocalStorage<Pitch[]>('pitches', [
-      {
-        id: 1,
-        name: "Green Valley Football Pitch",
-        location: "Green Valley Sports Complex",
-        city: "Dubai",
-        image: "/football-pitch-bg.jpg",
-        playersPerSide: 5,
-        description: "Professional 5v5 football pitch with high-quality artificial grass",
-        price: 200,
-        facilities: ["Parking", "Changing Rooms", "Floodlights", "Water"],
-        type: "outdoor",
-        openingHours: "06:00 - 23:00"
-      }
-    ]);
+    return safeGetLocalStorage<Pitch[]>('pitches', []);
   });
   
   const [reservations, setReservations] = useState<Reservation[]>(() => {
-    return safeGetLocalStorage<Reservation[]>('reservations', [
-      {
-        id: 1,
-        title: "Evening Football Match",
-        pitchName: "Green Valley Football Pitch",
-        date: "2025-05-20",
+    const storedReservations = safeGetLocalStorage<Reservation[]>('reservations', []);
+    
+    // Add a test completed reservation if none exists with completed status
+    const hasCompletedReservation = storedReservations.some(r => r.status === "completed");
+    
+    if (!hasCompletedReservation && storedReservations.length < 50) {
+      // Create a completed reservation for testing
+      const testCompletedReservation: Reservation = {
+        id: 9999,
+        title: "Test Completed Game",
+        pitchName: "Central Park Pitch",
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
         time: "18:00 - 19:30",
         startTime: "18:00",
         duration: 90,
-        location: "Green Valley Sports Complex",
-        city: "Dubai",
+        location: "Downtown",
+        city: "New York",
         maxPlayers: 12,
         playersJoined: 8,
-        price: 200,
-        imageUrl: "/football-pitch-bg.jpg",
+        price: 25,
+        imageUrl: "/public/football-pitch-bg.jpg",
+        status: "completed",
         lineup: [
-          { userId: "user1", playerName: "Ahmed Ali", status: "joined", joinedAt: "2025-05-20T10:00:00Z", role: "Forward" },
-          { userId: "user2", playerName: "Mohamed Hassan", status: "joined", joinedAt: "2025-05-20T10:15:00Z", role: "Midfielder" },
-          { userId: "user3", playerName: "Omar Khalil", status: "joined", joinedAt: "2025-05-20T10:30:00Z", role: "Defender" },
-          { userId: "user4", playerName: "Youssef Ahmed", status: "joined", joinedAt: "2025-05-20T10:45:00Z", role: "Goalkeeper" },
-          { userId: "user5", playerName: "Khaled Mahmoud", status: "joined", joinedAt: "2025-05-20T11:00:00Z", role: "Forward" },
-          { userId: "user6", playerName: "Tarek Said", status: "joined", joinedAt: "2025-05-20T11:15:00Z", role: "Midfielder" },
-          { userId: "user7", playerName: "Amr Fahmy", status: "joined", joinedAt: "2025-05-20T11:30:00Z", role: "Defender" },
-          { userId: "user8", playerName: "Hossam Fathy", status: "joined", joinedAt: "2025-05-20T11:45:00Z", role: "Forward" }
+          { userId: "player1", playerName: "John Doe", status: "joined", role: "Forward" },
+          { userId: "player2", playerName: "Jane Smith", status: "joined", role: "Midfielder" },
+          { userId: "player3", playerName: "Mike Wilson", status: "joined", role: "Defender" },
+          { userId: "player4", playerName: "Sarah Connor", status: "joined", role: "Goalkeeper" },
+          { userId: "player5", playerName: "Tom Brady", status: "joined", role: "Forward" },
+          { userId: "player6", playerName: "Alex Morgan", status: "joined", role: "Midfielder" },
+          { userId: "player7", playerName: "David Beckham", status: "joined", role: "Midfielder" },
+          { userId: "player8", playerName: "Megan Rapinoe", status: "joined", role: "Forward" }
         ],
         waitingList: [],
-        status: "completed",
-        summary: {
-          homeScore: 3,
-          awayScore: 2,
-          completed: true,
-          completedAt: "2025-05-20T19:30:00Z",
-          mvpPlayerId: "user1"
-        }
-      }
-    ]);
+        description: "A completed test game for testing the Add Summary feature"
+      };
+      
+      return [...storedReservations, testCompletedReservation];
+    }
+    
+    return storedReservations;
   });
 
   useEffect(() => {
@@ -303,7 +293,7 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         id: reservations.length > 0 ? Math.max(...reservations.map(r => r.id)) + 1 : 1,
         location: pitch.location,
         city: pitch.city,
-        imageUrl: pitch.image, // Use the main pitch image
+        imageUrl: pitch.image,
         additionalImages: pitch.additionalImages || [],
         playersJoined: 0,
         status: "upcoming" as "upcoming" | "completed" | "cancelled",

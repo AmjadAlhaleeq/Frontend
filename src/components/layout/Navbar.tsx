@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,7 @@ const Navbar = () => {
               <NavLink to="/leaderboards" className={getNavClassName}>
                 Leaderboards
               </NavLink>
+              {/* Only show Add Pitch in mobile menu for admin */}
             </nav>
           </div>
 
@@ -203,6 +205,14 @@ const Navbar = () => {
                         </Link>
                       </DropdownMenuItem>
                     </>
+                  )}
+                  {userRole === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/add-pitch" className="cursor-pointer flex w-full items-center">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Add Pitch</span>
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
