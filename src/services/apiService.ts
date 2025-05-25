@@ -1,4 +1,3 @@
-
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -19,7 +18,7 @@ interface PaginatedResponse<T> {
 class ApiService {
   private baseUrl: string;
 
-  constructor(baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001/api') {
+  constructor(baseUrl = 'http://localhost:3001/api') {
     this.baseUrl = baseUrl;
   }
 
