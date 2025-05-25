@@ -1,5 +1,5 @@
 // AddPitchForm.tsx
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,47 +12,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Users, FileText, Camera, Settings, X } from "lucide-react";
+import { FileText, Camera, Settings, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ImageUpload from "@/components/ui/image-upload";
 
-const CLOUD_NAME = "dsmuk27ce"; // from CLOUDINARY_CLOUD_NAME
-const UPLOAD_PRESET = "bokit_preset"; // or use the preset you set in your Cloudinary settings
+const CLOUD_NAME = "dsmuk27ce";
+const UPLOAD_PRESET = "bokit_preset";
 
-// import { fetchPitches } from "@/lib/api"; // Adjust the import path as needed
-// Function to upload a file to Cloudinary
+// Upload image to Cloudinary
 const uploadToCloudinary = async (file: File): Promise<string> => {
   const formData = new FormData();
-  formData.append("file", file); // Append the file to the form data
-  formData.append("upload_preset", UPLOAD_PRESET); // Append the upload preset
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
 
-  try {
-    // Send a POST request to Cloudinary's upload endpoint
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData }
+  );
 
-    // Parse the JSON response
-    const data = await res.json();
-
-    // If the response is not OK, log the status and error message
-    if (!res.ok) {
-      console.error("Cloudinary upload failed:", res.status, data);
-      throw new Error(data.error?.message || "Upload failed");
-    }
-
-    // Return the secure URL of the uploaded image
-    return data.secure_url;
-  } catch (error) {
-    // Log any network or parsing errors
-    console.error("Error uploading to Cloudinary:", error);
-    throw error;
-  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || "Upload failed");
+  return data.secure_url;
 };
 
 const facilityOptions = [
@@ -71,7 +52,7 @@ interface FormData {
   playersPerSide: string;
   type: string;
   description: string;
-  mainImage: File | null;
+  backgroundImage: File | null;
   additionalImages: File[];
   facilities: string[];
 }
@@ -84,12 +65,12 @@ const AddPitchForm = () => {
     playersPerSide: "5",
     type: "",
     description: "",
-    mainImage: null,
+    backgroundImage: null,
     additionalImages: [],
     facilities: [],
   });
 
-  const [mainImagePreview, setMainImagePreview] = useState("");
+  const [bgPreview, setBgPreview] = useState("");
   const [additionalPreviews, setAdditionalPreviews] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -110,12 +91,12 @@ const AddPitchForm = () => {
     }));
   };
 
-  const handleImageSelect = (file: File, isMain = false) => {
+  const handleImageSelect = (file: File, isBackground = false) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (isMain) {
-        setMainImagePreview(e.target?.result as string);
-        setFormData((prev) => ({ ...prev, mainImage: file }));
+      if (isBackground) {
+        setBgPreview(e.target?.result as string);
+        setFormData((prev) => ({ ...prev, backgroundImage: file }));
       } else {
         setFormData((prev) => ({
           ...prev,
@@ -128,8 +109,8 @@ const AddPitchForm = () => {
   };
 
   const handleImageRemove = () => {
-    setFormData((prev) => ({ ...prev, mainImage: null }));
-    setMainImagePreview("");
+    setFormData((prev) => ({ ...prev, backgroundImage: null }));
+    setBgPreview("");
   };
 
   const handleAdditionalImageRemove = (index: number) => {
@@ -142,8 +123,8 @@ const AddPitchForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, location, city, type, mainImage } = formData;
-    if (!name || !location || !city || !type || !mainImage) {
+    const { name, location, city, type, backgroundImage } = formData;
+    if (!name || !location || !city || !type || !backgroundImage) {
       toast({
         title: "Missing Fields",
         description: "Please complete all fields.",
@@ -154,23 +135,17 @@ const AddPitchForm = () => {
 
     try {
       const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("Authentication Error: Please log in.");
 
-      if (!token)
-        throw new Error(
-          "Authentication Error: You must be logged in to add a pitch."
-        );
-
-      const backgroundImage = await uploadToCloudinary(mainImage);
-      const images = await Promise.all(
+      const bgUrl = await uploadToCloudinary(backgroundImage);
+      const imageUrls = await Promise.all(
         formData.additionalImages.map(uploadToCloudinary)
       );
 
       const services: Record<string, boolean | string> = { type };
-      ["wifi", "parking", "cafeteria", "lockers", "bathrooms", "water"].forEach(
-        (key) => {
-          services[key] = formData.facilities.includes(key);
-        }
-      );
+      facilityOptions.forEach((opt) => {
+        services[opt.value] = formData.facilities.includes(opt.value);
+      });
 
       const res = await fetch("http://127.0.0.1:3000/pitches", {
         method: "POST",
@@ -182,8 +157,8 @@ const AddPitchForm = () => {
           name,
           location,
           city,
-          backgroundImage,
-          images,
+          backgroundImage: bgUrl,
+          images: imageUrls,
           playersPerSide: parseInt(formData.playersPerSide),
           description: formData.description,
           services,
@@ -202,10 +177,13 @@ const AddPitchForm = () => {
       navigate("/pitches");
     } catch (err: unknown) {
       console.error("Error:", err);
+      let message = "Failed to create pitch.";
+      if (err instanceof Error) {
+        message = err.message;
+      }
       toast({
         title: "Error",
-        description:
-          err instanceof Error ? err.message : "Failed to create pitch.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -216,6 +194,7 @@ const AddPitchForm = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         <h1 className="text-3xl font-bold mb-6 text-center">Add New Pitch</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Info */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -276,6 +255,7 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
+          {/* Images */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -286,8 +266,8 @@ const AddPitchForm = () => {
               <ImageUpload
                 onImageSelect={(f) => handleImageSelect(f, true)}
                 onImageRemove={handleImageRemove}
-                preview={mainImagePreview}
-                placeholder="Upload main image"
+                preview={bgPreview}
+                placeholder="Upload background image"
               />
               <ImageUpload
                 onImageSelect={(f) => handleImageSelect(f)}
@@ -316,6 +296,7 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
+          {/* Facilities */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -346,6 +327,7 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
+          {/* Actions */}
           <div className="flex justify-center space-x-4">
             <Button
               type="button"
