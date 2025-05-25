@@ -1,67 +1,51 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Plus, Edit3, Trash2 } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation, Pitch } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 import PitchCard from "@/components/pitches/PitchCard";
 import PitchDetailsDialog from "@/components/pitches/PitchDetailsDialog";
+import { fetchPitches, deletePitchById } from "@/lib/api";
 
-/**
- * Pitches page component
- * Displays all available pitches with search functionality
- * Admin users can add, edit, and delete pitches
- * Regular users can only view pitch details
- */
 const Pitches = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
-  const [selectedPitchForDetails, setSelectedPitchForDetails] = useState<Pitch | null>(null);
-  const {
-    pitches,
-    navigateToReservation,
-    deletePitch,
-    setPitches,
-  } = useReservation();
+  const [userRole, setUserRole] = useState<"admin" | "player" | null>(null);
+  const [selectedPitchForDetails, setSelectedPitchForDetails] =
+    useState<Pitch | null>(null);
+  const { pitches, navigateToReservation, deletePitch, setPitches } =
+    useReservation();
   const navigate = useNavigate();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pitchToDelete, setPitchToDelete] = useState<Pitch | null>(null);
 
-  // Get user role from localStorage and initialize pitches on component mount
   useEffect(() => {
-    // Get user role
-    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+    const role = localStorage.getItem("userRole") as "admin" | "player" | null;
     setUserRole(role);
-    
-    // Initialize pitches from localStorage with interval checking
-    const loadPitches = () => {
+
+    const loadPitches = async () => {
       try {
-        const storedPitches = localStorage.getItem('pitches');
-        if (storedPitches) {
-          const parsedPitches = JSON.parse(storedPitches);
-          if (Array.isArray(parsedPitches) && parsedPitches.length > 0) {
-            console.log("Loading pitches from localStorage:", parsedPitches);
-            setPitches(parsedPitches);
-          }
-        }
+        const apiPitches = await fetchPitches();
+        setPitches(apiPitches);
       } catch (error) {
-        console.error("Error loading pitches from localStorage:", error);
+        console.error("Failed to load pitches:", error);
+        toast({
+          title: "Error",
+          description: "Could not load pitches. Please try again later.",
+          variant: "destructive",
+        });
       }
     };
 
     loadPitches();
-    
-    // Check for updates every 2 seconds to catch new pitches
     const interval = setInterval(loadPitches, 2000);
-    
     return () => clearInterval(interval);
-  }, [setPitches]);
+  }, [setPitches, toast]);
 
-  // Filter pitches based on search term
   const filteredPitches = pitches.filter(
     (pitch) =>
       pitch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -69,7 +53,7 @@ const Pitches = () => {
   );
 
   const handleAddPitch = () => {
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       toast({
         title: "Access Denied",
         description: "Only administrators can add new pitches.",
@@ -85,44 +69,36 @@ const Pitches = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (pitchToDelete) {
-      // Delete from context
-      deletePitch(pitchToDelete.id);
-      
+  const handleConfirmDelete = async () => {
+    if (!pitchToDelete) return;
+
+    deletePitch(Number(pitchToDelete._id));
+
+    try {
+      await deletePitchById(pitchToDelete._id);
       toast({
         title: "Pitch Deleted",
         description: `The pitch "${pitchToDelete.name}" has been successfully deleted.`,
       });
-      setPitchToDelete(null);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  const handleEditPitch = (pitchId: number) => {
-    if (userRole !== 'admin') {
-      toast({ 
-        title: "Access Denied", 
-        description: "Only admins can edit pitches.", 
-        variant: "destructive" 
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pitch.",
+        variant: "destructive",
       });
-      return;
     }
-    // Navigate to the edit page with the proper ID
-    navigate(`/admin/edit-pitch/${pitchId}`);
-    
-    console.log(`Navigating to edit pitch ID: ${pitchId}`);
-    
-    toast({ 
-      title: "Edit Pitch", 
-      description: `Navigating to edit page for pitch ID: ${pitchId}.`
-    });
+
+    setPitchToDelete(null);
+    setShowDeleteDialog(false);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Available Pitches</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+          Available Pitches
+        </h1>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
@@ -139,7 +115,7 @@ const Pitches = () => {
             />
           </div>
 
-          {userRole === 'admin' && (
+          {userRole === "admin" && (
             <Button
               onClick={handleAddPitch}
               className="bg-[#0F766E] hover:bg-[#0d6d66]"
@@ -156,13 +132,16 @@ const Pitches = () => {
           <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4 mx-auto w-fit">
             <Search className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />
           </div>
-          <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">No pitches found</h3>
+          <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">
+            No pitches found
+          </h3>
           <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md mx-auto">
-            Try adjusting your search or add a new pitch if you have admin privileges.
+            Try adjusting your search or add a new pitch if you have admin
+            privileges.
           </p>
-          {userRole === 'admin' && (
-            <Button 
-              onClick={handleAddPitch} 
+          {userRole === "admin" && (
+            <Button
+              onClick={handleAddPitch}
               className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm"
             >
               Add New Pitch
@@ -174,12 +153,10 @@ const Pitches = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPitches.map((pitch) => (
             <PitchCard
-              key={pitch.id}
+              key={pitch._id}
               pitch={pitch}
-              isAdmin={userRole === 'admin'}
+              isAdmin={userRole === "admin"}
               onViewDetails={() => setSelectedPitchForDetails(pitch)}
-              onBookPitch={() => navigateToReservation(pitch.name)}
-              onEditClick={() => handleEditPitch(pitch.id)}
               onDeleteClick={() => handleOpenDeleteDialog(pitch)}
             />
           ))}
@@ -189,7 +166,9 @@ const Pitches = () => {
       {selectedPitchForDetails && (
         <PitchDetailsDialog
           pitch={selectedPitchForDetails}
-          onBookPitch={() => navigateToReservation(selectedPitchForDetails.name)}
+          onBookPitch={() =>
+            navigateToReservation(selectedPitchForDetails.name)
+          }
           onClose={() => setSelectedPitchForDetails(null)}
           userRole={userRole}
         />

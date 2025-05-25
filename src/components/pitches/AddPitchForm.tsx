@@ -1,23 +1,67 @@
-
+// AddPitchForm.tsx
 import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Users, FileText, Camera, Settings } from "lucide-react";
+import { MapPin, Users, FileText, Camera, Settings, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useReservation } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
 import ImageUpload from "@/components/ui/image-upload";
+
+const CLOUD_NAME = "dsmuk27ce"; // from CLOUDINARY_CLOUD_NAME
+const UPLOAD_PRESET = "bokit_preset"; // or use the preset you set in your Cloudinary settings
+
+// import { fetchPitches } from "@/lib/api"; // Adjust the import path as needed
+// Function to upload a file to Cloudinary
+const uploadToCloudinary = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file); // Append the file to the form data
+  formData.append("upload_preset", UPLOAD_PRESET); // Append the upload preset
+
+  try {
+    // Send a POST request to Cloudinary's upload endpoint
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    // Parse the JSON response
+    const data = await res.json();
+
+    // If the response is not OK, log the status and error message
+    if (!res.ok) {
+      console.error("Cloudinary upload failed:", res.status, data);
+      throw new Error(data.error?.message || "Upload failed");
+    }
+
+    // Return the secure URL of the uploaded image
+    return data.secure_url;
+  } catch (error) {
+    // Log any network or parsing errors
+    console.error("Error uploading to Cloudinary:", error);
+    throw error;
+  }
+};
 
 const facilityOptions = [
   { value: "wifi", label: "WiFi" },
   { value: "parking", label: "Parking" },
-  { value: "cafe", label: "Café/Restaurant" },
-  { value: "changing_rooms", label: "Changing Rooms" },
-  { value: "showers", label: "Showers" },
+  { value: "cafeteria", label: "Cafeteria" },
+  { value: "lockers", label: "Lockers" },
+  { value: "bathrooms", label: "Bathrooms" },
+  { value: "water", label: "Water" },
 ];
 
 interface FormData {
@@ -44,304 +88,268 @@ const AddPitchForm = () => {
     additionalImages: [],
     facilities: [],
   });
-  
+
   const [mainImagePreview, setMainImagePreview] = useState("");
   const [additionalPreviews, setAdditionalPreviews] = useState<string[]>([]);
   const { toast } = useToast();
-  const { addPitch } = useReservation();
   const navigate = useNavigate();
 
-  const handleInputChange = useCallback((field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const handleChange = <K extends keyof FormData>(
+    key: K,
+    value: FormData[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const handleFacilityToggle = useCallback((facility: string, checked: boolean) => {
-    setFormData(prev => ({
+  const handleFacilityToggle = (facility: string, checked: boolean) => {
+    setFormData((prev) => ({
       ...prev,
       facilities: checked
         ? [...prev.facilities, facility]
-        : prev.facilities.filter(f => f !== facility)
+        : prev.facilities.filter((f) => f !== facility),
     }));
-  }, []);
+  };
 
-  const handleMainImageSelect = useCallback((file: File) => {
-    setFormData(prev => ({ ...prev, mainImage: file }));
-    const reader = new FileReader();
-    reader.onload = (e) => setMainImagePreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleMainImageRemove = useCallback(() => {
-    setFormData(prev => ({ ...prev, mainImage: null }));
-    setMainImagePreview("");
-  }, []);
-
-  const handleAdditionalImageSelect = useCallback((file: File) => {
-    setFormData(prev => ({
-      ...prev,
-      additionalImages: [...prev.additionalImages, file]
-    }));
-    
+  const handleImageSelect = (file: File, isMain = false) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      setAdditionalPreviews(prev => [...prev, e.target?.result as string]);
+      if (isMain) {
+        setMainImagePreview(e.target?.result as string);
+        setFormData((prev) => ({ ...prev, mainImage: file }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          additionalImages: [...prev.additionalImages, file],
+        }));
+        setAdditionalPreviews((prev) => [...prev, e.target?.result as string]);
+      }
     };
     reader.readAsDataURL(file);
-  }, []);
+  };
 
-  const handleAdditionalImageRemove = useCallback((index: number) => {
-    setFormData(prev => ({
+  const handleImageRemove = () => {
+    setFormData((prev) => ({ ...prev, mainImage: null }));
+    setMainImagePreview("");
+  };
+
+  const handleAdditionalImageRemove = (index: number) => {
+    setFormData((prev) => ({
       ...prev,
-      additionalImages: prev.additionalImages.filter((_, i) => i !== index)
+      additionalImages: prev.additionalImages.filter((_, i) => i !== index),
     }));
-    setAdditionalPreviews(prev => prev.filter((_, i) => i !== index));
-  }, []);
+    setAdditionalPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const handlePlayersPerSideChange = useCallback((value: string) => {
-    setFormData(prev => ({ ...prev, playersPerSide: value }));
-  }, []);
-
-  const handleTypeChange = useCallback((value: string) => {
-    setFormData(prev => ({ ...prev, type: value }));
-  }, []);
-
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!formData.name || !formData.location || !formData.city || !formData.type || !formData.mainImage) {
+    const { name, location, city, type, mainImage } = formData;
+    if (!name || !location || !city || !type || !mainImage) {
       toast({
-        title: "Missing Required Fields",
-        description: "Please fill in all required fields including the main image.",
+        title: "Missing Fields",
+        description: "Please complete all fields.",
         variant: "destructive",
       });
       return;
     }
 
-    const playersPerSide = Math.max(parseInt(formData.playersPerSide), 5);
-
-    // Convert files to URLs for demo (in real app, upload to server first)
-    const mainImageUrl = mainImagePreview;
-    const additionalImageUrls = additionalPreviews;
-
-    const pitchData = {
-      name: formData.name,
-      location: formData.location,
-      city: formData.city,
-      type: formData.type as 'indoor' | 'outdoor',
-      description: formData.description,
-      image: mainImageUrl,
-      additionalImages: additionalImageUrls,
-      facilities: formData.facilities,
-      playersPerSide,
-      price: 25, // Default price for API compatibility
-      id: Date.now(),
-    };
-
     try {
-      addPitch(pitchData);
+      const token = localStorage.getItem("authToken");
+
+      if (!token)
+        throw new Error(
+          "Authentication Error: You must be logged in to add a pitch."
+        );
+
+      const backgroundImage = await uploadToCloudinary(mainImage);
+      const images = await Promise.all(
+        formData.additionalImages.map(uploadToCloudinary)
+      );
+
+      const services: Record<string, boolean | string> = { type };
+      ["wifi", "parking", "cafeteria", "lockers", "bathrooms", "water"].forEach(
+        (key) => {
+          services[key] = formData.facilities.includes(key);
+        }
+      );
+
+      const res = await fetch("http://127.0.0.1:3000/pitches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          location,
+          city,
+          backgroundImage,
+          images,
+          playersPerSide: parseInt(formData.playersPerSide),
+          description: formData.description,
+          services,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.status !== "success") {
+        throw new Error(result.message || "Unknown error");
+      }
+
       toast({
-        title: "Success!",
-        description: "Pitch has been added successfully.",
+        title: "Pitch Created",
+        description: "Pitch added successfully.",
       });
       navigate("/pitches");
-    } catch (error) {
+    } catch (err: unknown) {
+      console.error("Error:", err);
       toast({
         title: "Error",
-        description: "Failed to add pitch. Please try again.",
+        description:
+          err instanceof Error ? err.message : "Failed to create pitch.",
         variant: "destructive",
       });
     }
-  }, [formData, mainImagePreview, additionalPreviews, toast, addPitch, navigate]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Pitch</h1>
-          <p className="text-gray-600">Create a new pitch listing for players to discover and book</p>
-        </div>
-
+        <h1 className="text-3xl font-bold mb-6 text-center">Add New Pitch</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2" />
-                Basic Information
+              <CardTitle>
+                <FileText className="h-5 w-5 mr-2" /> Basic Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Pitch Name*</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="e.g., Champions League Arena"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">City*</label>
-                  <Input
-                    value={formData.city}
-                    onChange={(e) => handleInputChange("city", e.target.value)}
-                    placeholder="e.g., New York"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Full Address*</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    value={formData.location}
-                    onChange={(e) => handleInputChange("location", e.target.value)}
-                    placeholder="123 Stadium Road, Sports District"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Players Per Side*</label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Select value={formData.playersPerSide} onValueChange={handlePlayersPerSideChange}>
-                      <SelectTrigger className="pl-10">
-                        <SelectValue placeholder="Select format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[5, 6, 7, 8, 9, 10, 11].map((num) => (
-                          <SelectItem key={num} value={num.toString()}>
-                            {num} vs {num}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Pitch Type*</label>
-                  <Select value={formData.type} onValueChange={handleTypeChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="indoor">🏢 Indoor</SelectItem>
-                      <SelectItem value="outdoor">🌞 Outdoor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Description</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Describe your pitch..."
-                  rows={3}
-                />
-              </div>
+              <Input
+                placeholder="Pitch Name"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                required
+              />
+              <Input
+                placeholder="City"
+                value={formData.city}
+                onChange={(e) => handleChange("city", e.target.value)}
+                required
+              />
+              <Input
+                placeholder="Full Address"
+                value={formData.location}
+                onChange={(e) => handleChange("location", e.target.value)}
+                required
+              />
+              <Textarea
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) => handleChange("description", e.target.value)}
+              />
+              <Select
+                value={formData.playersPerSide}
+                onValueChange={(v) => handleChange("playersPerSide", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Players per side" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 6, 7, 8, 9, 10, 11].map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n} vs {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={formData.type}
+                onValueChange={(v) => handleChange("type", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pitch Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Indoor">Indoor</SelectItem>
+                  <SelectItem value="Outdoor">Outdoor</SelectItem>
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
-          {/* Images */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Camera className="h-5 w-5 mr-2" />
-                Images
+              <CardTitle>
+                <Camera className="h-5 w-5 mr-2" /> Images
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Main Image*</label>
-                <ImageUpload
-                  onImageSelect={handleMainImageSelect}
-                  onImageRemove={handleMainImageRemove}
-                  preview={mainImagePreview}
-                  placeholder="Upload main pitch image"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Additional Images</label>
-                <div className="space-y-4">
-                  <ImageUpload
-                    onImageSelect={handleAdditionalImageSelect}
-                    placeholder="Add more images to showcase your pitch"
-                  />
-                  
-                  {additionalPreviews.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {additionalPreviews.map((preview, index) => (
-                        <div key={index} className="relative group">
-                          <img 
-                            src={preview} 
-                            alt={`Additional ${index + 1}`} 
-                            className="w-full h-24 object-cover rounded border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleAdditionalImageRemove(index)}
-                            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
+            <CardContent className="space-y-4">
+              <ImageUpload
+                onImageSelect={(f) => handleImageSelect(f, true)}
+                onImageRemove={handleImageRemove}
+                preview={mainImagePreview}
+                placeholder="Upload main image"
+              />
+              <ImageUpload
+                onImageSelect={(f) => handleImageSelect(f)}
+                placeholder="Add more images"
+              />
+              {additionalPreviews.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {additionalPreviews.map((src, i) => (
+                    <div key={i} className="relative group">
+                      <img
+                        src={src}
+                        alt="Extra"
+                        className="w-full h-24 object-cover rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAdditionalImageRemove(i)}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Facilities */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Facilities
+              <CardTitle>
+                <Settings className="h-5 w-5 mr-2" /> Facilities
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {facilityOptions.map((facility) => (
-                  <div 
-                    key={facility.value} 
-                    className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50"
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {facilityOptions.map((f) => (
+                <div
+                  key={f.value}
+                  className="flex items-center space-x-3 p-3 border rounded"
+                >
+                  <Checkbox
+                    id={f.value}
+                    checked={formData.facilities.includes(f.value)}
+                    onCheckedChange={(checked) =>
+                      handleFacilityToggle(f.value, checked as boolean)
+                    }
+                  />
+                  <label
+                    htmlFor={f.value}
+                    className="text-sm font-medium cursor-pointer flex-1"
                   >
-                    <Checkbox
-                      id={facility.value}
-                      checked={formData.facilities.includes(facility.value)}
-                      onCheckedChange={(checked) => handleFacilityToggle(facility.value, checked as boolean)}
-                    />
-                    <label htmlFor={facility.value} className="text-sm font-medium cursor-pointer flex-1">
-                      {facility.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
+                    {f.label}
+                  </label>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Submit */}
           <div className="flex justify-center space-x-4">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => navigate("/pitches")}
             >
               Cancel

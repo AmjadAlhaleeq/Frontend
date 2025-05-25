@@ -1,13 +1,13 @@
-
+// PitchCard.tsx
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  MapPin, 
-  Trash2, 
-  Users, 
-  ChevronLeft, 
+import {
+  MapPin,
+  Trash2,
+  Users,
+  ChevronLeft,
   ChevronRight,
   Wifi,
   Car,
@@ -18,7 +18,7 @@ import {
   Camera,
   TreePine,
   Zap,
-  Wind
+  Wind,
 } from "lucide-react";
 import { Pitch } from "@/context/ReservationContext";
 
@@ -26,18 +26,16 @@ interface PitchCardProps {
   pitch: Pitch;
   isAdmin: boolean;
   onViewDetails: () => void;
-  onBookPitch: () => void;
-  onEditClick: () => void;
-  onDeleteClick: () => void;
+  onDeleteClick: (pitchId: string) => void;
 }
 
-const facilityIcons: Record<string, any> = {
+const facilityIcons: Record<string, React.ElementType> = {
   wifi: Wifi,
   parking: Car,
-  cafe: Coffee,
+  cafeteria: Coffee,
   security: Shield,
-  changing_rooms: Shirt,
-  showers: Droplets,
+  lockers: Shirt,
+  bathrooms: Droplets,
   cctv: Camera,
   outdoor_area: TreePine,
   floodlights: Zap,
@@ -47,61 +45,56 @@ const facilityIcons: Record<string, any> = {
 const facilityColors: Record<string, string> = {
   wifi: "text-blue-600",
   parking: "text-gray-600",
-  cafe: "text-orange-600",
+  cafeteria: "text-orange-600",
   security: "text-red-600",
-  changing_rooms: "text-purple-600",
-  showers: "text-cyan-600",
+  lockers: "text-purple-600",
+  bathrooms: "text-cyan-600",
   cctv: "text-indigo-600",
   outdoor_area: "text-green-600",
   floodlights: "text-yellow-600",
   air_conditioning: "text-sky-600",
 };
 
-/**
- * PitchCard component
- * Displays a card with pitch information and action buttons
- * Now supports multiple images with navigation and real facility icons
- */
 const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
   isAdmin,
   onViewDetails,
-  onDeleteClick
+  onDeleteClick,
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
-  // Get all images for this pitch
-  const allImages = [
-    pitch.image,
-    ...(pitch.additionalImages || [])
-  ].filter(Boolean);
+  const allImages = [pitch.backgroundImage, ...(pitch.images || [])].filter(
+    Boolean
+  );
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    setCurrentImageIndex(
+      (prev) => (prev - 1 + allImages.length) % allImages.length
+    );
   };
 
-  // Ensure minimum 5 players per side
   const playersPerSide = Math.max(pitch.playersPerSide, 5);
+
+  const availableFacilities = Object.entries(pitch.services || {})
+    .filter(([key, value]) => key !== "type" && value === true)
+    .map(([key]) => key);
 
   return (
     <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Card image with navigation for multiple images */}
-      <div 
-        className="h-48 relative cursor-pointer group" 
+      <div
+        className="h-48 relative cursor-pointer group"
         onClick={onViewDetails}
       >
-        <img 
-          src={allImages[currentImageIndex] || pitch.image}
-          alt={pitch.name} 
+        <img
+          src={allImages[currentImageIndex]}
+          alt={pitch.name}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
-        
-        {/* Image navigation - only show if more than 1 image */}
+
         {allImages.length > 1 && (
           <>
             <button
@@ -122,8 +115,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
             >
               <ChevronRight className="h-4 w-4" />
             </button>
-            
-            {/* Image indicators */}
+
             <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-1">
               {allImages.map((_, index) => (
                 <button
@@ -133,87 +125,90 @@ const PitchCard: React.FC<PitchCardProps> = ({
                     setCurrentImageIndex(index);
                   }}
                   className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                    index === currentImageIndex ? "bg-white" : "bg-white/50"
                   }`}
                 />
               ))}
             </div>
           </>
         )}
-        
+
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <h3 className="font-semibold text-white text-lg line-clamp-1">
             {pitch.name}
           </h3>
-          {/* Display pitch type badge */}
-          {pitch.type && (
-            <Badge 
-              variant="outline" 
+          {pitch.services?.type && (
+            <Badge
+              variant="outline"
               className={`mt-1 text-xs ${
-                pitch.type === 'indoor' 
-                  ? 'bg-purple-600/80 hover:bg-purple-600 text-white border-purple-400' 
-                  : 'bg-green-600/80 hover:bg-green-600 text-white border-green-400'
+                pitch.services.type.toLowerCase() === "indoor"
+                  ? "bg-purple-600/80 hover:bg-purple-600 text-white border-purple-400"
+                  : "bg-green-600/80 hover:bg-green-600 text-white border-green-400"
               }`}
             >
-              {pitch.type === 'indoor' ? 'Indoor' : 'Outdoor'}
+              {pitch.services.type}
             </Badge>
           )}
         </div>
       </div>
-      
+
       <CardContent className="p-4">
-        {/* Location with city */}
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-3">
           <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0" />
           <span className="truncate">{pitch.city}</span>
         </div>
-        
-        {/* Players info */}
+
         <div className="flex justify-between items-center mb-3 text-sm">
           <div className="flex items-center text-gray-600">
             <Users className="h-4 w-4 mr-1" />
             {playersPerSide}v{playersPerSide}
           </div>
         </div>
-        
-        {/* Facilities with real icons */}
+
         <div className="mb-3">
           <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
           <div className="flex flex-wrap gap-1.5">
-            {pitch.facilities && pitch.facilities.length > 0 ? (
-              pitch.facilities.slice(0, 3).map((facility, index) => {
+            {availableFacilities.length > 0 ? (
+              availableFacilities.slice(0, 3).map((facility, index) => {
                 const IconComponent = facilityIcons[facility];
                 const iconColor = facilityColors[facility] || "text-gray-500";
                 return (
-                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
-                    {IconComponent && <IconComponent className={`h-3 w-3 ${iconColor}`} />}
-                    {facility.replace('_', ' ')}
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="text-xs flex items-center gap-1"
+                  >
+                    {IconComponent && (
+                      <IconComponent className={`h-3 w-3 ${iconColor}`} />
+                    )}
+                    {facility.replace("_", " ")}
                   </Badge>
                 );
               })
             ) : (
-              <span className="text-xs text-gray-500 italic">No facilities listed</span>
+              <span className="text-xs text-gray-500 italic">
+                No facilities listed
+              </span>
             )}
-            {pitch.facilities && pitch.facilities.length > 3 && (
+            {availableFacilities.length > 3 && (
               <Badge variant="outline" className="text-xs">
-                +{pitch.facilities.length - 3} more
+                +{availableFacilities.length - 3} more
               </Badge>
             )}
           </div>
         </div>
-        
-        {/* Action buttons */}
+
         <div className="flex gap-2">
-          <Button 
-            onClick={onViewDetails} 
+          <Button
+            onClick={onViewDetails}
             className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
           >
             View Details
           </Button>
-          
+
           {isAdmin && (
-            <Button 
-              onClick={onDeleteClick}
+            <Button
+              onClick={() => onDeleteClick(pitch._id)}
               variant="outline"
               size="icon"
               className="h-9 w-9 text-red-500 hover:text-red-600 hover:border-red-300"

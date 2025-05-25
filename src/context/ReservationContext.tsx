@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Define the player interface with role information
@@ -31,7 +30,7 @@ export enum HighlightType {
   ASSIST = "assist",
   SAVE = "save",
   TACKLE = "tackle",
-  OTHER = "other"
+  OTHER = "other",
 }
 
 // Define user stats interface
@@ -48,23 +47,23 @@ export interface UserStats {
 
 // Define the Pitch interface with up to 4 images
 export interface Pitch {
-  id: number;
+  _id: string; // MongoDB uses _id as the unique identifier
   name: string;
   location: string;
   city: string;
-  image: string;
+  backgroundImage: string;
   playersPerSide: number;
   description: string;
-  price: number;
-  facilities: string[];
-  additionalImages?: string[]; // Up to 4 images total
-  type?: string; // 'indoor' or 'outdoor'
-  details?: {
-    address?: string;
-    description?: string;
-    price?: string;
-    facilities?: string[];
+  services: {
+    type: string; // "Indoor" or "Outdoor"
+    water: boolean;
+    cafeteria: boolean;
+    lockers: boolean;
+    bathrooms: boolean;
+    parking: boolean;
+    wifi: boolean;
   };
+  images: string[]; // Optional multiple images
 }
 
 // Define the Reservation interface with new status system
@@ -96,7 +95,7 @@ export interface Reservation {
     completed: boolean;
     completedAt: string;
     mvpPlayerId?: string;
-  }
+  };
 }
 
 // Define the ReservationContextType interface
@@ -116,22 +115,38 @@ interface ReservationContextType {
   joinWaitingList: (id: number, userId: string) => void;
   leaveWaitingList: (id: number, userId: string) => void;
   isUserJoined: (reservationId: number, userId: string) => boolean;
-  updateReservationStatus: (id: number, status: "upcoming" | "completed" | "cancelled") => void;
-  isDateAvailableForPitch: (date: string, pitchName: string, timeSlot: string) => boolean;
+  updateReservationStatus: (
+    id: number,
+    status: "upcoming" | "completed" | "cancelled"
+  ) => void;
+  isDateAvailableForPitch: (
+    date: string,
+    pitchName: string,
+    timeSlot: string
+  ) => boolean;
   navigateToReservation: (pitchName: string) => void;
   hasUserJoinedOnDate: (date: Date, userId: string) => boolean;
   getReservationsForDate: (date: Date) => Reservation[];
-  updateGameSummary: (reservationId: number, summary: any, playerStats: Player[]) => void;
+  updateGameSummary: (
+    reservationId: number,
+    summary: any,
+    playerStats: Player[]
+  ) => void;
   updatePlayerStats: (userId: string, stats: any) => void;
   suspendPlayer: (userId: string, reason: string, duration: number) => void;
   kickPlayerFromGame: (reservationId: number, userId: string) => void;
   editReservation: (id: number, updates: Partial<Reservation>) => void;
   getUserStats: (userId: string) => UserStats;
-  addHighlight: (reservationId: number, highlight: Omit<Highlight, "id">) => void;
+  addHighlight: (
+    reservationId: number,
+    highlight: Omit<Highlight, "id">
+  ) => void;
   deleteHighlight: (reservationId: number, highlightId: string) => void;
 }
 
-const ReservationContext = createContext<ReservationContextType | undefined>(undefined);
+const ReservationContext = createContext<ReservationContextType | undefined>(
+  undefined
+);
 
 export const useReservation = () => {
   const context = useContext(ReservationContext);
@@ -151,13 +166,17 @@ const safeSetLocalStorage = (key: string, value: any): boolean => {
   try {
     // For large objects, we can check size before attempting to store
     const serialized = JSON.stringify(value);
-    
+
     // If serialized data is too large (over 2MB), return false
     if (serialized.length > 2000000) {
-      console.warn(`LocalStorage: Data for '${key}' is too large (${Math.round(serialized.length/1024)}KB). Consider reducing data size.`);
+      console.warn(
+        `LocalStorage: Data for '${key}' is too large (${Math.round(
+          serialized.length / 1024
+        )}KB). Consider reducing data size.`
+      );
       return false;
     }
-    
+
     localStorage.setItem(key, serialized);
     return true;
   } catch (error) {
@@ -185,55 +204,69 @@ const safeGetLocalStorage = <T,>(key: string, defaultValue: T): T => {
   }
 };
 
-export const ReservationProvider = ({ children }: { children: React.ReactNode }) => {
+export const ReservationProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [pitches, setPitches] = useState<Pitch[]>(() => {
-    return safeGetLocalStorage<Pitch[]>('pitches', []);
+    return safeGetLocalStorage<Pitch[]>("pitches", []);
   });
-  
+
   const [reservations, setReservations] = useState<Reservation[]>(() => {
-    return safeGetLocalStorage<Reservation[]>('reservations', []);
+    return safeGetLocalStorage<Reservation[]>("reservations", []);
   });
 
   useEffect(() => {
-    const success = safeSetLocalStorage('pitches', pitches);
+    const success = safeSetLocalStorage("pitches", pitches);
     if (!success) {
-      console.warn("Failed to save pitches to localStorage due to size limits.");
+      console.warn(
+        "Failed to save pitches to localStorage due to size limits."
+      );
     }
   }, [pitches]);
 
   useEffect(() => {
     // Try to save all reservations first
-    const success = safeSetLocalStorage('reservations', reservations);
-    
+    const success = safeSetLocalStorage("reservations", reservations);
+
     // If saving all failed, try saving a maximum of 50 most recent reservations
     if (!success && reservations.length > 50) {
       console.warn("Trimming reservations data to fit in localStorage");
-      
+
       // Sort by date (most recent first) and take only 50
       const sortedReservations = [...reservations]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 50);
-      
+
       // Try saving the reduced set
-      const reducedSuccess = safeSetLocalStorage('reservations', sortedReservations);
-      
+      const reducedSuccess = safeSetLocalStorage(
+        "reservations",
+        sortedReservations
+      );
+
       if (!reducedSuccess) {
-        console.error("Even reduced reservations data is too large for localStorage");
+        console.error(
+          "Even reduced reservations data is too large for localStorage"
+        );
       }
     }
   }, [reservations]);
 
   const addPitch = (pitch: Omit<Pitch, "id">) => {
-    const newPitch = { ...pitch, id: pitches.length > 0 ? Math.max(...pitches.map(p => p.id)) + 1 : 1 };
+    const newPitch = {
+      ...pitch,
+      id: pitches.length > 0 ? Math.max(...pitches.map((p) => p.id)) + 1 : 1,
+    };
     setPitches([...pitches, newPitch]);
   };
 
   const updatePitch = (pitch: Pitch) => {
-    setPitches(pitches.map(p => p.id === pitch.id ? pitch : p));
+    setPitches(pitches.map((p) => (p.id === pitch.id ? pitch : p)));
   };
 
   const deletePitch = (pitchId: number) => {
-    setPitches(pitches.filter(pitch => pitch.id !== pitchId));
+    setPitches(pitches.filter((pitch) => pitch.id !== pitchId));
   };
 
   const addReservation = (reservation: any): Reservation | null => {
@@ -242,16 +275,25 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
       return null;
     }
 
-    const pitch = pitches.find(p => p.name === reservation.pitchName);
+    const pitch = pitches.find((p) => p.name === reservation.pitchName);
     if (!pitch) {
       console.error(`Pitch with name ${reservation.pitchName} not found.`);
       return null;
     }
 
-    if (isDateAvailableForPitch(reservation.date, reservation.pitchName, reservation.time)) {
+    if (
+      isDateAvailableForPitch(
+        reservation.date,
+        reservation.pitchName,
+        reservation.time
+      )
+    ) {
       const newReservation = {
         ...reservation,
-        id: reservations.length > 0 ? Math.max(...reservations.map(r => r.id)) + 1 : 1,
+        id:
+          reservations.length > 0
+            ? Math.max(...reservations.map((r) => r.id)) + 1
+            : 1,
         location: pitch.location,
         city: pitch.city,
         imageUrl: pitch.image,
@@ -259,7 +301,7 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
         playersJoined: 0,
         status: "upcoming" as "upcoming" | "completed" | "cancelled",
         lineup: [],
-        waitingList: []
+        waitingList: [],
       };
       setReservations([...reservations, newReservation]);
       return newReservation;
@@ -270,33 +312,41 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const updateReservation = (id: number, reservation: Partial<Reservation>) => {
-    setReservations(reservations.map(res => res.id === id ? { ...res, ...reservation } : res));
+    setReservations(
+      reservations.map((res) =>
+        res.id === id ? { ...res, ...reservation } : res
+      )
+    );
   };
 
   const deleteReservation = (id: number) => {
-    const reservation = reservations.find(res => res.id === id);
+    const reservation = reservations.find((res) => res.id === id);
     if (reservation && reservation.lineup) {
       // Send email notifications to all players
-      reservation.lineup.forEach(player => {
-        const playerEmail = localStorage.getItem(`playerEmail_${player.userId}`);
+      reservation.lineup.forEach((player) => {
+        const playerEmail = localStorage.getItem(
+          `playerEmail_${player.userId}`
+        );
         if (playerEmail) {
-          sendEmailNotification(playerEmail, 'deletion', {
+          sendEmailNotification(playerEmail, "deletion", {
             reservationTitle: reservation.title,
             date: reservation.date,
-            time: reservation.time
+            time: reservation.time,
           });
         }
       });
     }
-    
-    setReservations(reservations.filter(res => res.id !== id));
+
+    setReservations(reservations.filter((res) => res.id !== id));
   };
 
   const joinGame = (id: number, playerName?: string, userId?: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
+    setReservations((prev) => {
+      return prev.map((reservation) => {
         if (reservation.id === id && userId) {
-          const isAlreadyJoined = reservation.lineup?.some(player => player.userId === userId);
+          const isAlreadyJoined = reservation.lineup?.some(
+            (player) => player.userId === userId
+          );
           if (isAlreadyJoined) {
             return reservation;
           }
@@ -304,21 +354,23 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
           const newPlayer = {
             userId: userId,
             playerName: playerName || `Player ${userId.substring(0, 4)}`,
-            status: 'joined',
+            status: "joined",
             joinedAt: new Date().toISOString(),
-            role: `Player ${(reservation.lineup?.length || 0) + 1}`
+            role: `Player ${(reservation.lineup?.length || 0) + 1}`,
           };
 
-          const updatedLineup = reservation.lineup ? [...reservation.lineup, newPlayer] : [newPlayer];
+          const updatedLineup = reservation.lineup
+            ? [...reservation.lineup, newPlayer]
+            : [newPlayer];
           const playersJoined = updatedLineup.length;
-          
+
           let updatedWaitingList = reservation.waitingList || [];
-          
-          return { 
-            ...reservation, 
-            lineup: updatedLineup, 
+
+          return {
+            ...reservation,
+            lineup: updatedLineup,
             playersJoined,
-            waitingList: updatedWaitingList
+            waitingList: updatedWaitingList,
           };
         }
         return reservation;
@@ -327,16 +379,18 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const cancelReservation = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
+    setReservations((prev) => {
+      return prev.map((reservation) => {
         if (reservation.id === id) {
-          const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
+          const updatedLineup =
+            reservation.lineup?.filter((player) => player.userId !== userId) ||
+            [];
           const playersJoined = updatedLineup.length;
-          
+
           return {
             ...reservation,
             lineup: updatedLineup,
-            playersJoined
+            playersJoined,
           };
         }
         return reservation;
@@ -345,19 +399,21 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const isUserJoined = (reservationId: number, userId: string): boolean => {
-    const reservation = reservations.find(res => res.id === reservationId);
-    return reservation?.lineup?.some(player => player.userId === userId) || false;
+    const reservation = reservations.find((res) => res.id === reservationId);
+    return (
+      reservation?.lineup?.some((player) => player.userId === userId) || false
+    );
   };
 
   const joinWaitingList = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
+    setReservations((prev) => {
+      return prev.map((reservation) => {
         if (reservation.id === id) {
           const currentWaitingList = reservation.waitingList || [];
           if (!currentWaitingList.includes(userId)) {
             return {
               ...reservation,
-              waitingList: [...currentWaitingList, userId]
+              waitingList: [...currentWaitingList, userId],
             };
           }
         }
@@ -367,12 +423,12 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const leaveWaitingList = (id: number, userId: string) => {
-    setReservations(prev => {
-      return prev.map(reservation => {
+    setReservations((prev) => {
+      return prev.map((reservation) => {
         if (reservation.id === id && reservation.waitingList) {
           return {
             ...reservation,
-            waitingList: reservation.waitingList.filter(id => id !== userId)
+            waitingList: reservation.waitingList.filter((id) => id !== userId),
           };
         }
         return reservation;
@@ -381,13 +437,25 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   // Update reservation status function for new status system
-  const updateReservationStatus = (id: number, status: "upcoming" | "completed" | "cancelled") => {
-    setReservations(reservations.map(res => res.id === id ? { ...res, status } : res));
+  const updateReservationStatus = (
+    id: number,
+    status: "upcoming" | "completed" | "cancelled"
+  ) => {
+    setReservations(
+      reservations.map((res) => (res.id === id ? { ...res, status } : res))
+    );
   };
 
-  const isDateAvailableForPitch = (date: string, pitchName: string, timeSlot: string): boolean => {
+  const isDateAvailableForPitch = (
+    date: string,
+    pitchName: string,
+    timeSlot: string
+  ): boolean => {
     return !reservations.some(
-      res => res.date === date && res.pitchName === pitchName && res.time === timeSlot
+      (res) =>
+        res.date === date &&
+        res.pitchName === pitchName &&
+        res.time === timeSlot
     );
   };
 
@@ -396,46 +464,55 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const hasUserJoinedOnDate = (date: Date, userId: string): boolean => {
-    const dateString = date.toISOString().split('T')[0];
-    return reservations.some(reservation =>
-      reservation.date === dateString &&
-      reservation.lineup?.some(player => player.userId === userId)
+    const dateString = date.toISOString().split("T")[0];
+    return reservations.some(
+      (reservation) =>
+        reservation.date === dateString &&
+        reservation.lineup?.some((player) => player.userId === userId)
     );
   };
 
   const getReservationsForDate = (date: Date): Reservation[] => {
-    const dateString = date.toISOString().split('T')[0];
-    return reservations.filter(reservation => reservation.date === dateString);
+    const dateString = date.toISOString().split("T")[0];
+    return reservations.filter(
+      (reservation) => reservation.date === dateString
+    );
   };
-  
-  const updateGameSummary = (reservationId: number, summary: any, playerStats: Player[]) => {
+
+  const updateGameSummary = (
+    reservationId: number,
+    summary: any,
+    playerStats: Player[]
+  ) => {
     setReservations((prev) => {
       return prev.map((reservation) => {
         if (reservation.id === reservationId) {
-          const updatedLineup = reservation.lineup?.map(player => {
-            const updatedPlayer = playerStats.find(p => p.userId === player.userId);
+          const updatedLineup = reservation.lineup?.map((player) => {
+            const updatedPlayer = playerStats.find(
+              (p) => p.userId === player.userId
+            );
             return updatedPlayer || player;
           });
-          
+
           return {
             ...reservation,
             summary,
             status: "completed",
-            lineup: updatedLineup
+            lineup: updatedLineup,
           };
         }
         return reservation;
       });
     });
-    
-    playerStats.forEach(player => {
+
+    playerStats.forEach((player) => {
       if (player.attended) {
         updatePlayerStats(player.userId, {
           goals: player.goals || 0,
           assists: player.assists || 0,
           cleansheets: player.cleansheet ? 1 : 0,
           mvps: player.mvp ? 1 : 0,
-          gamesPlayed: 1
+          gamesPlayed: 1,
         });
       }
     });
@@ -444,29 +521,33 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   const updatePlayerStats = (userId: string, newStats: any) => {
     try {
       const userStatsString = localStorage.getItem(`userStats_${userId}`);
-      let userStats = userStatsString ? JSON.parse(userStatsString) : {
-        goals: 0,
-        assists: 0,
-        cleansheets: 0,
-        mvps: 0,
-        gamesPlayed: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0
-      };
-      
+      let userStats = userStatsString
+        ? JSON.parse(userStatsString)
+        : {
+            goals: 0,
+            assists: 0,
+            cleansheets: 0,
+            mvps: 0,
+            gamesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+          };
+
       Object.entries(newStats).forEach(([key, value]) => {
-        if (typeof value === 'number') {
+        if (typeof value === "number") {
           userStats[key] = (userStats[key] || 0) + value;
         }
       });
-      
+
       localStorage.setItem(`userStats_${userId}`, JSON.stringify(userStats));
-      
-      window.dispatchEvent(new CustomEvent('playerStatsUpdated', { 
-        detail: { userId, stats: userStats } 
-      }));
-      
+
+      window.dispatchEvent(
+        new CustomEvent("playerStatsUpdated", {
+          detail: { userId, stats: userStats },
+        })
+      );
+
       return userStats;
     } catch (error) {
       console.error("Error updating player stats:", error);
@@ -474,38 +555,50 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  const sendEmailNotification = (email: string, type: 'suspension' | 'kick' | 'deletion', details: any) => {
+  const sendEmailNotification = (
+    email: string,
+    type: "suspension" | "kick" | "deletion",
+    details: any
+  ) => {
     console.log(`Sending ${type} email to ${email}:`, details);
   };
 
   const suspendPlayer = (userId: string, reason: string, duration: number) => {
     const now = new Date();
-    const endDate = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000));
-    
+    const endDate = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+
     const suspension = {
       userId,
       reason,
       startDate: now.toISOString(),
       endDate: endDate.toISOString(),
-      active: true
+      active: true,
     };
-    
+
     try {
-      const suspensionsString = localStorage.getItem('playerSuspensions');
-      const suspensions = suspensionsString ? JSON.parse(suspensionsString) : [];
-      
+      const suspensionsString = localStorage.getItem("playerSuspensions");
+      const suspensions = suspensionsString
+        ? JSON.parse(suspensionsString)
+        : [];
+
       suspensions.push(suspension);
-      localStorage.setItem('playerSuspensions', JSON.stringify(suspensions));
-      
+      localStorage.setItem("playerSuspensions", JSON.stringify(suspensions));
+
       const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
       if (playerEmail) {
-        sendEmailNotification(playerEmail, 'suspension', { reason, duration, endDate: endDate.toISOString() });
+        sendEmailNotification(playerEmail, "suspension", {
+          reason,
+          duration,
+          endDate: endDate.toISOString(),
+        });
       }
-      
-      window.dispatchEvent(new CustomEvent('playerSuspended', { 
-        detail: { userId, endDate: endDate.toISOString() } 
-      }));
-      
+
+      window.dispatchEvent(
+        new CustomEvent("playerSuspended", {
+          detail: { userId, endDate: endDate.toISOString() },
+        })
+      );
+
       return true;
     } catch (error) {
       console.error("Error suspending player:", error);
@@ -517,22 +610,24 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     setReservations((prev) => {
       return prev.map((reservation) => {
         if (reservation.id === reservationId) {
-          const updatedLineup = reservation.lineup?.filter(player => player.userId !== userId) || [];
+          const updatedLineup =
+            reservation.lineup?.filter((player) => player.userId !== userId) ||
+            [];
           const playersJoined = updatedLineup.length;
-          
+
           const playerEmail = localStorage.getItem(`playerEmail_${userId}`);
           if (playerEmail) {
-            sendEmailNotification(playerEmail, 'kick', { 
+            sendEmailNotification(playerEmail, "kick", {
               reservationTitle: reservation.title,
               date: reservation.date,
-              time: reservation.time
+              time: reservation.time,
             });
           }
-          
+
           return {
             ...reservation,
             lineup: updatedLineup,
-            playersJoined
+            playersJoined,
           };
         }
         return reservation;
@@ -541,7 +636,9 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const editReservation = (id: number, updates: Partial<Reservation>) => {
-    setReservations(reservations.map(res => res.id === id ? { ...res, ...updates } : res));
+    setReservations(
+      reservations.map((res) => (res.id === id ? { ...res, ...updates } : res))
+    );
   };
 
   const getUserStats = (userId: string): UserStats => {
@@ -553,7 +650,7 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
     } catch (error) {
       console.error("Error getting user stats:", error);
     }
-    
+
     return {
       gamesPlayed: 0,
       goalsScored: 0,
@@ -565,19 +662,24 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
       draws: 0,
     };
   };
-  
-  const addHighlight = (reservationId: number, highlight: Omit<Highlight, "id">) => {
-    setReservations(prev => {
-      return prev.map(res => {
+
+  const addHighlight = (
+    reservationId: number,
+    highlight: Omit<Highlight, "id">
+  ) => {
+    setReservations((prev) => {
+      return prev.map((res) => {
         if (res.id === reservationId) {
           const newHighlight = {
             ...highlight,
-            id: `highlight_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+            id: `highlight_${Date.now()}_${Math.random()
+              .toString(36)
+              .substring(2, 9)}`,
           };
           const currentHighlights = res.highlights || [];
           return {
             ...res,
-            highlights: [...currentHighlights, newHighlight]
+            highlights: [...currentHighlights, newHighlight],
           };
         }
         return res;
@@ -586,12 +688,12 @@ export const ReservationProvider = ({ children }: { children: React.ReactNode })
   };
 
   const deleteHighlight = (reservationId: number, highlightId: string) => {
-    setReservations(prev => {
-      return prev.map(res => {
+    setReservations((prev) => {
+      return prev.map((res) => {
         if (res.id === reservationId && res.highlights) {
           return {
             ...res,
-            highlights: res.highlights.filter(h => h.id !== highlightId)
+            highlights: res.highlights.filter((h) => h.id !== highlightId),
           };
         }
         return res;
