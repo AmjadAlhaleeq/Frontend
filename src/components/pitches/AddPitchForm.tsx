@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Users, FileText, Clock, DollarSign, Camera, Settings } from "lucide-react";
+import { MapPin, Users, FileText, Camera, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +30,6 @@ interface FormData {
   mainImage: File | null;
   additionalImages: File[];
   facilities: string[];
-  openingHours: string;
-  price: string;
 }
 
 const AddPitchForm = () => {
@@ -45,8 +43,6 @@ const AddPitchForm = () => {
     mainImage: null,
     additionalImages: [],
     facilities: [],
-    openingHours: "",
-    price: "",
   });
   
   const [mainImagePreview, setMainImagePreview] = useState("");
@@ -113,26 +109,16 @@ const AddPitchForm = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.location || !formData.city || !formData.type || !formData.mainImage || !formData.price) {
+    if (!formData.name || !formData.location || !formData.city || !formData.type || !formData.mainImage) {
       toast({
         title: "Missing Required Fields",
-        description: "Please fill in all required fields including the main image and price.",
+        description: "Please fill in all required fields including the main image.",
         variant: "destructive",
       });
       return;
     }
 
     const playersPerSide = Math.max(parseInt(formData.playersPerSide), 5);
-    const price = parseFloat(formData.price);
-
-    if (isNaN(price) || price <= 0) {
-      toast({
-        title: "Invalid Price",
-        description: "Please enter a valid price greater than 0.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Convert files to URLs for demo (in real app, upload to server first)
     const mainImageUrl = mainImagePreview;
@@ -147,9 +133,8 @@ const AddPitchForm = () => {
       image: mainImageUrl,
       additionalImages: additionalImageUrls,
       facilities: formData.facilities,
-      openingHours: formData.openingHours,
       playersPerSide,
-      price,
+      price: 25, // Default price for API compatibility
       id: Date.now(),
     };
 
@@ -223,7 +208,7 @@ const AddPitchForm = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Players Per Side*</label>
                   <div className="relative">
@@ -254,36 +239,6 @@ const AddPitchForm = () => {
                       <SelectItem value="outdoor">🌞 Outdoor</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Price per hour*</label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange("price", e.target.value)}
-                      placeholder="50.00"
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Opening Hours</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    value={formData.openingHours}
-                    onChange={(e) => handleInputChange("openingHours", e.target.value)}
-                    placeholder="Mon-Sun: 6:00 AM - 11:00 PM"
-                    className="pl-10"
-                  />
                 </div>
               </div>
 

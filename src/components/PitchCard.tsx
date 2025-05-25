@@ -90,17 +90,13 @@ const PitchCard: React.FC<PitchCardProps> = ({
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <div>
-            <span className="font-medium text-primary">${price}</span>
-            <span className="text-sm text-muted-foreground"> / player</span>
-          </div>
           <Button 
             variant="default" 
             size="sm" 
             className="bg-[#0F766E] hover:bg-[#0F766E]/90"
             onClick={() => setShowReservations(!showReservations)}
           >
-            {showReservations ? "Hide Times" : "Show Times"}
+            {showReservations ? "Hide Games" : "Show Games"}
           </Button>
         </div>
 
@@ -110,7 +106,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-gray-700 flex items-center">
                 <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-                Upcoming Reservations
+                Upcoming Games
               </h4>
               <Button 
                 variant="link" 
@@ -132,11 +128,13 @@ const PitchCard: React.FC<PitchCardProps> = ({
                   >
                     <div>
                       <div className="font-medium">{formatDate(res.date)}</div>
-                      <div className="text-xs text-gray-500">{res.time}</div>
+                      <div className="text-xs text-gray-500">
+                        {res.startTime && res.endTime ? `${res.startTime} - ${res.endTime}` : res.time}
+                      </div>
                     </div>
                     <div className="flex items-center">
                       <Users className="h-3 w-3 mr-1 text-[#0F766E]" />
-                      <span className="text-xs">{res.playersJoined}/{res.maxPlayers}</span>
+                      <span className="text-xs">{res.maxPlayers} max</span>
                     </div>
                   </div>
                 ))}

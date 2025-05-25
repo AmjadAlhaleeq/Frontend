@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import AddReservationDialog from "@/components/reservations/AddReservationDialog";
+import EnhancedAddReservationDialog from "@/components/reservations/EnhancedAddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import ReservationCard from "@/components/reservations/ReservationCard";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
@@ -47,8 +47,8 @@ const EmptyState: React.FC<{
 );
 
 /**
- * Reservations Page Component
- * Displays and manages game reservations with improved UX
+ * Enhanced Reservations Page Component
+ * Clean, reusable, and API-ready
  */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
@@ -56,6 +56,7 @@ const Reservations = () => {
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [addDialogKey, setAddDialogKey] = useState(0); // Key to force re-render
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
@@ -68,64 +69,45 @@ const Reservations = () => {
     joinWaitingList,
     leaveWaitingList,
     isUserJoined,
-    hasUserJoinedOnDate,
     updateReservationStatus,
     deleteReservation,
     setReservations,
   } = useReservation();
 
+  // Initialize user data and reservations
   useEffect(() => {
-    // Get user role and ID from localStorage
-    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
-    setUserRole(role);
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
+    const initializeData = () => {
       try {
-        const userData = JSON.parse(storedUser);
-        setCurrentUserId(userData.id);
-      } catch (e) {
-        console.error("Failed to parse currentUser from localStorage", e);
-        setCurrentUserId(null);
-      }
-    }
-    
-    // Initialize reservations from localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        if (Array.isArray(parsedReservations) && parsedReservations.length > 0) {
-          console.log("Loading reservations from localStorage:", parsedReservations);
-          setReservations(parsedReservations);
+        // Get user role and ID
+        const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+        setUserRole(role);
+        
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setCurrentUserId(userData.id);
         }
-      }
-    } catch (error) {
-      console.error("Error loading reservations from localStorage:", error);
-    }
-    
-    const handleShowGameDetails = (event: any) => {
-      const gameId = event.detail?.gameId;
-      if (gameId) {
-        const game = reservations.find(r => r.id === gameId);
-        if (game) {
-          setSelectedGameForDetails(game);
-          setIsGameDetailsDialogOpen(true);
+        
+        // Initialize reservations
+        const storedReservations = localStorage.getItem('reservations');
+        if (storedReservations) {
+          const parsedReservations = JSON.parse(storedReservations);
+          if (Array.isArray(parsedReservations) && parsedReservations.length > 0) {
+            setReservations(parsedReservations);
+          }
         }
+      } catch (error) {
+        console.error("Error initializing data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    window.addEventListener('showGameDetails', handleShowGameDetails);
-    
-    setTimeout(() => setIsLoading(false), 800);
-    
-    return () => {
-      window.removeEventListener('showGameDetails', handleShowGameDetails);
-    };
-  }, [reservations, setReservations]); 
+
+    initializeData();
+  }, [setReservations]);
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
-    if (maxPlayers === 10) return 12;
-    return maxPlayers + 2;
+    return maxPlayers + 2; // Allow 2 extra players
   };
 
   const upcomingReservations = useMemo(() => {
@@ -144,7 +126,14 @@ const Reservations = () => {
                  new Date(res.date) >= today
       );
     }
-    return gamesToShow.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
+    return gamesToShow.sort((a,b) => {
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      
+      const aTime = a.startTime || a.time?.split(' - ')[0] || '00:00';
+      const bTime = b.startTime || b.time?.split(' - ')[0] || '00:00';
+      return aTime.localeCompare(bTime);
+    });
   }, [reservations, currentDate]);
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
@@ -152,7 +141,8 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  const handleJoinGame = (reservationId: number) => {
+  // Stable event handlers to prevent infinite loops
+  const handleJoinGame = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -198,9 +188,9 @@ const Reservations = () => {
     } catch (error) {
       console.error("Error updating reservation in localStorage:", error);
     }
-  };
+  }, [currentUserId, userRole, joinGame, toast]);
   
-  const handleCancelReservation = (reservationId: number) => {
+  const handleCancelReservation = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -231,9 +221,9 @@ const Reservations = () => {
     } catch (error) {
       console.error("Error updating reservation in localStorage:", error);
     }
-  };
+  }, [currentUserId, cancelReservation, toast]);
 
-  const handleJoinWaitingList = (reservationId: number) => {
+  const handleJoinWaitingList = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -272,30 +262,9 @@ const Reservations = () => {
     }
     
     joinWaitingList(reservationId, currentUserId);
-    
-    // Update localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        const updatedReservations = parsedReservations.map((res: Reservation) => {
-          if (res.id === reservationId) {
-            const updatedWaitingList = res.waitingList ? [...res.waitingList] : [];
-            if (!updatedWaitingList.includes(currentUserId)) {
-              updatedWaitingList.push(currentUserId);
-            }
-            return {...res, waitingList: updatedWaitingList};
-          }
-          return res;
-        });
-        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
-      }
-    } catch (error) {
-      console.error("Error updating waiting list in localStorage:", error);
-    }
-  };
+  }, [currentUserId, userRole, reservations, joinWaitingList, toast]);
   
-  const handleLeaveWaitingList = (reservationId: number) => {
+  const handleLeaveWaitingList = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -306,29 +275,9 @@ const Reservations = () => {
     }
     
     leaveWaitingList(reservationId, currentUserId);
-    
-    // Update localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        const updatedReservations = parsedReservations.map((res: Reservation) => {
-          if (res.id === reservationId && res.waitingList) {
-            return {
-              ...res,
-              waitingList: res.waitingList.filter(id => id !== currentUserId)
-            };
-          }
-          return res;
-        });
-        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
-      }
-    } catch (error) {
-      console.error("Error updating waiting list in localStorage:", error);
-    }
-  };
+  }, [currentUserId, leaveWaitingList, toast]);
   
-  const handleDeleteReservation = (reservationId: number) => {
+  const handleDeleteReservation = useCallback((reservationId: number) => {
     if (!currentUserId || userRole !== 'admin') {
       toast({ 
         title: "Permission Denied", 
@@ -356,7 +305,7 @@ const Reservations = () => {
       title: "Reservation Deleted",
       description: "The reservation has been successfully deleted."
     });
-  };
+  }, [currentUserId, userRole, deleteReservation, toast]);
 
   const upcomingGamesHeader = useMemo(() => {
     if (currentDate) {
@@ -369,13 +318,14 @@ const Reservations = () => {
     return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
   }, [currentDate, upcomingReservations.length]);
 
-  const createIsUserJoinedFunction = () => {
-    return (reservationId: number, userId: string): boolean => {
-      return isUserJoined(reservationId, userId);
-    };
-  };
-  
-  const isUserJoinedFunction = createIsUserJoinedFunction();
+  const isUserJoinedFunction = useCallback((reservationId: number, userId: string): boolean => {
+    return isUserJoined(reservationId, userId);
+  }, [isUserJoined]);
+
+  // Force re-render of add dialog to prevent infinite loops
+  const handleAddReservationSuccess = useCallback(() => {
+    setAddDialogKey(prev => prev + 1);
+  }, []);
 
   if (isLoading) {
     return (
@@ -398,7 +348,7 @@ const Reservations = () => {
         </div>
         {userRole === 'admin' && (
           <div id="add-reservation-dialog-trigger">
-            <AddReservationDialog />
+            <EnhancedAddReservationDialog key={addDialogKey} />
           </div>
         )}
       </div>
@@ -466,7 +416,7 @@ const Reservations = () => {
 
               {upcomingReservations.map((reservation) => (
                 <div 
-                  key={reservation.id}
+                  key={`reservation-${reservation.id}`}
                   className="cursor-pointer transition-transform hover:scale-[1.02]"
                   onClick={() => {
                     setSelectedGameForDetails(reservation);
