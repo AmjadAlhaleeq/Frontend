@@ -1,3 +1,4 @@
+
 // AddPitchForm.tsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ const AddPitchForm = () => {
     e.preventDefault();
     const { name, location, city, type, backgroundImage } = formData;
     
-    // Improved validation
+    // Improved validation - check both File object and preview URL
     if (!name.trim()) {
       toast({
         title: "Missing Field",
@@ -162,7 +163,8 @@ const AddPitchForm = () => {
       return;
     }
     
-    if (!backgroundImage) {
+    // Fixed validation: check both backgroundImage file and bgPreview URL
+    if (!backgroundImage && !bgPreview) {
       toast({
         title: "Missing Field",
         description: "Please upload a background image.",
@@ -182,8 +184,11 @@ const AddPitchForm = () => {
         return;
       }
 
-      // Upload background image
-      const bgUrl = await uploadToCloudinary(backgroundImage);
+      // Upload background image only if it's a File object
+      let bgUrl = bgPreview;
+      if (backgroundImage instanceof File) {
+        bgUrl = await uploadToCloudinary(backgroundImage);
+      }
       
       // Upload additional images
       const imageUrls = await Promise.all(
