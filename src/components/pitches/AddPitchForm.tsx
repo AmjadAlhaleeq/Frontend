@@ -59,12 +59,12 @@ const AddPitchForm = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleFacilityToggle = useCallback((facility: string) => {
+  const handleFacilityToggle = useCallback((facility: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      facilities: prev.facilities.includes(facility)
-        ? prev.facilities.filter(f => f !== facility)
-        : [...prev.facilities, facility]
+      facilities: checked
+        ? [...prev.facilities, facility]
+        : prev.facilities.filter(f => f !== facility)
     }));
   }, []);
 
@@ -366,13 +366,12 @@ const AddPitchForm = () => {
                 {facilityOptions.map((facility) => (
                   <div 
                     key={facility.value} 
-                    className="flex items-center space-x-3 p-3 border rounded cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleFacilityToggle(facility.value)}
+                    className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50"
                   >
                     <Checkbox
                       id={facility.value}
                       checked={formData.facilities.includes(facility.value)}
-                      onCheckedChange={() => handleFacilityToggle(facility.value)}
+                      onCheckedChange={(checked) => handleFacilityToggle(facility.value, checked as boolean)}
                     />
                     <label htmlFor={facility.value} className="text-sm font-medium cursor-pointer flex-1">
                       {facility.label}
