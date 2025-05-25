@@ -13,10 +13,13 @@ import {
   UserPlus,
   UserMinus,
   Eye,
-  UserX
+  UserX,
+  ClipboardCheck,
+  AlertTriangle
 } from "lucide-react";
 import { Reservation } from "@/context/ReservationContext";
 import { format, parseISO } from 'date-fns';
+import { useToast } from "@/hooks/use-toast";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -30,6 +33,9 @@ interface ReservationCardProps {
   isFull: boolean;
   onDeleteReservation?: (id: number) => void;
   onViewDetails: (reservation: Reservation) => void;
+  onAddSummary?: (reservation: Reservation) => void;
+  pitchImage?: string;
+  isUserLoggedIn: boolean;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -43,11 +49,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   isUserJoined,
   isFull,
   onDeleteReservation,
-  onViewDetails
+  onViewDetails,
+  onAddSummary,
+  pitchImage,
+  isUserLoggedIn
 }) => {
+  const { toast } = useToast();
   const [maxPlayersInput, setMaxPlayersInput] = useState(reservation.maxPlayers);
   const currentPlayers = reservation.lineup?.length || 0;
-  const actualMaxPlayers = maxPlayersInput + 2; // Allow 2 extra players
+  const actualMaxPlayers = maxPlayersInput + 2;
   const progressPercentage = Math.min((currentPlayers / actualMaxPlayers) * 100, 100);
   
   const userHasJoined = isUserJoined(reservation.id, userId);
@@ -80,9 +90,36 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
+  const handleJoinClick = () => {
+    if (!isUserLoggedIn) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join a game.",
+        variant: "destructive",
+      });
+      return;
+    }
+    onJoin(reservation.id);
+  };
+
+  const getCardImage = () => {
+    if (pitchImage) return pitchImage;
+    if (reservation.backgroundImage) return reservation.backgroundImage;
+    return `https://source.unsplash.com/400x200/?football,pitch,${reservation.pitchName.split(" ").join(",")}`;
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-l-4 border-l-teal-500">
       <CardContent className="p-4">
+        {/* Pitch Image */}
+        <div className="h-32 w-full rounded-md overflow-hidden mb-3">
+          <img 
+            src={getCardImage()}
+            alt={reservation.pitchName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
@@ -93,18 +130,37 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               <span className="truncate">{reservation.location}</span>
             </div>
           </div>
-          {userRole === 'admin' && onDeleteReservation && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteReservation(reservation.id);
-              }}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          
+          {userRole === 'admin' && (
+            <div className="flex gap-1">
+              {reservation.status === 'upcoming' && onDeleteReservation && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteReservation(reservation.id);
+                  }}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {reservation.status === 'completed' && onAddSummary && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddSummary(reservation);
+                  }}
+                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                >
+                  <ClipboardCheck className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -184,6 +240,14 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             )}
           </div>
 
+          {/* Login Warning for Players */}
+          {!isUserLoggedIn && userRole === 'player' && (
+            <div className="flex items-center text-amber-600 text-xs p-2 bg-amber-50 rounded">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              <span>Please log in to join games</span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Button
@@ -199,14 +263,14 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               Details
             </Button>
             
-            {userRole === 'player' && (
+            {userRole === 'player' && isUserLoggedIn && (
               <>
                 {!userHasJoined && !isInWaitingList && !isFull && (
                   <Button
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onJoin(reservation.id);
+                      handleJoinClick();
                     }}
                     className="flex-1 bg-teal-600 hover:bg-teal-700"
                   >
