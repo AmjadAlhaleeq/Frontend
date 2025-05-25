@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -97,12 +96,12 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
 
   const handleSuspendPlayer = async (playerId: string, playerName: string) => {
     try {
-      // For now, suspend for 7 days with a default reason
-      await suspendPlayer(playerId, "Inappropriate behavior during game", 7);
+      // Call the suspendPlayer API with just the reservation ID
+      await suspendPlayer(reservation.id.toString());
       onSuspendPlayer(playerId, playerName);
       toast({
         title: "Player Suspended",
-        description: `${playerName} has been suspended for 7 days.`
+        description: `${playerName} has been suspended.`
       });
     } catch (error) {
       console.error('Failed to suspend player:', error);
