@@ -7,17 +7,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Reservation, Player } from "@/context/ReservationContext";
-import { Ban, Save, Users } from "lucide-react";
+import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { addGameSummary, kickPlayer, AddSummaryRequest, KickPlayerRequest } from "@/services/reservationApi";
+import PlayerStatsForm from './PlayerStatsForm';
+import PlayerActionsPanel from './PlayerActionsPanel';
+import GameSummaryForm from './GameSummaryForm';
 
 interface AddSummaryDialogProps {
   isOpen: boolean;
@@ -67,9 +65,9 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
     }
   }, [isOpen, players]);
 
-  const updatePlayerStat = (playerId: string, field: keyof PlayerStat, value: number | boolean) => {
+  const updatePlayerStat = (userId: string, field: keyof PlayerStat, value: number | boolean) => {
     setPlayerStats(prev => prev.map(stat => 
-      stat.playerId === playerId ? { ...stat, [field]: value } : stat
+      stat.userId === userId ? { ...stat, [field]: value } : stat
     ));
   };
 
@@ -85,14 +83,12 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
 
     setIsLoading(true);
     try {
-      // Prepare summary data according to backend API
       const summaryData: AddSummaryRequest = {
         mvp: mvpPlayerId || undefined,
         players: playerStats,
         absentees: absentees
       };
 
-      // Call API to save game summary
       await addGameSummary(reservation.id.toString(), summaryData);
 
       onSave(summary, playerStats);
@@ -142,18 +138,12 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
     const suspensionDays = 3;
     
     setAbsentees(prev => [...prev, { userId: playerId, reason, suspensionDays }]);
-    
-    // Remove from player stats
     setPlayerStats(prev => prev.filter(stat => stat.userId !== playerId));
     
     toast({
       title: "Player Marked as Absentee",
       description: `${playerName} will be suspended for ${suspensionDays} days.`
     });
-  };
-
-  const getPlayerName = (player: Player) => {
-    return player.playerName || player.name || `Player ${player.userId?.substring(0, 4)}`;
   };
 
   return (
@@ -171,154 +161,31 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
           </TabsList>
 
           <TabsContent value="summary" className="space-y-4">
-            <div>
-              <Label htmlFor="summary">Game Summary</Label>
-              <Textarea
-                id="summary"
-                placeholder="Describe the game highlights, final score, key moments..."
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                className="min-h-[200px]"
-              />
-            </div>
+            <GameSummaryForm
+              summary={summary}
+              onSummaryChange={setSummary}
+            />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-4">
             <ScrollArea className="h-[400px]">
-              <div className="space-y-4">
-                <div className="mb-4">
-                  <Label htmlFor="mvp">MVP Player</Label>
-                  <select
-                    id="mvp"
-                    value={mvpPlayerId}
-                    onChange={(e) => setMvpPlayerId(e.target.value)}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="">Select MVP</option>
-                    {players.map((player) => (
-                      <option key={player.userId} value={player.userId}>
-                        {getPlayerName(player)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {playerStats.map((stats) => {
-                  const player = players.find(p => p.userId === stats.userId);
-                  if (!player) return null;
-
-                  return (
-                    <Card key={player.userId}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-medium">{getPlayerName(player)}</h4>
-                            {stats.userId === mvpPlayerId && <Badge className="bg-yellow-500">MVP</Badge>}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`played-${player.userId}`}
-                              checked={stats.played}
-                              onChange={(e) => updatePlayerStat(player.userId, 'played', e.target.checked)}
-                              className="rounded"
-                            />
-                            <Label htmlFor={`played-${player.userId}`}>Played</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`won-${player.userId}`}
-                              checked={stats.won}
-                              onChange={(e) => updatePlayerStat(player.userId, 'won', e.target.checked)}
-                              className="rounded"
-                            />
-                            <Label htmlFor={`won-${player.userId}`}>Won</Label>
-                          </div>
-                          <div>
-                            <Label htmlFor={`goals-${player.userId}`}>Goals</Label>
-                            <Input
-                              id={`goals-${player.userId}`}
-                              type="number"
-                              min="0"
-                              value={stats.goals}
-                              onChange={(e) => updatePlayerStat(player.userId, 'goals', parseInt(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`assists-${player.userId}`}>Assists</Label>
-                            <Input
-                              id={`assists-${player.userId}`}
-                              type="number"
-                              min="0"
-                              value={stats.assists}
-                              onChange={(e) => updatePlayerStat(player.userId, 'assists', parseInt(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`interceptions-${player.userId}`}>Interceptions</Label>
-                            <Input
-                              id={`interceptions-${player.userId}`}
-                              type="number"
-                              min="0"
-                              value={stats.interceptions}
-                              onChange={(e) => updatePlayerStat(player.userId, 'interceptions', parseInt(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div className="flex items-center space-x-2 pt-6">
-                            <input
-                              type="checkbox"
-                              id={`cleansheet-${player.userId}`}
-                              checked={stats.cleanSheet}
-                              onChange={(e) => updatePlayerStat(player.userId, 'cleanSheet', e.target.checked)}
-                              className="rounded"
-                            />
-                            <Label htmlFor={`cleansheet-${player.userId}`}>Clean Sheet</Label>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+              <PlayerStatsForm
+                players={players}
+                playerStats={playerStats}
+                mvpPlayerId={mvpPlayerId}
+                onUpdatePlayerStat={updatePlayerStat}
+                onSetMvp={setMvpPlayerId}
+              />
             </ScrollArea>
           </TabsContent>
 
           <TabsContent value="actions" className="space-y-4">
             <ScrollArea className="h-[400px]">
-              <div className="space-y-4">
-                {players.map((player) => (
-                  <Card key={player.userId}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{getPlayerName(player)}</h4>
-                        <div className="space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => markAsAbsentee(player.userId, getPlayerName(player))}
-                            className="text-orange-600 hover:text-orange-700"
-                          >
-                            Mark Absent
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleKickPlayer(player.userId, getPlayerName(player))}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Ban className="h-4 w-4 mr-1" />
-                            Kick & Suspend
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <PlayerActionsPanel
+                players={players}
+                onKickPlayer={handleKickPlayer}
+                onMarkAbsentee={markAsAbsentee}
+              />
             </ScrollArea>
           </TabsContent>
         </Tabs>
