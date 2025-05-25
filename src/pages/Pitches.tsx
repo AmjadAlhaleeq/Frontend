@@ -1,6 +1,3 @@
-
-// This is the Pitches.tsx page. It handles UI and logic for Pitches.
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,19 +37,28 @@ const Pitches = () => {
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
     setUserRole(role);
     
-    // Initialize pitches from localStorage
-    try {
-      const storedPitches = localStorage.getItem('pitches');
-      if (storedPitches) {
-        const parsedPitches = JSON.parse(storedPitches);
-        if (Array.isArray(parsedPitches) && parsedPitches.length > 0) {
-          console.log("Loading pitches from localStorage:", parsedPitches);
-          setPitches(parsedPitches);
+    // Initialize pitches from localStorage with interval checking
+    const loadPitches = () => {
+      try {
+        const storedPitches = localStorage.getItem('pitches');
+        if (storedPitches) {
+          const parsedPitches = JSON.parse(storedPitches);
+          if (Array.isArray(parsedPitches) && parsedPitches.length > 0) {
+            console.log("Loading pitches from localStorage:", parsedPitches);
+            setPitches(parsedPitches);
+          }
         }
+      } catch (error) {
+        console.error("Error loading pitches from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Error loading pitches from localStorage:", error);
-    }
+    };
+
+    loadPitches();
+    
+    // Check for updates every 2 seconds to catch new pitches
+    const interval = setInterval(loadPitches, 2000);
+    
+    return () => clearInterval(interval);
   }, [setPitches]);
 
   // Filter pitches based on search term

@@ -1,635 +1,270 @@
 
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { useReservation, Reservation } from "@/context/ReservationContext";
-import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight, DollarSign, Eye } from "lucide-react";
-import GameSummaryDialog from "./GameSummaryDialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-// Import Player from context but rename it to avoid conflict with local interface
-import { Player as ReservationPlayer } from "@/context/ReservationContext";
-
-// Extend the Player interface to include email property
-interface Player extends ReservationPlayer {
-  email?: string; // Add email as optional property
-}
+import { Input } from "@/components/ui/input";
+import { 
+  MapPin, 
+  Clock, 
+  Users, 
+  Calendar,
+  Trash2,
+  UserPlus,
+  UserMinus,
+  Eye,
+  UserX
+} from "lucide-react";
+import { Reservation } from "@/context/ReservationContext";
+import { format, parseISO } from 'date-fns';
 
 interface ReservationCardProps {
   reservation: Reservation;
   userId: string;
-  userRole?: string;
-  onJoin: (id: number, playerName?: string, userId?: string) => void;
+  userRole: 'admin' | 'player';
+  onJoin: (id: number, playerName?: string) => void;
   onCancel: (id: number, userId: string) => void;
   onJoinWaitingList: (id: number, userId: string) => void;
   onLeaveWaitingList: (id: number, userId: string) => void;
   isUserJoined: (reservationId: number, userId: string) => boolean;
   isFull: boolean;
-  suspendPlayer?: (userId: string, reason: string, duration: number) => void;
-  kickPlayerFromGame?: (reservationId: number, userId: string) => void;
   onDeleteReservation?: (id: number) => void;
-  onViewDetails?: (reservation: Reservation) => void;
+  onViewDetails: (reservation: Reservation) => void;
 }
-
-interface PlayerDetailsDialogProps {
-  player: Player;
-  isOpen: boolean;
-  onClose: () => void;
-  userRole: string;
-}
-
-// Email notification setup (placeholder function, ready for API)
-async function sendCancellationEmail(playerEmail: string, playerName: string, pitchName: string, date: string, startTime: string) {
-  // TODO: Connect to real email API or use your backend endpoint here.
-  console.log(`Sending cancellation email to ${playerEmail} for reservation at ${pitchName} on ${date} at ${startTime}`);
-}
-
-// Utility to add minutes to a time string "HH:mm"
-function addMinutesToTime(startTime: string, minutesToAdd: number): string {
-  const [hour, min] = startTime.split(":").map(Number);
-  if (isNaN(hour) || isNaN(min)) return startTime;
-  const baseDate = new Date();
-  baseDate.setHours(hour, min, 0, 0);
-  baseDate.setMinutes(baseDate.getMinutes() + minutesToAdd);
-  return baseDate.toTimeString().slice(0, 5); // "HH:mm"
-}
-
-const PlayerDetailsDialog: React.FC<PlayerDetailsDialogProps> = ({
-  player,
-  isOpen,
-  onClose,
-  userRole
-}) => {
-  // Generate initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('')
-      .slice(0, 2);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-teal-600 text-white font-bold text-lg">
-                {getInitials(player.playerName)}
-              </AvatarFallback>
-            </Avatar>
-            {player.playerName}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Status:</span>
-              <Badge className="ml-2" variant={player.status === 'joined' ? 'default' : 'secondary'}>
-                {player.status}
-              </Badge>
-            </div>
-            <div>
-              <span className="font-medium">Joined:</span>
-              <span className="ml-2">{player.joinedAt ? new Date(player.joinedAt).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-          
-          {/* Player Stats Section */}
-          <Separator />
-          <div className="space-y-3">
-            <h4 className="font-medium">Player Stats</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Games Played:</span>
-                <div className="font-medium">12</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Win Rate:</span>
-                <div className="font-medium">75%</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Goals Scored:</span>
-                <div className="font-medium">8</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground">MVP Awards:</span>
-                <div className="font-medium">3</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badges Section */}
-          <Separator />
-          <div className="space-y-3">
-            <h4 className="font-medium">Badges</h4>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Top Scorer</Badge>
-              <Badge variant="outline">Team Player</Badge>
-              <Badge variant="outline">Regular</Badge>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
   userId,
-  userRole = "player",
+  userRole,
   onJoin,
   onCancel,
   onJoinWaitingList,
   onLeaveWaitingList,
   isUserJoined,
   isFull,
-  suspendPlayer,
-  kickPlayerFromGame,
   onDeleteReservation,
-  onViewDetails,
+  onViewDetails
 }) => {
-  const [isJoining, setIsJoining] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const { updateGameSummary } = useReservation();
-
-  // Determine if game is completed based on time
-  const determineGameStatus = () => {
+  const [maxPlayersInput, setMaxPlayersInput] = useState(reservation.maxPlayers);
+  const currentPlayers = reservation.lineup?.length || 0;
+  const actualMaxPlayers = maxPlayersInput + 2; // Allow 2 extra players
+  const progressPercentage = Math.min((currentPlayers / actualMaxPlayers) * 100, 100);
+  
+  const userHasJoined = isUserJoined(reservation.id, userId);
+  const isInWaitingList = reservation.waitingList?.some(player => player.userId === userId) || false;
+  
+  const formatDate = (dateString: string) => {
     try {
-      const gameDate = new Date(reservation.date);
-      const [startHour, startMinute] = reservation.startTime?.split(':').map(Number) || [0, 0];
-      const gameStartTime = new Date(gameDate);
-      gameStartTime.setHours(startHour, startMinute, 0, 0);
-      
-      // Add duration to get end time (duration is in minutes)
-      const gameEndTime = new Date(gameStartTime);
-      gameEndTime.setMinutes(gameStartTime.getMinutes() + (reservation.duration || 120));
-      
-      const now = new Date();
-      
-      if (now < gameStartTime) {
-        return 'upcoming';
-      } else if (now >= gameEndTime) {
-        return 'completed';
-      } else {
-        return 'in-progress';
-      }
-    } catch (error) {
-      console.error("Error determining game status:", error);
-      return reservation.status || 'upcoming';
+      return format(parseISO(dateString), "EEE, MMM d");
+    } catch {
+      return format(new Date(dateString), "EEE, MMM d");
     }
   };
 
-  const gameStatus = determineGameStatus();
-  const isGameCompleted = gameStatus === 'completed';
-  const isGameUpcoming = gameStatus === 'upcoming';
-  const isAdmin = userRole === "admin";
-
-  // Get pitch photos
-  const pitchPhotos = reservation.additionalImages && reservation.additionalImages.length > 0
-    ? [reservation.imageUrl, ...reservation.additionalImages].filter(Boolean)
-    : [reservation.imageUrl || `https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=400&fit=crop&crop=center`];
-
-  const handleJoin = async () => {
-    // Check if user is logged in
-    if (!userId) {
-      toast({
-        title: "Login Required",
-        description: "Please log in to join a game.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsJoining(true);
-    try {
-      onJoin(reservation.id, "", userId);
-      toast({
-        title: "Joined Game",
-        description: "You have successfully joined the game!",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Failed to Join",
-        description: "There was an error joining the game. Please try again.",
-      });
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    setIsCancelling(true);
-    try {
-      onCancel(reservation.id, userId);
-      toast({
-        title: "Cancelled Reservation",
-        description: "You have cancelled your reservation.",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Failed to Cancel",
-        description: "There was an error cancelling your reservation. Please try again.",
-      });
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
-  const handleJoinWaitingList = () => {
-    if (!userId) {
-      toast({
-        title: "Login Required",
-        description: "Please log in to join the waiting list.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    onJoinWaitingList(reservation.id, userId);
-    toast({
-      title: "Joined Waiting List",
-      description: "You have joined the waiting list for this game.",
-    });
-  };
-
-  const handleLeaveWaitingList = () => {
-    onLeaveWaitingList(reservation.id, userId);
-    toast({
-      title: "Left Waiting List",
-      description: "You have left the waiting list for this game.",
-    });
-  };
-
-  const handlePlayerClick = (player: Player) => {
-    setSelectedPlayer(player);
-    setIsPlayerDialogOpen(true);
-  };
-
-  const handleUpdateSummary = (reservationId: number, summary: any, playerStats: any[]) => {
-    updateGameSummary(reservationId, summary, playerStats);
-    setShowSummaryDialog(false);
-  };
-
-  const handleViewDetails = () => {
-    if (onViewDetails) {
-      onViewDetails(reservation);
-    }
-  };
-
-  const isUserInWaitingList = reservation.waitingList?.includes(userId);
-
-  // Generate initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('')
-      .slice(0, 2);
-  };
-
-  const getPlayerAvatar = (player: Player) => {
-    return (
-      <Avatar className="h-8 w-8 cursor-pointer" onClick={() => handlePlayerClick(player)}>
-        <AvatarFallback className="bg-teal-600 text-white font-bold">
-          {getInitials(player.playerName)}
-        </AvatarFallback>
-      </Avatar>
-    );
-  };
-
-  const nextPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % pitchPhotos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + pitchPhotos.length) % pitchPhotos.length);
-  };
-
-  const handleDeleteReservation = async () => {
-    setShowDeleteDialog(false);
-    onDeleteReservation?.(reservation.id);
-
-    // Send email notifications to joined players, if emails exist
-    if (reservation.lineup && reservation.lineup.length > 0) {
-      reservation.lineup.forEach(player => {
-        const emailFromStorage = localStorage.getItem(`playerEmail_${player.userId}`);
-        if (emailFromStorage) {
-          sendCancellationEmail(
-            emailFromStorage,
-            player.playerName,
-            reservation.pitchName,
-            reservation.date,
-            reservation.startTime || reservation.time
+  const handleMaxPlayersChange = (newMax: number) => {
+    if (newMax >= 6 && newMax <= 22) {
+      setMaxPlayersInput(newMax);
+      // Update localStorage
+      try {
+        const storedReservations = localStorage.getItem('reservations');
+        if (storedReservations) {
+          const reservations = JSON.parse(storedReservations);
+          const updatedReservations = reservations.map((res: Reservation) => 
+            res.id === reservation.id ? { ...res, maxPlayers: newMax } : res
           );
+          localStorage.setItem('reservations', JSON.stringify(updatedReservations));
         }
-      });
+      } catch (error) {
+        console.error("Error updating max players:", error);
+      }
     }
   };
-
-  // Calculate end time
-  let startDisplay = reservation.startTime || reservation.time;
-  let endDisplay = startDisplay;
-  if (startDisplay && reservation.duration) {
-    const minutes = Number(reservation.duration);
-    if (!isNaN(minutes)) {
-      endDisplay = addMinutesToTime(startDisplay, minutes);
-    }
-  }
 
   return (
-    <>
-      <Card 
-        className="bg-white dark:bg-gray-800 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-teal-200"
-        onClick={handleViewDetails}
-      >
-        <div className="flex">
-          {/* Pitch Photo Section */}
-          <div className="relative w-48 h-48 flex-shrink-0">
-            <img
-              src={pitchPhotos[currentPhotoIndex]}
-              alt={reservation.pitchName}
-              className="w-full h-full object-cover"
-            />
-            {pitchPhotos.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    prevPhoto();
-                  }}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    nextPhoto();
-                  }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                  {pitchPhotos.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${
-                        index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            {/* View Details Button Overlay */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="bg-white/90 hover:bg-white text-gray-900"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleViewDetails();
-                }}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                View Details
-              </Button>
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-l-4 border-l-teal-500">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              {reservation.pitchName}
+            </h3>
+            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <MapPin className="h-4 w-4 mr-1" />
+              <span className="truncate">{reservation.location}</span>
+            </div>
+          </div>
+          {userRole === 'admin' && onDeleteReservation && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteReservation(reservation.id);
+              }}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {/* Date and Time */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <Calendar className="h-4 w-4 mr-2" />
+              <span>{formatDate(reservation.date)}</span>
+            </div>
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <Clock className="h-4 w-4 mr-2" />
+              <span>
+                {reservation.startTime && reservation.endTime 
+                  ? `${reservation.startTime} - ${reservation.endTime}`
+                  : reservation.time
+                }
+              </span>
             </div>
           </div>
 
-          {/* Content Section */}
-          <CardContent className="flex-1 p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {reservation.title || reservation.pitchName}
-                </h2>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {reservation.date}
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Clock className="h-4 w-4 mr-2" />
-                    {startDisplay} - {endDisplay}
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {reservation.location || reservation.city}
-                  </div>
-                  <div className="flex items-center text-gray-600 dark:text-gray-400">
-                    <Users className="h-4 w-4 mr-2" />
-                    {reservation.lineup?.length || 0}/{reservation.maxPlayers}
-                  </div>
-                </div>
-
-                {/* Price Display */}
-                {reservation.price && (
-                  <div className="flex items-center text-teal-600 dark:text-teal-400 mb-2">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    <span className="font-semibold">${reservation.price} per player</span>
-                  </div>
-                )}
+          {/* Players Progress with Input */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-teal-600" />
+                <span className="text-sm font-medium">Players</span>
               </div>
-              
-              {/* Status Badge */}
-              <Badge 
-                className={`${
-                  gameStatus === 'upcoming' ? 'bg-green-500' : 
-                  gameStatus === 'completed' ? 'bg-blue-500' :
-                  gameStatus === 'in-progress' ? 'bg-orange-500' :
-                  'bg-red-500'
-                }`}
-              >
-                {gameStatus}
-              </Badge>
-            </div>
-
-            <Separator className="my-3" />
-
-            {/* ADMIN ONLY: Expandable Players List */}
-            {isAdmin && (
-              <Accordion type="single" collapsible className="mb-4">
-                <AccordionItem value="players">
-                  <AccordionTrigger className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Show Players Joined
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    {reservation.lineup && reservation.lineup.length > 0 ? (
-                      <ScrollArea className="h-[120px] rounded-md border dark:border-gray-700">
-                        <div className="p-2 space-y-2">
-                          {reservation.lineup.map((player) => (
-                            <div 
-                              key={player.userId} 
-                              className="flex items-center space-x-2 py-1 px-2 rounded"
-                            >
-                              {getPlayerAvatar(player)}
-                              <p className="text-sm text-gray-800 dark:text-gray-100">
-                                {player.playerName}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 py-3 text-center border rounded-md">
-                        No players have joined yet.
-                      </p>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            )}
-
-            <div className="flex flex-col items-stretch mt-4">
-              {isAdmin ? (
-                // Admin Actions
-                <Button
-                  variant="destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteDialog(true);
-                  }}
-                  className="w-full"
-                  size="lg"
-                >
-                  Delete Reservation
-                </Button>
-              ) : (
-                // Player Actions (only show for non-completed games)
-                !isGameCompleted && (
-                  <>
-                    {isUserJoined(reservation.id, userId) ? (
-                      <Button
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancel();
-                        }}
-                        disabled={isCancelling}
-                        size="sm"
-                      >
-                        {isCancelling ? "Cancelling..." : "Cancel Reservation"}
-                      </Button>
-                    ) : isFull ? (
-                      !isUserInWaitingList ? (
-                        <Button 
-                          variant="secondary" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleJoinWaitingList();
-                          }} 
-                          size="sm"
-                        >
-                          Join Waiting List
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="secondary" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLeaveWaitingList();
-                          }} 
-                          size="sm"
-                        >
-                          Leave Waiting List
-                        </Button>
-                      )
-                    ) : (
-                      <Button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleJoin();
-                        }} 
-                        disabled={isJoining || !userId} 
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                      >
-                        {isJoining ? "Joining..." : "Join Game"}
-                      </Button>
-                    )}
-                  </>
-                )
+              {userRole === 'admin' && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">Max:</span>
+                  <Input
+                    type="number"
+                    min="6"
+                    max="22"
+                    value={maxPlayersInput}
+                    onChange={(e) => handleMaxPlayersChange(parseInt(e.target.value) || 6)}
+                    className="w-16 h-6 text-xs text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
               )}
             </div>
-          </CardContent>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div 
+                className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{currentPlayers} joined</span>
+              <span>{actualMaxPlayers} max (inc. +2)</span>
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div className="flex items-center justify-between">
+            <Badge 
+              variant={reservation.status === "upcoming" ? "default" : "secondary"}
+              className={
+                reservation.status === "upcoming" 
+                  ? "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" 
+                  : ""
+              }
+            >
+              {reservation.status}
+            </Badge>
+            
+            {/* Waiting List Info */}
+            {reservation.waitingList && reservation.waitingList.length > 0 && (
+              <div className="text-xs text-orange-600 dark:text-orange-400">
+                {reservation.waitingList.length} waiting
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails(reservation);
+              }}
+              className="flex-1"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Details
+            </Button>
+            
+            {userRole === 'player' && (
+              <>
+                {!userHasJoined && !isInWaitingList && !isFull && (
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJoin(reservation.id);
+                    }}
+                    className="flex-1 bg-teal-600 hover:bg-teal-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Join
+                  </Button>
+                )}
+                
+                {userHasJoined && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCancel(reservation.id, userId);
+                    }}
+                    className="flex-1"
+                  >
+                    <UserMinus className="h-4 w-4 mr-1" />
+                    Leave
+                  </Button>
+                )}
+                
+                {!userHasJoined && isFull && !isInWaitingList && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJoinWaitingList(reservation.id, userId);
+                    }}
+                    className="flex-1"
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Join Waitlist
+                  </Button>
+                )}
+                
+                {isInWaitingList && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLeaveWaitingList(reservation.id, userId);
+                    }}
+                    className="flex-1"
+                  >
+                    <UserX className="h-4 w-4 mr-1" />
+                    Leave Waitlist
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </Card>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this reservation? This action cannot be undone and will notify joined players.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteReservation} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Player Details Dialog */}
-      {selectedPlayer && (
-        <PlayerDetailsDialog
-          player={selectedPlayer}
-          isOpen={isPlayerDialogOpen}
-          onClose={() => setIsPlayerDialogOpen(false)}
-          userRole={userRole}
-        />
-      )}
-
-      {/* Game Summary Dialog */}
-      {showSummaryDialog && isGameCompleted && (
-        <GameSummaryDialog
-          isOpen={showSummaryDialog}
-          onClose={() => setShowSummaryDialog(false)}
-          reservation={reservation}
-          onUpdateSummary={handleUpdateSummary}
-        />
-      )}
-    </>
+      </CardContent>
+    </Card>
   );
 };
 

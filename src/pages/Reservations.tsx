@@ -56,7 +56,7 @@ const Reservations = () => {
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [addDialogKey, setAddDialogKey] = useState(0); // Key to force re-render
+  const [addDialogKey, setAddDialogKey] = useState(0);
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
@@ -88,14 +88,23 @@ const Reservations = () => {
           setCurrentUserId(userData.id);
         }
         
-        // Initialize reservations
-        const storedReservations = localStorage.getItem('reservations');
-        if (storedReservations) {
-          const parsedReservations = JSON.parse(storedReservations);
-          if (Array.isArray(parsedReservations) && parsedReservations.length > 0) {
-            setReservations(parsedReservations);
+        // Initialize reservations with interval checking
+        const loadReservations = () => {
+          const storedReservations = localStorage.getItem('reservations');
+          if (storedReservations) {
+            const parsedReservations = JSON.parse(storedReservations);
+            if (Array.isArray(parsedReservations)) {
+              setReservations(parsedReservations);
+            }
           }
-        }
+        };
+
+        loadReservations();
+        
+        // Check for updates every 2 seconds
+        const interval = setInterval(loadReservations, 2000);
+        
+        return () => clearInterval(interval);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
@@ -103,7 +112,8 @@ const Reservations = () => {
       }
     };
 
-    initializeData();
+    const cleanup = initializeData();
+    return cleanup;
   }, [setReservations]);
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
@@ -287,6 +297,12 @@ const Reservations = () => {
       return;
     }
     
+    // Close details dialog if it's open for this reservation
+    if (selectedGameForDetails && selectedGameForDetails.id === reservationId) {
+      setSelectedGameForDetails(null);
+      setIsGameDetailsDialogOpen(false);
+    }
+    
     deleteReservation(reservationId);
     
     // Update localStorage
@@ -305,7 +321,7 @@ const Reservations = () => {
       title: "Reservation Deleted",
       description: "The reservation has been successfully deleted."
     });
-  }, [currentUserId, userRole, deleteReservation, toast]);
+  }, [currentUserId, userRole, deleteReservation, selectedGameForDetails, toast]);
 
   const upcomingGamesHeader = useMemo(() => {
     if (currentDate) {
@@ -326,6 +342,22 @@ const Reservations = () => {
   const handleAddReservationSuccess = useCallback(() => {
     setAddDialogKey(prev => prev + 1);
   }, []);
+
+  // Safe check for game details dialog
+  const safeSelectedGameForDetails = useMemo(() => {
+    if (!selectedGameForDetails) return null;
+    
+    // Check if the selected game still exists in reservations
+    const gameExists = reservations.find(res => res.id === selectedGameForDetails.id);
+    if (!gameExists) {
+      // Game was deleted, close the dialog
+      setSelectedGameForDetails(null);
+      setIsGameDetailsDialogOpen(false);
+      return null;
+    }
+    
+    return gameExists;
+  }, [selectedGameForDetails, reservations]);
 
   if (isLoading) {
     return (
@@ -456,20 +488,23 @@ const Reservations = () => {
         </div>
       </div>
 
-      {/* Dialog for Viewing Game Details */}
-      {selectedGameForDetails && (
+      {/* Dialog for Viewing Game Details - with safe check */}
+      {safeSelectedGameForDetails && (
         <GameDetailsDialog
-          reservation={selectedGameForDetails}
+          reservation={safeSelectedGameForDetails}
           isOpen={isGameDetailsDialogOpen}
-          onClose={() => setIsGameDetailsDialogOpen(false)}
+          onClose={() => {
+            setIsGameDetailsDialogOpen(false);
+            setSelectedGameForDetails(null);
+          }}
           isAdmin={userRole === 'admin'}
           onStatusChange={(status) => {
-            if (userRole === 'admin' && selectedGameForDetails) {
-              updateReservationStatus(selectedGameForDetails.id, status);
+            if (userRole === 'admin' && safeSelectedGameForDetails) {
+              updateReservationStatus(safeSelectedGameForDetails.id, status);
             }
           }}
           currentUserId={currentUserId || ""}
-          actualMaxPlayers={calculateActualMaxPlayers(selectedGameForDetails.maxPlayers)}
+          actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
         />
       )}
     </div>
