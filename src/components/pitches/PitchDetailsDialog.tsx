@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   MapPin,
@@ -219,12 +220,12 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 <div className="flex items-center p-4 bg-green-50 rounded-lg">
                   <Badge
                     className={`text-lg px-3 py-1 ${
-                      pitch.services?.type?.toLowerCase() === "indoor"
+                      typeof pitch.services?.type === 'string' && pitch.services.type.toLowerCase() === "indoor"
                         ? "bg-purple-600 hover:bg-purple-700"
                         : "bg-green-600 hover:bg-green-700"
                     }`}
                   >
-                    {pitch.services?.type || "Pitch Type"}
+                    {typeof pitch.services?.type === 'string' ? pitch.services.type : "Pitch Type"}
                   </Badge>
                 </div>
               </div>

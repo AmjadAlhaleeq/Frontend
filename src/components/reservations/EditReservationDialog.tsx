@@ -83,9 +83,9 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
     },
   });
   
-  // Handle saving highlights
-  const handleSaveHighlight = (highlight: Omit<Highlight, "id">) => {
-    // Create a new highlight with ID and required properties
+  // Handle saving highlights - using the correct type from context
+  const handleSaveHighlight = (highlight: Omit<Highlight, "id" | "timestamp">) => {
+    // Create a new highlight with ID and required properties from context Highlight type
     const newHighlight: Highlight = {
       ...highlight,
       id: `highlight_${Date.now()}`,

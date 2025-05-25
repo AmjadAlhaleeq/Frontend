@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,7 +163,12 @@ const Profile = () => {
     assists: 0,
     cleansheets: 0,
     mvps: 0,
-    wins: 0
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    goals: 0,
+    matchesPlayed: 0,
+    winPercentage: 0
   };
 
   try {
