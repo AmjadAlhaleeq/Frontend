@@ -25,7 +25,20 @@ export interface CreateReservationRequest {
   maxPlayers: number;
 }
 
-const API_BASE = 'http://127.0.0.1:3000';
+export interface PlayerStats {
+  playerId: string;
+  goals: number;
+  assists: number;
+  mvp: boolean;
+  rating: number;
+}
+
+export interface GameSummary {
+  summary: string;
+  playerStats: PlayerStats[];
+}
+
+const API_BASE = API_BASE_URL;
 
 // Get all reservations
 export const fetchAllReservations = async (): Promise<BackendReservation[]> => {
@@ -81,6 +94,40 @@ export const createReservation = async (reservation: CreateReservationRequest): 
   
   const data = await response.json();
   return data.data?.reservation || data.data;
+};
+
+// Add game summary
+export const addGameSummary = async (reservationId: string, gameSummary: GameSummary): Promise<void> => {
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(`${API_BASE}/reservations/${reservationId}/summary`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(gameSummary),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to add game summary');
+  }
+};
+
+// Suspend player
+export const suspendPlayer = async (playerId: string, reason: string, duration: number): Promise<void> => {
+  const token = localStorage.getItem('authToken');
+  const response = await fetch(`${API_BASE}/players/${playerId}/suspend`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reason, duration }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to suspend player');
+  }
 };
 
 // Delete reservation (admin only)

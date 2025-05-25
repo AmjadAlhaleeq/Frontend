@@ -17,14 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Reservation, Player } from "@/context/ReservationContext";
 import { Ban, Save, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface PlayerStats {
-  playerId: string;
-  goals: number;
-  assists: number;
-  mvp: boolean;
-  rating: number;
-}
+import { addGameSummary, suspendPlayer, PlayerStats } from "@/services/reservationApi";
 
 interface AddSummaryDialogProps {
   isOpen: boolean;
@@ -44,6 +37,7 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
   const { toast } = useToast();
   const [summary, setSummary] = useState('');
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const players = reservation.lineup?.filter(p => p.status === 'joined' || !p.status) || [];
 
@@ -65,7 +59,7 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
     ));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!summary.trim()) {
       toast({
         title: "Summary Required",
@@ -75,12 +69,49 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
       return;
     }
 
-    onSave(summary, playerStats);
-    toast({
-      title: "Summary Added",
-      description: "Game summary and player stats have been saved successfully."
-    });
-    onClose();
+    setIsLoading(true);
+    try {
+      // Call API to save game summary
+      await addGameSummary(reservation.id.toString(), {
+        summary,
+        playerStats
+      });
+
+      onSave(summary, playerStats);
+      toast({
+        title: "Summary Added",
+        description: "Game summary and player stats have been saved successfully."
+      });
+      onClose();
+    } catch (error) {
+      console.error('Failed to save game summary:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save game summary. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuspendPlayer = async (playerId: string, playerName: string) => {
+    try {
+      // For now, suspend for 7 days with a default reason
+      await suspendPlayer(playerId, "Inappropriate behavior during game", 7);
+      onSuspendPlayer(playerId, playerName);
+      toast({
+        title: "Player Suspended",
+        description: `${playerName} has been suspended for 7 days.`
+      });
+    } catch (error) {
+      console.error('Failed to suspend player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to suspend player. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getPlayerName = (player: Player) => {
@@ -131,7 +162,7 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onSuspendPlayer(player.userId, getPlayerName(player))}
+                            onClick={() => handleSuspendPlayer(player.userId, getPlayerName(player))}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Ban className="h-4 w-4 mr-1" />
@@ -202,12 +233,12 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
         </Tabs>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={isLoading}>
             <Save className="h-4 w-4 mr-2" />
-            Save Summary
+            {isLoading ? 'Saving...' : 'Save Summary'}
           </Button>
         </div>
       </DialogContent>
