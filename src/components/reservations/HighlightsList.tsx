@@ -3,26 +3,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useReservation } from "@/context/ReservationContext";
+import { useReservation, Highlight } from "@/context/ReservationContext";
 import { toast } from "@/components/ui/use-toast";
-
-// Define simplified HighlightType enum and Highlight interface here to avoid circular dependency
-enum HighlightType {
-  GOAL = "goal",
-  ASSIST = "assist",
-  SAVE = "save",
-  TACKLE = "tackle",
-  OTHER = "other"
-}
-
-interface Highlight {
-  id: string;
-  playerId: string;
-  playerName: string;
-  type: HighlightType;
-  description: string;
-  timestamp: string;
-}
 
 interface HighlightsListProps {
   highlights: Highlight[];
@@ -41,15 +23,15 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const { deleteHighlight } = useReservation();
 
   // Function to get the color for a highlight type
-  const getHighlightColor = (type: HighlightType) => {
+  const getHighlightColor = (type: "goal" | "assist" | "save" | "tackle") => {
     switch (type) {
-      case HighlightType.GOAL:
+      case "goal":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
-      case HighlightType.ASSIST:
+      case "assist":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
-      case HighlightType.SAVE:
+      case "save":
         return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
-      case HighlightType.TACKLE:
+      case "tackle":
         return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
@@ -97,6 +79,9 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
                     {highlight.type.charAt(0).toUpperCase() + highlight.type.slice(1)}
                   </Badge>
                   <span className="ml-2 font-medium">{highlight.playerName}</span>
+                  {highlight.minute > 0 && (
+                    <span className="ml-2 text-xs text-gray-500">({highlight.minute}')</span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">{highlight.description}</p>
                 <p className="text-xs text-gray-500 mt-1">{formatTime(highlight.timestamp)}</p>
