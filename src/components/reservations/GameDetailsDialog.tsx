@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
+import ActionConfirmationDialog from "./ActionConfirmationDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface GameDetailsDialogProps {
@@ -32,10 +34,6 @@ interface GameDetailsDialogProps {
   pitchImage?: string;
 }
 
-/**
- * GameDetailsDialog component
- * Displays detailed information about a game reservation
- */
 const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   isOpen,
   onClose,
@@ -43,7 +41,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   isAdmin = false,
   currentUserId,
   actualMaxPlayers,
-  showAdminControls = false,
   onKickPlayer,
   onSuspendPlayer,
   pitchImage
@@ -59,10 +56,19 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     playerId: ""
   });
 
+  const [kickConfirmation, setKickConfirmation] = useState<{
+    isOpen: boolean;
+    playerName: string;
+    playerId: string;
+  }>({
+    isOpen: false,
+    playerName: "",
+    playerId: ""
+  });
+
   const formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
   const joinedPlayers = reservation.lineup?.filter(p => (p.status === 'joined' || !p.status)) || [];
 
-  // Get initials from player name
   const getInitials = (name?: string) => {
     if (!name) return "?";
     const names = name.split(" ");
@@ -80,13 +86,22 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       return;
     }
 
-    if (onKickPlayer) {
-      onKickPlayer(reservation.id, playerId);
+    setKickConfirmation({
+      isOpen: true,
+      playerName,
+      playerId
+    });
+  };
+
+  const confirmKickPlayer = () => {
+    if (onKickPlayer && kickConfirmation.playerId) {
+      onKickPlayer(reservation.id, kickConfirmation.playerId);
       toast({
         title: "Player Kicked",
-        description: `${playerName} has been removed from the game.`,
+        description: `${kickConfirmation.playerName} has been removed from the game.`,
       });
     }
+    setKickConfirmation({ isOpen: false, playerName: "", playerId: "" });
   };
 
   const handleSuspendPlayer = (playerId: string, playerName: string) => {
@@ -116,7 +131,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[600px] p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[700px] p-0 gap-0 overflow-hidden">
           <DialogHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl">
@@ -132,11 +147,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </Button>
             </div>
             <DialogDescription className="mt-2">
-              Game details and players
+              Game details and player management
             </DialogDescription>
           </DialogHeader>
 
-          {/* Game image */}
           <div className="relative h-48 w-full">
             <img
               src={getGameImage()}
@@ -146,7 +160,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           </div>
 
           <div className="p-6">
-            {/* Game details */}
             <div className="flex flex-col gap-3 mb-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-medium text-lg">Game Information</h3>
@@ -166,7 +179,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>{reservation.time}</span>
+                  <span>{reservation.startTime && reservation.endTime 
+                    ? `${reservation.startTime} - ${reservation.endTime}`
+                    : reservation.time}</span>
                 </div>
                 <div className="flex items-center">
                   <Users className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -200,23 +215,23 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
             <Separator className="my-4" />
 
-            {/* Players and Waiting List tabs */}
             <Tabs defaultValue="players">
               <TabsList className="mb-4">
-                <TabsTrigger value="players">Players</TabsTrigger>
+                <TabsTrigger value="players">Players ({joinedPlayers.length})</TabsTrigger>
                 <TabsTrigger value="waiting">Waiting List ({reservation.waitingList?.length || 0})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="players">
-                <h3 className="text-sm font-medium mb-2">Joined Players ({joinedPlayers.length}/{actualMaxPlayers})</h3>
-                <ScrollArea className="h-[200px] border rounded-md p-2">
+                <ScrollArea className="h-[250px] border rounded-md p-2">
                   {joinedPlayers.length > 0 ? (
                     <div className="space-y-2">
                       {joinedPlayers.map((player, index) => (
-                        <div key={player.userId || index} className="flex items-center justify-between p-2 rounded-md bg-muted/40">
+                        <div key={player.userId || index} className="flex items-center justify-between p-3 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors">
                           <div className="flex items-center">
-                            <Avatar className="h-8 w-8 mr-2">
-                              <AvatarFallback>{getInitials(player.playerName || player.name)}</AvatarFallback>
+                            <Avatar className="h-10 w-10 mr-3">
+                              <AvatarFallback className="bg-teal-100 text-teal-700">
+                                {getInitials(player.playerName || player.name)}
+                              </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="text-sm font-medium">{player.playerName || player.name || `Player ${player.userId?.substring(0, 4)}`}</p>
@@ -233,22 +248,24 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                               <Badge className="bg-blue-500">You</Badge>
                             )}
                             
-                            {isAdmin && player.userId !== currentUserId && reservation.status === 'upcoming' && (
+                            {isAdmin && player.userId !== currentUserId && (
                               <div className="flex gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleKickPlayer(player.userId, player.playerName || player.name || 'Player')}
-                                  className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
-                                >
-                                  <UserMinus className="h-3 w-3 mr-1" />
-                                  Kick
-                                </Button>
+                                {reservation.status === 'upcoming' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleKickPlayer(player.userId, player.playerName || player.name || 'Player')}
+                                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <UserMinus className="h-3 w-3 mr-1" />
+                                    Kick
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleSuspendPlayer(player.userId, player.playerName || player.name || 'Player')}
-                                  className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700"
+                                  className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                                 >
                                   <Ban className="h-3 w-3 mr-1" />
                                   Suspend
@@ -266,24 +283,32 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </TabsContent>
 
               <TabsContent value="waiting">
-                <h3 className="text-sm font-medium mb-2">Waiting List ({reservation.waitingList?.length || 0})</h3>
-                <ScrollArea className="h-[200px] border rounded-md p-2">
+                <ScrollArea className="h-[250px] border rounded-md p-2">
                   {reservation.waitingList && reservation.waitingList.length > 0 ? (
                     <div className="space-y-2">
                       {reservation.waitingList.map((userId, index) => (
-                        <div key={userId} className="flex items-center justify-between p-2 rounded-md bg-muted/40">
+                        <div key={userId} className="flex items-center justify-between p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                           <div className="flex items-center">
-                            <Avatar className="h-8 w-8 mr-2">
-                              <AvatarFallback>{(index + 1).toString()}</AvatarFallback>
+                            <Avatar className="h-10 w-10 mr-3">
+                              <AvatarFallback className="bg-amber-100 text-amber-700">
+                                {(index + 1).toString()}
+                              </AvatarFallback>
                             </Avatar>
-                            <p className="text-sm font-medium">
-                              {`Player ${userId.substring(0, 6)}`}
-                            </p>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {`Player ${userId.substring(0, 6)}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Position #{index + 1} in queue
+                              </p>
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-2">
                             {userId === currentUserId && (
-                              <Badge variant="outline" className="border-amber-500 text-amber-500">You</Badge>
+                              <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
+                                You
+                              </Badge>
                             )}
                             
                             {isAdmin && userId !== currentUserId && (
@@ -291,7 +316,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleSuspendPlayer(userId, `Player ${userId.substring(0, 6)}`)}
-                                className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700"
+                                className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                               >
                                 <Ban className="h-3 w-3 mr-1" />
                                 Suspend
@@ -302,7 +327,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center text-sm text-muted-foreground py-8">The waiting list is empty.</p>
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-muted-foreground">The waiting list is empty.</p>
+                    </div>
                   )}
                 </ScrollArea>
               </TabsContent>
@@ -317,6 +345,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         playerName={suspensionDialog.playerName}
         playerId={suspensionDialog.playerId}
         onConfirm={confirmSuspension}
+      />
+
+      <ActionConfirmationDialog
+        open={kickConfirmation.isOpen}
+        onOpenChange={(open) => !open && setKickConfirmation({ isOpen: false, playerName: "", playerId: "" })}
+        onConfirm={confirmKickPlayer}
+        title="Kick Player"
+        description={`Are you sure you want to kick ${kickConfirmation.playerName} from this game? This action cannot be undone.`}
+        confirmButtonText="Kick Player"
+        confirmButtonVariant="destructive"
       />
     </>
   );

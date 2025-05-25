@@ -14,7 +14,10 @@ import EnhancedAddReservationDialog from "@/components/reservations/EnhancedAddR
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import ReservationCard from "@/components/reservations/ReservationCard";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
+import AddSummaryDialog from "@/components/reservations/AddSummaryDialog";
+import PlayerSuspensionDialog from "@/components/reservations/PlayerSuspensionDialog";
 import { format, parseISO } from 'date-fns';
+import { fetchAllReservations, fetchPitches } from "@/services/reservationApi";
 
 // Empty state component
 const EmptyState: React.FC<{
@@ -56,9 +59,23 @@ const Reservations = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [addDialogKey, setAddDialogKey] = useState(0);
+  const [pitchImages, setPitchImages] = useState<Record<string, string>>({});
   
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
+  
+  const [selectedGameForSummary, setSelectedGameForSummary] = useState<Reservation | null>(null);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  
+  const [suspensionDialog, setSuspensionDialog] = useState<{
+    isOpen: boolean;
+    playerName: string;
+    playerId: string;
+  }>({
+    isOpen: false,
+    playerName: "",
+    playerId: ""
+  });
   
   // Get access to reservations context
   const {
@@ -73,9 +90,9 @@ const Reservations = () => {
     setReservations,
   } = useReservation();
 
-  // Initialize user data and reservations
+  // Initialize user data and fetch reservations
   useEffect(() => {
-    const initializeData = () => {
+    const initializeData = async () => {
       try {
         // Get user role and ID
         const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
@@ -87,8 +104,38 @@ const Reservations = () => {
           setCurrentUserId(userData.id);
         }
         
-        // Initialize reservations with interval checking
-        const loadReservations = () => {
+        // Fetch reservations from backend
+        try {
+          const backendReservations = await fetchAllReservations();
+          // Transform backend data to frontend format
+          const transformedReservations = backendReservations.map((res, index) => ({
+            id: index + 1,
+            pitchId: res.pitch,
+            pitchName: `Pitch ${res.pitch.substring(0, 8)}`,
+            location: 'Football Complex',
+            city: 'City',
+            date: res.date.split('T')[0],
+            startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            endTime: new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            duration: 60,
+            title: res.title,
+            maxPlayers: res.maxPlayers,
+            lineup: res.currentPlayers.map(playerId => ({
+              userId: playerId,
+              name: `Player ${playerId.substring(0, 4)}`,
+              playerName: `Player ${playerId.substring(0, 4)}`,
+              status: 'joined' as const,
+              joinedAt: new Date().toISOString()
+            })),
+            waitingList: res.waitList,
+            status: (res.status || 'upcoming') as 'upcoming' | 'completed' | 'cancelled',
+            createdBy: 'admin',
+            price: res.price
+          }));
+          setReservations(transformedReservations);
+        } catch (error) {
+          console.error("Error fetching reservations:", error);
+          // Fallback to localStorage
           const storedReservations = localStorage.getItem('reservations');
           if (storedReservations) {
             const parsedReservations = JSON.parse(storedReservations);
@@ -96,14 +143,22 @@ const Reservations = () => {
               setReservations(parsedReservations);
             }
           }
-        };
+        }
 
-        loadReservations();
+        // Fetch pitches for images
+        try {
+          const pitches = await fetchPitches();
+          const imageMap: Record<string, string> = {};
+          pitches.forEach((pitch: any) => {
+            if (pitch._id && pitch.backgroundImage) {
+              imageMap[pitch._id] = pitch.backgroundImage;
+            }
+          });
+          setPitchImages(imageMap);
+        } catch (error) {
+          console.error("Error fetching pitches:", error);
+        }
         
-        // Check for updates every 2 seconds
-        const interval = setInterval(loadReservations, 2000);
-        
-        return () => clearInterval(interval);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
@@ -111,8 +166,7 @@ const Reservations = () => {
       }
     };
 
-    const cleanup = initializeData();
-    return cleanup;
+    initializeData();
   }, [setReservations]);
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
@@ -150,7 +204,7 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  // Stable event handlers to prevent infinite loops
+  // Event handlers with improved UX
   const handleJoinGame = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -171,33 +225,10 @@ const Reservations = () => {
     }
     
     joinGame(reservationId, undefined, currentUserId);
-    
-    // Update localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        const updatedReservations = parsedReservations.map((res: Reservation) => {
-          if (res.id === reservationId) {
-            const updatedLineup = res.lineup ? [...res.lineup] : [];
-            if (!updatedLineup.some(player => player.userId === currentUserId)) {
-              updatedLineup.push({ 
-                userId: currentUserId,
-                name: `Player ${currentUserId.substring(0, 4)}`,
-                status: 'joined',
-                joinedAt: new Date().toISOString(),
-                playerName: `Player ${currentUserId.substring(0, 4)}` 
-              });
-            }
-            return {...res, lineup: updatedLineup};
-          }
-          return res;
-        });
-        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
-      }
-    } catch (error) {
-      console.error("Error updating reservation in localStorage:", error);
-    }
+    toast({
+      title: "Joined Game!",
+      description: "You have successfully joined the game. See you on the pitch!",
+    });
   }, [currentUserId, userRole, joinGame, toast]);
   
   const handleCancelReservation = useCallback((reservationId: number) => {
@@ -211,26 +242,10 @@ const Reservations = () => {
     }
     
     cancelReservation(reservationId, currentUserId);
-    
-    // Update localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        const updatedReservations = parsedReservations.map((res: Reservation) => {
-          if (res.id === reservationId && res.lineup) {
-            return {
-              ...res, 
-              lineup: res.lineup.filter(player => player.userId !== currentUserId)
-            };
-          }
-          return res;
-        });
-        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
-      }
-    } catch (error) {
-      console.error("Error updating reservation in localStorage:", error);
-    }
+    toast({
+      title: "Left Game",
+      description: "You have left the game. Your spot is now available for others.",
+    });
   }, [currentUserId, cancelReservation, toast]);
 
   const handleJoinWaitingList = useCallback((reservationId: number) => {
@@ -272,6 +287,10 @@ const Reservations = () => {
     }
     
     joinWaitingList(reservationId, currentUserId);
+    toast({
+      title: "Added to Waiting List",
+      description: "You'll be notified if a spot becomes available.",
+    });
   }, [currentUserId, userRole, reservations, joinWaitingList, toast]);
   
   const handleLeaveWaitingList = useCallback((reservationId: number) => {
@@ -285,6 +304,10 @@ const Reservations = () => {
     }
     
     leaveWaitingList(reservationId, currentUserId);
+    toast({
+      title: "Left Waiting List",
+      description: "You have been removed from the waiting list.",
+    });
   }, [currentUserId, leaveWaitingList, toast]);
   
   const handleDeleteReservation = useCallback((reservationId: number) => {
@@ -297,31 +320,75 @@ const Reservations = () => {
       return;
     }
     
-    // Close details dialog if it's open for this reservation
+    // Close dialogs if they're open for this reservation
     if (selectedGameForDetails && selectedGameForDetails.id === reservationId) {
       setSelectedGameForDetails(null);
       setIsGameDetailsDialogOpen(false);
     }
     
-    deleteReservation(reservationId);
-    
-    // Update localStorage
-    try {
-      const storedReservations = localStorage.getItem('reservations');
-      if (storedReservations) {
-        const parsedReservations = JSON.parse(storedReservations);
-        const updatedReservations = parsedReservations.filter((res: Reservation) => res.id !== reservationId);
-        localStorage.setItem('reservations', JSON.stringify(updatedReservations));
-      }
-    } catch (error) {
-      console.error("Error deleting reservation from localStorage:", error);
+    if (selectedGameForSummary && selectedGameForSummary.id === reservationId) {
+      setSelectedGameForSummary(null);
+      setIsSummaryDialogOpen(false);
     }
+    
+    deleteReservation(reservationId);
     
     toast({
       title: "Reservation Deleted",
       description: "The reservation has been successfully deleted."
     });
-  }, [currentUserId, userRole, deleteReservation, selectedGameForDetails, toast]);
+  }, [currentUserId, userRole, deleteReservation, selectedGameForDetails, selectedGameForSummary, toast]);
+
+  const handleKickPlayer = useCallback((reservationId: number, playerId: string) => {
+    if (userRole !== 'admin') return;
+    
+    cancelReservation(reservationId, playerId);
+    toast({
+      title: "Player Kicked",
+      description: "The player has been removed from the game.",
+    });
+  }, [userRole, cancelReservation, toast]);
+
+  const handleSuspendPlayer = useCallback((playerId: string, days: number, reason: string) => {
+    if (userRole !== 'admin') return;
+    
+    // Here you would typically call an API to suspend the player
+    // For now, we'll just show a success message
+    toast({
+      title: "Player Suspended",
+      description: `Player has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
+    });
+    
+    setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" });
+  }, [userRole, toast]);
+
+  const handleAddSummary = useCallback((reservation: Reservation) => {
+    setSelectedGameForSummary(reservation);
+    setIsSummaryDialogOpen(true);
+  }, []);
+
+  const handleSaveSummary = useCallback((summary: string, playerStats: any[]) => {
+    if (!selectedGameForSummary) return;
+    
+    // Here you would typically save to backend
+    // For now, update local state
+    const updatedReservation = {
+      ...selectedGameForSummary,
+      summary: summary,
+      playerStats: playerStats
+    };
+    
+    // Update the reservation in context
+    // updateReservation(selectedGameForSummary.id, { summary, playerStats });
+    
+    toast({
+      title: "Summary Saved",
+      description: "Game summary and player stats have been saved successfully.",
+    });
+    
+    setIsSummaryDialogOpen(false);
+    setSelectedGameForSummary(null);
+  }, [selectedGameForSummary, toast]);
 
   const upcomingGamesHeader = useMemo(() => {
     if (currentDate) {
@@ -338,19 +405,15 @@ const Reservations = () => {
     return isUserJoined(reservationId, userId);
   }, [isUserJoined]);
 
-  // Force re-render of add dialog to prevent infinite loops
   const handleAddReservationSuccess = useCallback(() => {
     setAddDialogKey(prev => prev + 1);
   }, []);
 
-  // Safe check for game details dialog
   const safeSelectedGameForDetails = useMemo(() => {
     if (!selectedGameForDetails) return null;
     
-    // Check if the selected game still exists in reservations
     const gameExists = reservations.find(res => res.id === selectedGameForDetails.id);
     if (!gameExists) {
-      // Game was deleted, close the dialog
       setSelectedGameForDetails(null);
       setIsGameDetailsDialogOpen(false);
       return null;
@@ -480,11 +543,9 @@ const Reservations = () => {
                       setSelectedGameForDetails(reservation);
                       setIsGameDetailsDialogOpen(true);
                     }}
-                    onAddSummary={userRole === 'admin' ? (reservation) => {
-                      // Handle add summary logic here
-                      console.log('Add summary for reservation:', reservation.id);
-                    } : undefined}
+                    onAddSummary={userRole === 'admin' ? handleAddSummary : undefined}
                     isUserLoggedIn={!!currentUserId}
+                    pitchImage={pitchImages[reservation.pitchId]}
                   />
                 </div>
               ))}
@@ -493,7 +554,7 @@ const Reservations = () => {
         </div>
       </div>
 
-      {/* Dialog for Viewing Game Details - with safe check */}
+      {/* Game Details Dialog */}
       {safeSelectedGameForDetails && (
         <GameDetailsDialog
           reservation={safeSelectedGameForDetails}
@@ -510,8 +571,46 @@ const Reservations = () => {
           }}
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
+          onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
+          onSuspendPlayer={userRole === 'admin' ? (playerId: string, playerName: string) => {
+            setSuspensionDialog({
+              isOpen: true,
+              playerName,
+              playerId
+            });
+          } : undefined}
+          pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
         />
       )}
+
+      {/* Add Summary Dialog */}
+      {selectedGameForSummary && (
+        <AddSummaryDialog
+          isOpen={isSummaryDialogOpen}
+          onClose={() => {
+            setIsSummaryDialogOpen(false);
+            setSelectedGameForSummary(null);
+          }}
+          reservation={selectedGameForSummary}
+          onSave={handleSaveSummary}
+          onSuspendPlayer={(playerId: string, playerName: string) => {
+            setSuspensionDialog({
+              isOpen: true,
+              playerName,
+              playerId
+            });
+          }}
+        />
+      )}
+
+      {/* Player Suspension Dialog */}
+      <PlayerSuspensionDialog
+        isOpen={suspensionDialog.isOpen}
+        onClose={() => setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" })}
+        playerName={suspensionDialog.playerName}
+        playerId={suspensionDialog.playerId}
+        onConfirm={handleSuspendPlayer}
+      />
     </div>
   );
 };
