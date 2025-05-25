@@ -10,14 +10,23 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import EnhancedAddReservationDialog from "@/components/reservations/EnhancedAddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import ReservationCard from "@/components/reservations/ReservationCard";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
 import AddSummaryDialog from "@/components/reservations/AddSummaryDialog";
 import PlayerSuspensionDialog from "@/components/reservations/PlayerSuspensionDialog";
+import BackendReservationForm from "@/components/reservations/BackendReservationForm";
 import { format, parseISO } from 'date-fns';
-import { fetchAllReservations, fetchPitches } from "@/services/reservationApi";
+import { 
+  getAllReservations, 
+  joinReservation as joinReservationApi,
+  cancelReservation as cancelReservationApi,
+  removeFromWaitlist,
+  deleteReservationApi,
+  kickPlayer as kickPlayerApi,
+  addGameSummary
+} from "@/lib/reservationApi";
+import { fetchPitches } from "@/lib/api";
 
 // Empty state component
 const EmptyState: React.FC<{
@@ -50,7 +59,7 @@ const EmptyState: React.FC<{
 
 /**
  * Enhanced Reservations Page Component
- * Clean, reusable, and API-ready
+ * Now integrated with backend API
  */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
@@ -90,6 +99,50 @@ const Reservations = () => {
     setReservations,
   } = useReservation();
 
+  // Load reservations from backend
+  const loadReservations = useCallback(async () => {
+    try {
+      const backendReservations = await getAllReservations();
+      
+      // Transform backend data to frontend format
+      const transformedReservations = backendReservations.map((res, index) => ({
+        id: index + 1,
+        pitchId: res.pitch,
+        pitchName: `Pitch ${res.pitch.substring(0, 8)}`,
+        location: 'Football Complex',
+        city: 'City',
+        date: res.date.split('T')[0],
+        startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        endTime: new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        duration: 60,
+        title: res.title,
+        maxPlayers: res.maxPlayers,
+        lineup: res.currentPlayers.map(playerId => ({
+          userId: playerId,
+          name: `Player ${playerId.substring(0, 4)}`,
+          playerName: `Player ${playerId.substring(0, 4)}`,
+          status: 'joined' as const,
+          joinedAt: new Date().toISOString()
+        })),
+        waitingList: res.waitList,
+        status: (res.status || 'upcoming') as 'upcoming' | 'completed' | 'cancelled',
+        createdBy: 'admin',
+        price: res.price,
+        time: `${new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+        playersJoined: res.currentPlayers.length
+      }));
+      
+      setReservations(transformedReservations);
+    } catch (error) {
+      console.error("Error loading reservations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load reservations from server",
+        variant: "destructive",
+      });
+    }
+  }, [setReservations, toast]);
+
   // Initialize user data and fetch reservations
   useEffect(() => {
     const initializeData = async () => {
@@ -104,46 +157,8 @@ const Reservations = () => {
           setCurrentUserId(userData.id);
         }
         
-        // Fetch reservations from backend
-        try {
-          const backendReservations = await fetchAllReservations();
-          // Transform backend data to frontend format
-          const transformedReservations = backendReservations.map((res, index) => ({
-            id: index + 1,
-            pitchId: res.pitch,
-            pitchName: `Pitch ${res.pitch.substring(0, 8)}`,
-            location: 'Football Complex',
-            city: 'City',
-            date: res.date.split('T')[0],
-            startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            endTime: new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            duration: 60,
-            title: res.title,
-            maxPlayers: res.maxPlayers,
-            lineup: res.currentPlayers.map(playerId => ({
-              userId: playerId,
-              name: `Player ${playerId.substring(0, 4)}`,
-              playerName: `Player ${playerId.substring(0, 4)}`,
-              status: 'joined' as const,
-              joinedAt: new Date().toISOString()
-            })),
-            waitingList: res.waitList,
-            status: (res.status || 'upcoming') as 'upcoming' | 'completed' | 'cancelled',
-            createdBy: 'admin',
-            price: res.price
-          }));
-          setReservations(transformedReservations);
-        } catch (error) {
-          console.error("Error fetching reservations:", error);
-          // Fallback to localStorage
-          const storedReservations = localStorage.getItem('reservations');
-          if (storedReservations) {
-            const parsedReservations = JSON.parse(storedReservations);
-            if (Array.isArray(parsedReservations)) {
-              setReservations(parsedReservations);
-            }
-          }
-        }
+        // Load reservations from backend
+        await loadReservations();
 
         // Fetch pitches for images
         try {
@@ -167,7 +182,7 @@ const Reservations = () => {
     };
 
     initializeData();
-  }, [setReservations]);
+  }, [loadReservations]);
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
     return maxPlayers + 2; // Allow 2 extra players
@@ -204,8 +219,8 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  // Event handlers with improved UX
-  const handleJoinGame = useCallback((reservationId: number) => {
+  // Backend-integrated event handlers
+  const handleJoinGame = useCallback(async (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -223,15 +238,35 @@ const Reservations = () => {
       });
       return;
     }
-    
-    joinGame(reservationId, undefined, currentUserId);
-    toast({
-      title: "Joined Game!",
-      description: "You have successfully joined the game. See you on the pitch!",
-    });
-  }, [currentUserId, userRole, joinGame, toast]);
+
+    try {
+      const reservation = reservations.find(r => r.id === reservationId);
+      if (!reservation) throw new Error('Reservation not found');
+      
+      // Call backend API
+      await joinReservationApi(reservation.pitchId);
+      
+      // Update local state
+      joinGame(reservationId, undefined, currentUserId);
+      
+      toast({
+        title: "Joined Game!",
+        description: "You have successfully joined the game. See you on the pitch!",
+      });
+      
+      // Refresh reservations
+      await loadReservations();
+    } catch (error) {
+      console.error("Error joining game:", error);
+      toast({
+        title: "Failed to Join",
+        description: error instanceof Error ? error.message : "Failed to join the game",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, userRole, reservations, joinGame, toast, loadReservations]);
   
-  const handleCancelReservation = useCallback((reservationId: number) => {
+  const handleCancelReservation = useCallback(async (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -240,15 +275,35 @@ const Reservations = () => {
       });
       return;
     }
-    
-    cancelReservation(reservationId, currentUserId);
-    toast({
-      title: "Left Game",
-      description: "You have left the game. Your spot is now available for others.",
-    });
-  }, [currentUserId, cancelReservation, toast]);
 
-  const handleJoinWaitingList = useCallback((reservationId: number) => {
+    try {
+      const reservation = reservations.find(r => r.id === reservationId);
+      if (!reservation) throw new Error('Reservation not found');
+      
+      // Call backend API
+      await cancelReservationApi(reservation.pitchId);
+      
+      // Update local state
+      cancelReservation(reservationId, currentUserId);
+      
+      toast({
+        title: "Left Game",
+        description: "You have left the game. Your spot is now available for others.",
+      });
+      
+      // Refresh reservations
+      await loadReservations();
+    } catch (error) {
+      console.error("Error cancelling reservation:", error);
+      toast({
+        title: "Failed to Cancel",
+        description: error instanceof Error ? error.message : "Failed to cancel the reservation",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, reservations, cancelReservation, toast, loadReservations]);
+
+  const handleJoinWaitingList = useCallback(async (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -293,7 +348,7 @@ const Reservations = () => {
     });
   }, [currentUserId, userRole, reservations, joinWaitingList, toast]);
   
-  const handleLeaveWaitingList = useCallback((reservationId: number) => {
+  const handleLeaveWaitingList = useCallback(async (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
         title: "Login Required", 
@@ -302,15 +357,32 @@ const Reservations = () => {
       });
       return;
     }
-    
-    leaveWaitingList(reservationId, currentUserId);
-    toast({
-      title: "Left Waiting List",
-      description: "You have been removed from the waiting list.",
-    });
-  }, [currentUserId, leaveWaitingList, toast]);
+
+    try {
+      const reservation = reservations.find(r => r.id === reservationId);
+      if (!reservation) throw new Error('Reservation not found');
+      
+      // Call backend API
+      await removeFromWaitlist(reservation.pitchId);
+      
+      // Update local state
+      leaveWaitingList(reservationId, currentUserId);
+      
+      toast({
+        title: "Left Waiting List",
+        description: "You have been removed from the waiting list.",
+      });
+    } catch (error) {
+      console.error("Error leaving waitlist:", error);
+      toast({
+        title: "Failed to Leave Waitlist",
+        description: error instanceof Error ? error.message : "Failed to leave the waiting list",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, reservations, leaveWaitingList, toast]);
   
-  const handleDeleteReservation = useCallback((reservationId: number) => {
+  const handleDeleteReservation = useCallback(async (reservationId: number) => {
     if (!currentUserId || userRole !== 'admin') {
       toast({ 
         title: "Permission Denied", 
@@ -319,35 +391,74 @@ const Reservations = () => {
       });
       return;
     }
-    
-    // Close dialogs if they're open for this reservation
-    if (selectedGameForDetails && selectedGameForDetails.id === reservationId) {
-      setSelectedGameForDetails(null);
-      setIsGameDetailsDialogOpen(false);
-    }
-    
-    if (selectedGameForSummary && selectedGameForSummary.id === reservationId) {
-      setSelectedGameForSummary(null);
-      setIsSummaryDialogOpen(false);
-    }
-    
-    deleteReservation(reservationId);
-    
-    toast({
-      title: "Reservation Deleted",
-      description: "The reservation has been successfully deleted."
-    });
-  }, [currentUserId, userRole, deleteReservation, selectedGameForDetails, selectedGameForSummary, toast]);
 
-  const handleKickPlayer = useCallback((reservationId: number, playerId: string) => {
+    try {
+      const reservation = reservations.find(r => r.id === reservationId);
+      if (!reservation) throw new Error('Reservation not found');
+      
+      // Call backend API
+      await deleteReservationApi(reservation.pitchId);
+      
+      // Close dialogs if they're open for this reservation
+      if (selectedGameForDetails && selectedGameForDetails.id === reservationId) {
+        setSelectedGameForDetails(null);
+        setIsGameDetailsDialogOpen(false);
+      }
+      
+      if (selectedGameForSummary && selectedGameForSummary.id === reservationId) {
+        setSelectedGameForSummary(null);
+        setIsSummaryDialogOpen(false);
+      }
+      
+      // Update local state
+      deleteReservation(reservationId);
+      
+      toast({
+        title: "Reservation Deleted",
+        description: "The reservation has been successfully deleted."
+      });
+      
+      // Refresh reservations
+      await loadReservations();
+    } catch (error) {
+      console.error("Error deleting reservation:", error);
+      toast({
+        title: "Failed to Delete",
+        description: error instanceof Error ? error.message : "Failed to delete the reservation",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, userRole, reservations, deleteReservation, selectedGameForDetails, selectedGameForSummary, toast, loadReservations]);
+
+  const handleKickPlayer = useCallback(async (reservationId: number, playerId: string) => {
     if (userRole !== 'admin') return;
     
-    cancelReservation(reservationId, playerId);
-    toast({
-      title: "Player Kicked",
-      description: "The player has been removed from the game.",
-    });
-  }, [userRole, cancelReservation, toast]);
+    try {
+      const reservation = reservations.find(r => r.id === reservationId);
+      if (!reservation) throw new Error('Reservation not found');
+      
+      // Call backend API
+      await kickPlayerApi(reservation.pitchId, playerId);
+      
+      // Update local state
+      cancelReservation(reservationId, playerId);
+      
+      toast({
+        title: "Player Kicked",
+        description: "The player has been removed from the game.",
+      });
+      
+      // Refresh reservations
+      await loadReservations();
+    } catch (error) {
+      console.error("Error kicking player:", error);
+      toast({
+        title: "Failed to Kick Player",
+        description: error instanceof Error ? error.message : "Failed to kick the player",
+        variant: "destructive",
+      });
+    }
+  }, [userRole, reservations, cancelReservation, toast, loadReservations]);
 
   const handleSuspendPlayer = useCallback((playerId: string, days: number, reason: string) => {
     if (userRole !== 'admin') return;
@@ -373,28 +484,32 @@ const Reservations = () => {
     setIsSummaryDialogOpen(true);
   }, []);
 
-  const handleSaveSummary = useCallback((summary: string, playerStats: any[]) => {
+  const handleSaveSummary = useCallback(async (summary: string, playerStats: any[]) => {
     if (!selectedGameForSummary) return;
     
-    // Here you would typically save to backend
-    // For now, update local state
-    const updatedReservation = {
-      ...selectedGameForSummary,
-      summary: summary,
-      playerStats: playerStats
-    };
-    
-    // Update the reservation in context
-    // updateReservation(selectedGameForSummary.id, { summary, playerStats });
-    
-    toast({
-      title: "Summary Saved",
-      description: "Game summary and player stats have been saved successfully.",
-    });
-    
-    setIsSummaryDialogOpen(false);
-    setSelectedGameForSummary(null);
-  }, [selectedGameForSummary, toast]);
+    try {
+      // Call backend API
+      await addGameSummary(selectedGameForSummary.pitchId, { summary, playerStats });
+      
+      toast({
+        title: "Summary Saved",
+        description: "Game summary and player stats have been saved successfully.",
+      });
+      
+      setIsSummaryDialogOpen(false);
+      setSelectedGameForSummary(null);
+      
+      // Refresh reservations
+      await loadReservations();
+    } catch (error) {
+      console.error("Error saving summary:", error);
+      toast({
+        title: "Failed to Save Summary",
+        description: error instanceof Error ? error.message : "Failed to save the game summary",
+        variant: "destructive",
+      });
+    }
+  }, [selectedGameForSummary, toast, loadReservations]);
 
   const upcomingGamesHeader = useMemo(() => {
     if (currentDate) {
@@ -449,7 +564,13 @@ const Reservations = () => {
         </div>
         {userRole === 'admin' && (
           <div id="add-reservation-dialog-trigger">
-            <EnhancedAddReservationDialog key={addDialogKey} />
+            <BackendReservationForm 
+              key={addDialogKey} 
+              onSuccess={() => {
+                setAddDialogKey(prev => prev + 1);
+                loadReservations();
+              }}
+            />
           </div>
         )}
       </div>

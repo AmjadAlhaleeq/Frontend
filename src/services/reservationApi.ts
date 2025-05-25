@@ -1,4 +1,3 @@
-
 import { API_BASE_URL } from '@/lib/api';
 
 export interface BackendReservation {
@@ -40,113 +39,23 @@ export interface GameSummary {
 
 const API_BASE = API_BASE_URL;
 
-// Get all reservations
-export const fetchAllReservations = async (): Promise<BackendReservation[]> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/reservations`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch reservations');
-  }
-  
-  const data = await response.json();
-  return data.data?.reservations || data.data || [];
-};
+// Update to use the new API functions
+export { 
+  getAllReservations,
+  getReservationById as fetchReservationById,
+  createReservation,
+  deleteReservationApi as deleteReservationById,
+  addGameSummary,
+  joinReservation,
+  cancelReservation,
+  removeFromWaitlist as suspendPlayer,
+  kickPlayer
+} from '@/lib/reservationApi';
 
-// Get reservation by ID
-export const fetchReservationById = async (id: string): Promise<BackendReservation> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/reservations/${id}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch reservation');
-  }
-  
-  const data = await response.json();
-  return data.data?.reservation || data.data;
-};
+// Keep existing fetchAllReservations as alias
+export const fetchAllReservations = getAllReservations;
 
-// Create reservation
-export const createReservation = async (reservation: CreateReservationRequest): Promise<BackendReservation> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/reservations`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(reservation),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to create reservation');
-  }
-  
-  const data = await response.json();
-  return data.data?.reservation || data.data;
-};
-
-// Add game summary
-export const addGameSummary = async (reservationId: string, gameSummary: GameSummary): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/reservations/${reservationId}/summary`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(gameSummary),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to add game summary');
-  }
-};
-
-// Suspend player
-export const suspendPlayer = async (playerId: string, reason: string, duration: number): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/players/${playerId}/suspend`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ reason, duration }),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to suspend player');
-  }
-};
-
-// Delete reservation (admin only)
-export const deleteReservationById = async (id: string): Promise<void> => {
-  const token = localStorage.getItem('authToken');
-  const response = await fetch(`${API_BASE}/reservations/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to delete reservation');
-  }
-};
-
-// Get pitches (for getting pitch images)
+// Keep existing fetchPitches function
 export const fetchPitches = async () => {
   const token = localStorage.getItem('authToken');
   const response = await fetch(`${API_BASE}/pitches`, {
