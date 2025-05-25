@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/services/apiService';
 import { useToast } from '@/hooks/use-toast';
@@ -9,13 +8,13 @@ interface Player {
   userId: string;
   firstName: string;
   lastName: string;
+  name: string; // Made required to match ModernLeaderboard expectations
   profilePicture?: string;
+  avatar?: string;
+  email: string;
   matches: number;
   statValue: number;
-  name?: string;
-  email?: string;
-  avatar?: string;
-  stats?: {
+  stats: {
     gamesPlayed: number;
     wins: number;
     losses: number;
@@ -77,10 +76,10 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
           userId: player.userId,
           firstName: player.firstName,
           lastName: player.lastName,
-          name: `${player.firstName} ${player.lastName}`,
+          name: `${player.firstName} ${player.lastName}`, // Always provide name
           profilePicture: player.profilePicture,
           avatar: player.profilePicture,
-          email: '',
+          email: '', // Provide default empty email
           matches: player.matches,
           statValue: player.statValue,
           stats: {
