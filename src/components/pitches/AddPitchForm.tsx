@@ -24,7 +24,8 @@ import {
   TreePine,
   Zap,
   Wind,
-  Clock
+  Clock,
+  DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
@@ -48,13 +49,14 @@ const AddPitchForm = () => {
     name: "",
     location: "",
     city: "",
-    playersPerSide: "5", // Default minimum 5
+    playersPerSide: "5",
     type: "",
     description: "",
     image: "",
     additionalImages: [] as string[],
     facilities: [] as string[],
     openingHours: "",
+    price: "",
   });
   
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -96,10 +98,10 @@ const AddPitchForm = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.location || !formData.city || !formData.type || !formData.image) {
+    if (!formData.name || !formData.location || !formData.city || !formData.type || !formData.image || !formData.price) {
       toast({
         title: "Missing Required Fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields including price.",
         variant: "destructive",
       });
       return;
@@ -107,11 +109,22 @@ const AddPitchForm = () => {
 
     // Ensure minimum 5 players per side
     const playersPerSide = Math.max(parseInt(formData.playersPerSide), 5);
+    const price = parseFloat(formData.price);
+
+    if (isNaN(price) || price <= 0) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const pitchData = {
       ...formData,
       playersPerSide,
-      id: Date.now(), // Simple ID generation for demo
+      price,
+      id: Date.now(),
     };
 
     try {
@@ -183,9 +196,9 @@ const AddPitchForm = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Players Per Side* (Minimum 5)</label>
+                <label className="text-sm font-medium">Players Per Side* (Min 5)</label>
                 <div className="relative">
                   <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Select value={formData.playersPerSide} onValueChange={(value) => handleInputChange("playersPerSide", value)}>
@@ -195,7 +208,7 @@ const AddPitchForm = () => {
                     <SelectContent>
                       {[5, 6, 7, 8, 9, 10, 11].map((num) => (
                         <SelectItem key={num} value={num.toString()}>
-                          {num} vs {num} ({num * 2} players total)
+                          {num} vs {num}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -214,6 +227,23 @@ const AddPitchForm = () => {
                     <SelectItem value="outdoor">Outdoor</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price per hour*</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange("price", e.target.value)}
+                    placeholder="50.00"
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
