@@ -124,10 +124,48 @@ const AddPitchForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { name, location, city, type, backgroundImage } = formData;
-    if (!name || !location || !city || !type || !backgroundImage) {
+    
+    // Improved validation
+    if (!name.trim()) {
       toast({
-        title: "Missing Fields",
-        description: "Please complete all fields.",
+        title: "Missing Field",
+        description: "Please enter a pitch name.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!location.trim()) {
+      toast({
+        title: "Missing Field", 
+        description: "Please enter the pitch location.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!city.trim()) {
+      toast({
+        title: "Missing Field",
+        description: "Please enter the city.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!type) {
+      toast({
+        title: "Missing Field",
+        description: "Please select a pitch type.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!backgroundImage) {
+      toast({
+        title: "Missing Field",
+        description: "Please upload a background image.",
         variant: "destructive",
       });
       return;
@@ -135,9 +173,19 @@ const AddPitchForm = () => {
 
     try {
       const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("Authentication Error: Please log in.");
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
 
+      // Upload background image
       const bgUrl = await uploadToCloudinary(backgroundImage);
+      
+      // Upload additional images
       const imageUrls = await Promise.all(
         formData.additionalImages.map(uploadToCloudinary)
       );
@@ -167,16 +215,16 @@ const AddPitchForm = () => {
 
       const result = await res.json();
       if (result.status !== "success") {
-        throw new Error(result.message || "Unknown error");
+        throw new Error(result.message || "Failed to create pitch");
       }
 
       toast({
-        title: "Pitch Created",
-        description: "Pitch added successfully.",
+        title: "Success",
+        description: "Pitch created successfully!",
       });
       navigate("/pitches");
     } catch (err: unknown) {
-      console.error("Error:", err);
+      console.error("Error creating pitch:", err);
       let message = "Failed to create pitch.";
       if (err instanceof Error) {
         message = err.message;
