@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,32 +55,32 @@ const AddPitchForm = () => {
   const { addPitch } = useReservation();
   const navigate = useNavigate();
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  const handleInputChange = useCallback((field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleFacilityToggle = (facility: string) => {
+  const handleFacilityToggle = useCallback((facility: string) => {
     setFormData(prev => ({
       ...prev,
       facilities: prev.facilities.includes(facility)
         ? prev.facilities.filter(f => f !== facility)
         : [...prev.facilities, facility]
     }));
-  };
+  }, []);
 
-  const handleMainImageSelect = (file: File) => {
+  const handleMainImageSelect = useCallback((file: File) => {
     setFormData(prev => ({ ...prev, mainImage: file }));
     const reader = new FileReader();
     reader.onload = (e) => setMainImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const handleMainImageRemove = () => {
+  const handleMainImageRemove = useCallback(() => {
     setFormData(prev => ({ ...prev, mainImage: null }));
     setMainImagePreview("");
-  };
+  }, []);
 
-  const handleAdditionalImageSelect = (file: File) => {
+  const handleAdditionalImageSelect = useCallback((file: File) => {
     setFormData(prev => ({
       ...prev,
       additionalImages: [...prev.additionalImages, file]
@@ -91,17 +91,25 @@ const AddPitchForm = () => {
       setAdditionalPreviews(prev => [...prev, e.target?.result as string]);
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const handleAdditionalImageRemove = (index: number) => {
+  const handleAdditionalImageRemove = useCallback((index: number) => {
     setFormData(prev => ({
       ...prev,
       additionalImages: prev.additionalImages.filter((_, i) => i !== index)
     }));
     setAdditionalPreviews(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handlePlayersPerSideChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, playersPerSide: value }));
+  }, []);
+
+  const handleTypeChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, type: value }));
+  }, []);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -159,7 +167,7 @@ const AddPitchForm = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [formData, mainImagePreview, additionalPreviews, toast, addPitch, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -220,7 +228,7 @@ const AddPitchForm = () => {
                   <label className="text-sm font-medium text-gray-700">Players Per Side*</label>
                   <div className="relative">
                     <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Select value={formData.playersPerSide} onValueChange={(value) => handleInputChange("playersPerSide", value)}>
+                    <Select value={formData.playersPerSide} onValueChange={handlePlayersPerSideChange}>
                       <SelectTrigger className="pl-10">
                         <SelectValue placeholder="Select format" />
                       </SelectTrigger>
@@ -237,7 +245,7 @@ const AddPitchForm = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700">Pitch Type*</label>
-                  <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                  <Select value={formData.type} onValueChange={handleTypeChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
