@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -85,21 +84,26 @@ const EnhancedAddReservationDialog: React.FC<EnhancedAddReservationDialogProps> 
       return;
     }
 
+    const selectedPitch = pitches.find(p => p.name === data.pitchName);
+
     const reservationData = {
-      id: Date.now(),
+      pitchId: selectedPitch?._id || selectedPitch?.id || `pitch_${Date.now()}`,
       pitchName: data.pitchName,
       date: format(data.date, 'yyyy-MM-dd'),
       startTime: data.startTime,
       endTime: data.endTime,
+      duration: 120, // Default 2 hours
       time: `${data.startTime} - ${data.endTime}`, // For backward compatibility
       location: data.location,
+      city: selectedPitch?.city || "Unknown",
       maxPlayers: data.maxPlayers,
       status: "upcoming" as const,
       title: `Game at ${data.pitchName}`,
       playersJoined: 0,
       lineup: [],
       waitingList: [],
-      imageUrl: pitches.find(p => p.name === data.pitchName)?.image || "/football-pitch-bg.jpg",
+      createdBy: localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).id : 'admin',
+      imageUrl: selectedPitch?.images?.[0] || selectedPitch?.backgroundImage || "/football-pitch-bg.jpg",
     };
 
     try {
@@ -108,7 +112,7 @@ const EnhancedAddReservationDialog: React.FC<EnhancedAddReservationDialogProps> 
       // Update localStorage
       const storedReservations = localStorage.getItem('reservations');
       const existingReservations = storedReservations ? JSON.parse(storedReservations) : [];
-      const updatedReservations = [...existingReservations, reservationData];
+      const updatedReservations = [...existingReservations, { ...reservationData, id: Date.now() }];
       localStorage.setItem('reservations', JSON.stringify(updatedReservations));
 
       toast({
@@ -175,7 +179,7 @@ const EnhancedAddReservationDialog: React.FC<EnhancedAddReservationDialogProps> 
                     </FormControl>
                     <SelectContent className="dark:bg-gray-800 max-h-40 overflow-y-auto">
                       {pitches.map((pitch) => (
-                        <SelectItem key={pitch.id} value={pitch.name}>
+                        <SelectItem key={pitch._id || pitch.id} value={pitch.name}>
                           {pitch.name} - {pitch.city}
                         </SelectItem>
                       ))}

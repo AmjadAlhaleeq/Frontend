@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -183,7 +182,8 @@ const Reservations = () => {
             const updatedLineup = res.lineup ? [...res.lineup] : [];
             if (!updatedLineup.some(player => player.userId === currentUserId)) {
               updatedLineup.push({ 
-                userId: currentUserId, 
+                userId: currentUserId,
+                name: `Player ${currentUserId.substring(0, 4)}`,
                 status: 'joined',
                 joinedAt: new Date().toISOString(),
                 playerName: `Player ${currentUserId.substring(0, 4)}` 

@@ -24,6 +24,10 @@ export interface UserStats {
   assists: number;
   matchesPlayed: number;
   winPercentage: number;
+  gamesPlayed: number;
+  goalsScored: number;
+  cleansheets: number;
+  mvps: number;
 }
 
 export interface Highlight {
@@ -37,11 +41,14 @@ export interface Highlight {
 
 export interface Pitch {
   _id: string;
+  id?: string;
   name: string;
   location: string;
   city: string;
   backgroundImage: string;
   images: string[];
+  image?: string;
+  additionalImages?: string[];
   playersPerSide: number;
   description: string;
   services: Record<string, boolean | string>;
@@ -73,6 +80,7 @@ export interface Reservation {
   playersJoined?: number;
   highlights?: Highlight[];
   summary?: string;
+  additionalImages?: string[];
 }
 
 interface ReservationContextProps {
@@ -119,7 +127,19 @@ const ReservationContext = createContext<ReservationContextProps>({
   setReservations: () => {},
   joinGame: () => {},
   updateReservationStatus: () => {},
-  getUserStats: () => ({ wins: 0, losses: 0, draws: 0, goals: 0, assists: 0, matchesPlayed: 0, winPercentage: 0 }),
+  getUserStats: () => ({ 
+    wins: 0, 
+    losses: 0, 
+    draws: 0, 
+    goals: 0, 
+    assists: 0, 
+    matchesPlayed: 0, 
+    winPercentage: 0,
+    gamesPlayed: 0,
+    goalsScored: 0,
+    cleansheets: 0,
+    mvps: 0
+  }),
   deleteHighlight: () => {},
 });
 
@@ -263,10 +283,15 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     let goals = 0;
     let assists = 0;
     let matchesPlayed = 0;
+    let gamesPlayed = 0;
+    let goalsScored = 0;
+    let cleansheets = 0;
+    let mvps = 0;
 
     reservations.forEach(reservation => {
       if (reservation.status === 'completed' && reservation.lineup?.some(player => player.userId === userId)) {
         matchesPlayed++;
+        gamesPlayed++;
         // Add logic to calculate wins/losses/draws based on game results
         // This is a simplified version - you might want to enhance this
       }
@@ -281,7 +306,11 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
       goals,
       assists,
       matchesPlayed,
-      winPercentage
+      winPercentage,
+      gamesPlayed,
+      goalsScored,
+      cleansheets,
+      mvps
     };
   };
 
@@ -353,4 +382,4 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
 export const useReservation = () => useContext(ReservationContext);
 
 export default ReservationContext;
-export type { Player, Highlight };
+export type { Player };
