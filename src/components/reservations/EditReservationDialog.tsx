@@ -65,7 +65,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
   onClose,
   isAdmin = false, // Default isAdmin to false; should be explicitly passed
 }) => {
-  const { editReservation } = useReservation(); // Context function to save changes
+  const { updateReservation } = useReservation(); // Context function to save changes
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details"); // For tabs in past game admin view
   const isPastGame = new Date(reservation.date) < new Date(new Date().setHours(0,0,0,0)) || reservation.status === "completed";
@@ -78,34 +78,29 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
       date: new Date(reservation.date), // Ensure date is a Date object for the calendar
       time: reservation.time,
       location: reservation.location,
-      price: reservation.price,
+      price: reservation.price || 0,
       maxPlayers: reservation.maxPlayers,
     },
   });
   
   // Handle saving highlights
-  const handleSaveHighlight = (highlight: Highlight) => {
+  const handleSaveHighlight = (highlight: Omit<Highlight, "id">) => {
+    // Create a new highlight with ID and required properties
+    const newHighlight: Highlight = {
+      ...highlight,
+      id: `highlight_${Date.now()}`,
+      minute: highlight.minute || 0,
+      timestamp: new Date().toISOString()
+    };
+    
     // Create a new array of highlights
     const currentHighlights = reservation.highlights || [];
-    const updatedHighlights = [...currentHighlights, highlight];
+    const updatedHighlights = [...currentHighlights, newHighlight];
     
-    // Here we directly modify the reservation object to update the highlights
-    // This is necessary since editReservation doesn't accept highlights directly
-    const updatedReservation = { ...reservation, highlights: updatedHighlights };
-    
-    // Use the editReservation to save other fields, but we'll rely on the local state update for highlights
-    editReservation(reservation.id, {
-      pitchName: updatedReservation.pitchName,
-      date: updatedReservation.date,
-      time: updatedReservation.time,
-      location: updatedReservation.location,
-      price: updatedReservation.price,
-      maxPlayers: updatedReservation.maxPlayers,
+    // Update the reservation with new highlights
+    updateReservation(reservation.id, {
+      highlights: updatedHighlights
     });
-    
-    // Update the reservation context directly for highlights
-    // Note: In a real app with a backend, you'd make an API call here
-    // For this example, we're relying on the ReservationContext to handle it internally
     
     toast({
       title: "Highlight Added",
@@ -125,8 +120,8 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
    */
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     // TODO: API Call: Send 'data' to backend to update the reservation.
-    // The context's editReservation would then ideally update based on backend response.
-    editReservation(reservation.id, {
+    // The context's updateReservation would then ideally update based on backend response.
+    updateReservation(reservation.id, {
       ...data,
       date: data.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD string
     });
@@ -344,9 +339,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
           // Default view: Form for editing upcoming games (admin) or viewing details if non-admin somehow gets here
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* ... FormFields are repeated here. Consider refactoring to a separate component if identical. */}
-              {/* For brevity, assuming these are similar to the ones in the TabsContent above. */}
-              {/* FormField for Pitch Name */}
               <FormField
                 control={form.control}
                 name="pitchName"
@@ -361,7 +353,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
-              {/* FormField for Date */}
               <FormField
                 control={form.control}
                 name="date"
@@ -402,7 +393,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
-              {/* FormField for Time */}
               <FormField
                 control={form.control}
                 name="time"
@@ -426,7 +416,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
-              {/* FormField for Location */}
               <FormField
                 control={form.control}
                 name="location"
@@ -441,9 +430,7 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                 )}
               />
 
-              {/* Grid for Price and Max Players */}
               <div className="grid grid-cols-2 gap-4">
-                {/* FormField for Price */}
                 <FormField
                   control={form.control}
                   name="price"
@@ -458,7 +445,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
                   )}
                 />
 
-                {/* FormField for Max Players */}
                 <FormField
                   control={form.control}
                   name="maxPlayers"

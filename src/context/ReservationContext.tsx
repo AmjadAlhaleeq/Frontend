@@ -14,6 +14,7 @@ interface Player {
   playerName: string;
   status: "joined" | "pending" | "cancelled";
   joinedAt: string;
+  avatar?: string;
 }
 
 export interface UserStats {
@@ -37,6 +38,7 @@ export interface Highlight {
   playerName: string;
   minute: number;
   description?: string;
+  timestamp: string;
 }
 
 export interface Pitch {
@@ -79,7 +81,7 @@ export interface Reservation {
   imageUrl?: string;
   playersJoined?: number;
   highlights?: Highlight[];
-  summary?: string;
+  summary?: string | { homeScore: number; awayScore: number; completed: boolean; completedAt: string };
   additionalImages?: string[];
 }
 

@@ -89,34 +89,38 @@ const AddReservationDialog = () => {
       return;
     }
     
-    // Create the reservation data object
+    // Create the reservation data object with all required fields
     const reservationData = {
+      pitchId: selectedPitch?._id || `pitch_${Date.now()}`,
       title,
       pitchName,
       date: format(date, 'yyyy-MM-dd'),
       time: time,
       startTime: time.split('-')[0]?.trim() || time,
+      endTime: time.split('-')[1]?.trim() || time,
       duration: 90, // Default duration
       location: selectedPitch?.location || "",
       city: selectedPitch?.city || "",
       maxPlayers: maxPlayers || 12,
       price: parseFloat(price) || 0,
-      imageUrl: selectedPitch?.image,
-      additionalImages: selectedPitch?.additionalImages || [],
-      startPlayerName: "",
-      endPlayerName: "",
+      imageUrl: selectedPitch?.images?.[0] || selectedPitch?.backgroundImage || "/football-pitch-bg.jpg",
+      additionalImages: selectedPitch?.images || [],
+      status: "upcoming" as const,
+      createdBy: localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).id : 'admin',
+      playersJoined: 0,
+      lineup: [],
+      waitingList: [],
     };
     
     // Add the reservation
-    const newReservation = addReservation(reservationData);
-
-    if (newReservation) {
+    try {
+      addReservation(reservationData);
       toast({
         title: "Success!",
         description: "Reservation created successfully.",
       });
       setOpen(false);
-    } else {
+    } catch (error) {
       toast({
         title: "Error",
         description: "A reservation for this pitch at this time already exists or the pitch doesn't exist.",
@@ -164,7 +168,7 @@ const AddReservationDialog = () => {
               </SelectTrigger>
               <SelectContent>
                 {pitches.map((pitch) => (
-                  <SelectItem key={pitch.id} value={pitch.name}>
+                  <SelectItem key={pitch._id} value={pitch.name}>
                     {pitch.name} ({Math.max(pitch.playersPerSide, 5)}v{Math.max(pitch.playersPerSide, 5)})
                   </SelectItem>
                 ))}
