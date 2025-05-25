@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Define the player interface with role information
@@ -58,7 +59,6 @@ export interface Pitch {
   facilities: string[];
   additionalImages?: string[]; // Up to 4 images total
   type?: string; // 'indoor' or 'outdoor'
-  openingHours?: string;
   details?: {
     address?: string;
     description?: string;
@@ -75,6 +75,7 @@ export interface Reservation {
   date: string;
   time: string;
   startTime?: string;
+  endTime?: string; // Added endTime property
   duration?: number;
   location: string;
   city: string;
