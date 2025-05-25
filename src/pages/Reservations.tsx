@@ -362,6 +362,14 @@ const Reservations = () => {
     setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" });
   }, [userRole, toast]);
 
+  const handleOpenSuspensionDialog = useCallback((playerId: string, playerName: string) => {
+    setSuspensionDialog({
+      isOpen: true,
+      playerName,
+      playerId
+    });
+  }, []);
+
   const handleAddSummary = useCallback((reservation: Reservation) => {
     setSelectedGameForSummary(reservation);
     setIsSummaryDialogOpen(true);
@@ -572,13 +580,7 @@ const Reservations = () => {
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
           onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
-          onSuspendPlayer={userRole === 'admin' ? (playerId: string, playerName: string) => {
-            setSuspensionDialog({
-              isOpen: true,
-              playerName,
-              playerId
-            });
-          } : undefined}
+          onSuspendPlayer={userRole === 'admin' ? handleOpenSuspensionDialog : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
         />
       )}
@@ -593,13 +595,7 @@ const Reservations = () => {
           }}
           reservation={selectedGameForSummary}
           onSave={handleSaveSummary}
-          onSuspendPlayer={(playerId: string, playerName: string) => {
-            setSuspensionDialog({
-              isOpen: true,
-              playerName,
-              playerId
-            });
-          }}
+          onSuspendPlayer={handleOpenSuspensionDialog}
         />
       )}
 
