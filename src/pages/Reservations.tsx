@@ -358,8 +358,6 @@ const Reservations = () => {
       title: "Player Suspended",
       description: `Player has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
     });
-    
-    setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" });
   }, [userRole, toast]);
 
   const handleOpenSuspensionDialog = useCallback((playerId: string, playerName: string) => {
@@ -580,7 +578,7 @@ const Reservations = () => {
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
           onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
-          onSuspendPlayer={userRole === 'admin' ? handleOpenSuspensionDialog : undefined}
+          onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
         />
       )}
