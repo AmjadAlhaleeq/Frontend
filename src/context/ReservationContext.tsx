@@ -11,9 +11,28 @@ import { useNavigate } from "react-router-dom";
 interface Player {
   userId: string;
   name: string;
-  playerName?: string;
-  status?: "joined" | "pending" | "cancelled";
-  joinedAt?: string;
+  playerName: string;
+  status: "joined" | "pending" | "cancelled";
+  joinedAt: string;
+}
+
+export interface UserStats {
+  wins: number;
+  losses: number;
+  draws: number;
+  goals: number;
+  assists: number;
+  matchesPlayed: number;
+  winPercentage: number;
+}
+
+export interface Highlight {
+  id: string;
+  type: 'goal' | 'assist' | 'save' | 'tackle';
+  playerId: string;
+  playerName: string;
+  minute: number;
+  description?: string;
 }
 
 export interface Pitch {
@@ -52,7 +71,8 @@ export interface Reservation {
   price?: number;
   imageUrl?: string;
   playersJoined?: number;
-  highlights?: any[];
+  highlights?: Highlight[];
+  summary?: string;
 }
 
 interface ReservationContextProps {
@@ -60,6 +80,7 @@ interface ReservationContextProps {
   pitches: Pitch[];
   addReservation: (reservation: Omit<Reservation, "id">) => void;
   updateReservation: (id: number, updates: Partial<Reservation>) => void;
+  editReservation: (id: number, updates: Partial<Reservation>) => void;
   deleteReservation: (id: number) => void;
   joinReservation: (reservationId: number, userId: string, playerName: string) => void;
   cancelReservation: (reservationId: number, userId: string) => void;
@@ -71,8 +92,11 @@ interface ReservationContextProps {
   deletePitch: (id: number) => void;
   navigateToReservation: (pitchName: string) => void;
   setPitches: (pitches: Pitch[]) => void;
+  setReservations: (reservations: Reservation[]) => void;
   joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
   updateReservationStatus: (id: number, status: "upcoming" | "completed" | "cancelled") => void;
+  getUserStats: (userId: string) => UserStats;
+  deleteHighlight: (reservationId: number, highlightId: string) => void;
 }
 
 const ReservationContext = createContext<ReservationContextProps>({
@@ -80,6 +104,7 @@ const ReservationContext = createContext<ReservationContextProps>({
   pitches: [],
   addReservation: () => {},
   updateReservation: () => {},
+  editReservation: () => {},
   deleteReservation: () => {},
   joinReservation: () => {},
   cancelReservation: () => {},
@@ -91,8 +116,11 @@ const ReservationContext = createContext<ReservationContextProps>({
   deletePitch: () => {},
   navigateToReservation: () => {},
   setPitches: () => {},
+  setReservations: () => {},
   joinGame: () => {},
   updateReservationStatus: () => {},
+  getUserStats: () => ({ wins: 0, losses: 0, draws: 0, goals: 0, assists: 0, matchesPlayed: 0, winPercentage: 0 }),
+  deleteHighlight: () => {},
 });
 
 interface ReservationProviderProps {
@@ -135,6 +163,10 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     );
   };
 
+  const editReservation = (id: number, updates: Partial<Reservation>) => {
+    updateReservation(id, updates);
+  };
+
   const deleteReservation = (id: number) => {
     setReservations((prevReservations) =>
       prevReservations.filter((reservation) => reservation.id !== id)
@@ -145,11 +177,11 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     setReservations((prevReservations) =>
       prevReservations.map((reservation) => {
         if (reservation.id === reservationId) {
-          const newPlayer = { 
+          const newPlayer: Player = { 
             userId: userId, 
             name: playerName,
             playerName: playerName,
-            status: "joined" as const,
+            status: "joined",
             joinedAt: new Date().toISOString()
           };
           if (!reservation.lineup) {
@@ -224,6 +256,49 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     updateReservation(id, { status });
   };
 
+  const getUserStats = (userId: string): UserStats => {
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
+    let goals = 0;
+    let assists = 0;
+    let matchesPlayed = 0;
+
+    reservations.forEach(reservation => {
+      if (reservation.status === 'completed' && reservation.lineup?.some(player => player.userId === userId)) {
+        matchesPlayed++;
+        // Add logic to calculate wins/losses/draws based on game results
+        // This is a simplified version - you might want to enhance this
+      }
+    });
+
+    const winPercentage = matchesPlayed > 0 ? (wins / matchesPlayed) * 100 : 0;
+
+    return {
+      wins,
+      losses,
+      draws,
+      goals,
+      assists,
+      matchesPlayed,
+      winPercentage
+    };
+  };
+
+  const deleteHighlight = (reservationId: number, highlightId: string) => {
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          return {
+            ...reservation,
+            highlights: reservation.highlights?.filter(h => h.id !== highlightId) || []
+          };
+        }
+        return reservation;
+      })
+    );
+  };
+
   const addPitch = (pitch: Pitch) => {
     setPitches([...pitches, pitch]);
   };
@@ -251,6 +326,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         pitches,
         addReservation,
         updateReservation,
+        editReservation,
         deleteReservation,
         joinReservation,
         cancelReservation,
@@ -262,8 +338,11 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         deletePitch,
         navigateToReservation,
         setPitches,
+        setReservations,
         joinGame,
         updateReservationStatus,
+        getUserStats,
+        deleteHighlight,
       }}
     >
       {children}
@@ -274,4 +353,4 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
 export const useReservation = () => useContext(ReservationContext);
 
 export default ReservationContext;
-export { Player };
+export type { Player, Highlight };

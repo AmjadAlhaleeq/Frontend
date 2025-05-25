@@ -28,14 +28,14 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ReservationProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <ReservationProvider>
           <ScrollToTop /> {/* Scroll to top on page change */}
           <Toaster />
           <Sonner />
           <Index />
-        </BrowserRouter>
-      </ReservationProvider>
+        </ReservationProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

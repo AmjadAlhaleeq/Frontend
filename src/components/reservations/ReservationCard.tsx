@@ -51,7 +51,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const progressPercentage = Math.min((currentPlayers / actualMaxPlayers) * 100, 100);
   
   const userHasJoined = isUserJoined(reservation.id, userId);
-  const isInWaitingList = reservation.waitingList?.some(player => player.userId === userId) || false;
+  const isInWaitingList = reservation.waitingList?.includes(userId) || false;
   
   const formatDate = (dateString: string) => {
     try {
