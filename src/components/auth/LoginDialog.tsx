@@ -316,7 +316,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
         // Navigate to home page
         navigate("/");
       }
-    } catch (error: any) {
+    } catch (error: Error | any) {
       console.error("Login error:", error);
 
       let errorMessage = "Login failed. Please try again.";

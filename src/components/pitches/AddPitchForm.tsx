@@ -1,5 +1,3 @@
-
-// AddPitchForm.tsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,25 +15,6 @@ import { FileText, Camera, Settings, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ImageUpload from "@/components/ui/image-upload";
-
-const CLOUD_NAME = "dsmuk27ce";
-const UPLOAD_PRESET = "bokit_preset";
-
-// Upload image to Cloudinary
-const uploadToCloudinary = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
-
-  const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-    { method: "POST", body: formData }
-  );
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || "Upload failed");
-  return data.secure_url;
-};
 
 const facilityOptions = [
   { value: "wifi", label: "WiFi" },
@@ -72,6 +51,7 @@ const AddPitchForm = () => {
   });
 
   const [bgPreview, setBgPreview] = useState("");
+  const [loading, setLoading] = useState(false);
   const [additionalPreviews, setAdditionalPreviews] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -124,121 +104,81 @@ const AddPitchForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, location, city, type, backgroundImage } = formData;
-    
-    // Improved validation - check both File object and preview URL
-    if (!name.trim()) {
+
+    const missingFields = [];
+    if (!formData.name) missingFields.push("Pitch Name");
+    if (!formData.location) missingFields.push("Location");
+    if (!formData.city) missingFields.push("City");
+    if (!formData.type) missingFields.push("Pitch Type");
+    if (!formData.backgroundImage) missingFields.push("Background Image");
+
+    if (missingFields.length > 0) {
       toast({
-        title: "Missing Field",
-        description: "Please enter a pitch name.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!location.trim()) {
-      toast({
-        title: "Missing Field", 
-        description: "Please enter the pitch location.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!city.trim()) {
-      toast({
-        title: "Missing Field",
-        description: "Please enter the city.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!type) {
-      toast({
-        title: "Missing Field",
-        description: "Please select a pitch type.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Fixed validation: check both backgroundImage file and bgPreview URL
-    if (!backgroundImage && !bgPreview) {
-      toast({
-        title: "Missing Field",
-        description: "Please upload a background image.",
+        title: "Missing Fields",
+        description: `Please provide: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
     }
 
     try {
+      setLoading(true);
+
       const token = localStorage.getItem("authToken");
-      if (!token) {
-        toast({
-          title: "Authentication Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!token) throw new Error("Authentication Error: Please log in.");
 
-      // Upload background image only if it's a File object
-      let bgUrl = bgPreview;
-      if (backgroundImage instanceof File) {
-        bgUrl = await uploadToCloudinary(backgroundImage);
-      }
-      
-      // Upload additional images
-      const imageUrls = await Promise.all(
-        formData.additionalImages.map(uploadToCloudinary)
-      );
+      const multipartForm = new FormData();
+      multipartForm.append("name", formData.name);
+      multipartForm.append("location", formData.location);
+      multipartForm.append("city", formData.city);
+      multipartForm.append("playersPerSide", formData.playersPerSide);
+      multipartForm.append("description", formData.description);
+      multipartForm.append("backgroundImage", formData.backgroundImage!);
 
-      const services: Record<string, boolean | string> = { type };
-      facilityOptions.forEach((opt) => {
-        services[opt.value] = formData.facilities.includes(opt.value);
+      formData.additionalImages.forEach((file) => {
+        multipartForm.append("images", file);
       });
+
+      const services = {
+        type: formData.type,
+        ...Object.fromEntries(
+          facilityOptions.map((opt) => [
+            opt.value,
+            formData.facilities.includes(opt.value),
+          ])
+        ),
+      };
+      multipartForm.append("services", JSON.stringify(services));
 
       const res = await fetch("http://127.0.0.1:3000/pitches", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          // Don't set content-type manually for FormData
         },
-        body: JSON.stringify({
-          name,
-          location,
-          city,
-          backgroundImage: bgUrl,
-          images: imageUrls,
-          playersPerSide: parseInt(formData.playersPerSide),
-          description: formData.description,
-          services,
-        }),
+        body: multipartForm,
       });
 
       const result = await res.json();
       if (result.status !== "success") {
-        throw new Error(result.message || "Failed to create pitch");
+        throw new Error(result.message || "Unknown error");
       }
 
       toast({
-        title: "Success",
-        description: "Pitch created successfully!",
+        title: "Pitch Created",
+        description: "Pitch added successfully.",
       });
       navigate("/pitches");
     } catch (err: unknown) {
-      console.error("Error creating pitch:", err);
-      let message = "Failed to create pitch.";
-      if (err instanceof Error) {
-        message = err.message;
-      }
+      console.error("Error:", err);
       toast({
         title: "Error",
-        description: message,
+        description:
+          err instanceof Error ? err.message : "Failed to create pitch.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -247,7 +187,6 @@ const AddPitchForm = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         <h1 className="text-3xl font-bold mb-6 text-center">Add New Pitch</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -259,19 +198,16 @@ const AddPitchForm = () => {
                 placeholder="Pitch Name"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                required
               />
               <Input
                 placeholder="City"
                 value={formData.city}
                 onChange={(e) => handleChange("city", e.target.value)}
-                required
               />
               <Input
                 placeholder="Full Address"
                 value={formData.location}
                 onChange={(e) => handleChange("location", e.target.value)}
-                required
               />
               <Textarea
                 placeholder="Description"
@@ -308,7 +244,6 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
-          {/* Images */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -349,7 +284,6 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
-          {/* Facilities */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -380,7 +314,6 @@ const AddPitchForm = () => {
             </CardContent>
           </Card>
 
-          {/* Actions */}
           <div className="flex justify-center space-x-4">
             <Button
               type="button"
@@ -389,8 +322,12 @@ const AddPitchForm = () => {
             >
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Create Pitch
+            <Button
+              disabled={loading}
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {loading ? "creating..." : "Create Pitch"}
             </Button>
           </div>
         </form>

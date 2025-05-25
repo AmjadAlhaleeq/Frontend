@@ -11,6 +11,8 @@ import PitchDetailsDialog from "@/components/pitches/PitchDetailsDialog";
 import { fetchPitches, deletePitchById } from "@/lib/api";
 
 const Pitches = () => {
+  const [loading, setLoading] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<"admin" | "player" | null>(null);
@@ -72,9 +74,8 @@ const Pitches = () => {
   const handleConfirmDelete = async () => {
     if (!pitchToDelete) return;
 
-    deletePitch(Number(pitchToDelete._id));
-
     try {
+      setLoading(true);
       await deletePitchById(pitchToDelete._id);
       toast({
         title: "Pitch Deleted",
@@ -87,6 +88,8 @@ const Pitches = () => {
         description: "Failed to delete pitch.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
 
     setPitchToDelete(null);
