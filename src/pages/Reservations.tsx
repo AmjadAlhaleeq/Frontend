@@ -501,6 +501,7 @@ const Reservations = () => {
             }
           }}
           currentUserId={currentUserId || ""}
+          actualMaxPlayers={calculateActualMaxPlayers(selectedGameForDetails.maxPlayers)}
         />
       )}
     </div>
