@@ -480,6 +480,11 @@ const Reservations = () => {
                       setSelectedGameForDetails(reservation);
                       setIsGameDetailsDialogOpen(true);
                     }}
+                    onAddSummary={userRole === 'admin' ? (reservation) => {
+                      // Handle add summary logic here
+                      console.log('Add summary for reservation:', reservation.id);
+                    } : undefined}
+                    isUserLoggedIn={!!currentUserId}
                   />
                 </div>
               ))}
