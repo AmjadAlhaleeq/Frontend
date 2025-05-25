@@ -1,11 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle,
-  Users,
-  Calendar as CalendarIcon,
+  CalendarIcon,
   ArrowRight,
   ListFilter,
   XCircle,
@@ -15,36 +13,42 @@ import { useToast } from "@/hooks/use-toast";
 import { useReservation, Reservation } from "@/context/ReservationContext";
 import AddReservationDialog from "@/components/reservations/AddReservationDialog";
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
-import { cn } from "@/lib/utils";
 import ReservationCard from "@/components/reservations/ReservationCard";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
 import { format, parseISO } from 'date-fns';
 
-/**
- * Formats a date string or Date object into a more readable format.
- * @param dateString - The date string (ISO format) or Date object.
- * @param dateFormat - The desired date format string (default: "PP").
- * @returns Formatted date string or "Invalid Date" on error.
- */
-const formatDate = (dateString: string | Date, dateFormat: string = "PP") => {
-  try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return format(date, dateFormat);
-  } catch (error) {
-    console.error("Error formatting date:", dateString, error);
-    return "Invalid Date";
-  }
-};
+// Empty state component
+const EmptyState: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  actionText?: string;
+  onActionClick?: () => void;
+  actionIcon?: React.ReactNode;
+}> = ({ icon, title, description, actionText, onActionClick, actionIcon }) => (
+  <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">
+    <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4 mx-auto w-fit">
+      {icon}
+    </div>
+    <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">{title}</h3>
+    <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md mx-auto">
+      {description}
+    </p>
+    {actionText && onActionClick && (
+      <Button 
+        onClick={onActionClick} 
+        className="bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm"
+      >
+        {actionText}
+        {actionIcon}
+      </Button>
+    )}
+  </div>
+);
 
 /**
  * Reservations Page Component
- * Displays and manages game reservations
- * 
- * Features:
- * - Filter reservations by date
- * - Join or leave games
- * - View game details
- * - Admin controls for managing reservations
+ * Displays and manages game reservations with improved UX
  */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
@@ -65,7 +69,6 @@ const Reservations = () => {
     leaveWaitingList,
     isUserJoined,
     hasUserJoinedOnDate,
-    getReservationsForDate,
     updateReservationStatus,
     deleteReservation,
     setReservations,
@@ -113,7 +116,6 @@ const Reservations = () => {
     
     window.addEventListener('showGameDetails', handleShowGameDetails);
     
-    // Simulate API loading
     setTimeout(() => setIsLoading(false), 800);
     
     return () => {
@@ -121,11 +123,6 @@ const Reservations = () => {
     };
   }, [reservations, setReservations]); 
 
-  /**
-   * Calculates the actual maximum players based on the game format.
-   * For 5v5 format (10 players), we add 2 for substitutes.
-   * For all other formats, add 2 as requested.
-   */
   const calculateActualMaxPlayers = (maxPlayers: number) => {
     if (maxPlayers === 10) return 12;
     return maxPlayers + 2;
@@ -136,7 +133,6 @@ const Reservations = () => {
     const today = new Date(new Date().setHours(0, 0, 0, 0)); 
 
     if (currentDate) {
-      // For current date
       const dateString = format(currentDate, 'yyyy-MM-dd');
       const filtered = reservations.filter(
         res => res.date === dateString && res.status === "upcoming"
@@ -156,7 +152,6 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  // Handle joining a game and update localStorage
   const handleJoinGame = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -176,7 +171,6 @@ const Reservations = () => {
       return;
     }
     
-    // Join game through context
     joinGame(reservationId, undefined, currentUserId);
     
     // Update localStorage
@@ -186,7 +180,6 @@ const Reservations = () => {
         const parsedReservations = JSON.parse(storedReservations);
         const updatedReservations = parsedReservations.map((res: Reservation) => {
           if (res.id === reservationId) {
-            // Use lineup instead of players
             const updatedLineup = res.lineup ? [...res.lineup] : [];
             if (!updatedLineup.some(player => player.userId === currentUserId)) {
               updatedLineup.push({ 
@@ -207,7 +200,6 @@ const Reservations = () => {
     }
   };
   
-  // Handle canceling a reservation and update localStorage
   const handleCancelReservation = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -218,7 +210,6 @@ const Reservations = () => {
       return;
     }
     
-    // Cancel reservation through context
     cancelReservation(reservationId, currentUserId);
     
     // Update localStorage
@@ -242,7 +233,6 @@ const Reservations = () => {
     }
   };
 
-  // Handle joining waiting list and update localStorage
   const handleJoinWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -262,7 +252,6 @@ const Reservations = () => {
       return;
     }
     
-    // Only allow joining waiting list for games at max capacity
     const reservation = reservations.find(r => r.id === reservationId);
     if (reservation && reservation.lineup && reservation.lineup.length < calculateActualMaxPlayers(reservation.maxPlayers)) {
       toast({
@@ -273,7 +262,6 @@ const Reservations = () => {
       return;
     }
     
-    // Restrict waiting list to max 3 people
     if (reservation && reservation.waitingList && reservation.waitingList.length >= 3) {
       toast({
         title: "Waiting List Full",
@@ -283,7 +271,6 @@ const Reservations = () => {
       return;
     }
     
-    // Join waiting list through context
     joinWaitingList(reservationId, currentUserId);
     
     // Update localStorage
@@ -308,7 +295,6 @@ const Reservations = () => {
     }
   };
   
-  // Handle leaving waiting list and update localStorage
   const handleLeaveWaitingList = (reservationId: number) => {
     if (!currentUserId) {
       toast({ 
@@ -319,7 +305,6 @@ const Reservations = () => {
       return;
     }
     
-    // Leave waiting list through context
     leaveWaitingList(reservationId, currentUserId);
     
     // Update localStorage
@@ -343,7 +328,6 @@ const Reservations = () => {
     }
   };
   
-  // Handle deleting reservation and update localStorage
   const handleDeleteReservation = (reservationId: number) => {
     if (!currentUserId || userRole !== 'admin') {
       toast({ 
@@ -354,7 +338,6 @@ const Reservations = () => {
       return;
     }
     
-    // Delete reservation through context
     deleteReservation(reservationId);
     
     // Update localStorage
@@ -386,50 +369,14 @@ const Reservations = () => {
     return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
   }, [currentDate, upcomingReservations.length]);
 
-  const hasUserJoinedOnDateFixed = (dateString: string, userId: string): boolean => {
-    if (!userId) return false;
-    try {
-      const date = new Date(dateString);
-      return hasUserJoinedOnDate(date, userId);
-    } catch (error) {
-      console.error("Error converting date:", error);
-      return false;
-    }
-  };
-
-  // Handle suspending a player
-  const suspendPlayer = (userId: string, reason: string, duration: number) => {
-    console.log(`Suspending player ${userId} for ${duration} days for reason: ${reason}`);
-    toast({
-      title: "Player Suspended",
-      description: `Player has been suspended for ${duration} days.`,
-    });
-  };
-  
-  // Handle kicking a player from a game
-  const kickPlayerFromGame = (reservationId: number, userId: string) => {
-    if (!userId) return;
-    
-    // Call the context method to handle this action
-    cancelReservation(reservationId, userId);
-    
-    toast({
-      title: "Player Removed",
-      description: "The player has been removed from this game.",
-    });
-  };
-
-  // Fix the type issue by creating a function that returns a function
   const createIsUserJoinedFunction = () => {
     return (reservationId: number, userId: string): boolean => {
       return isUserJoined(reservationId, userId);
     };
   };
   
-  // Create the function that will be passed to ReservationCard
   const isUserJoinedFunction = createIsUserJoinedFunction();
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -529,9 +476,11 @@ const Reservations = () => {
                   onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
                   isUserJoined={isUserJoinedFunction}
                   isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
-                  suspendPlayer={userRole === 'admin' ? suspendPlayer : undefined}
-                  kickPlayerFromGame={userRole === 'admin' ? kickPlayerFromGame : undefined}
                   onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
+                  onViewDetails={(reservation) => {
+                    setSelectedGameForDetails(reservation);
+                    setIsGameDetailsDialogOpen(true);
+                  }}
                 />
               ))}
             </>
@@ -552,50 +501,10 @@ const Reservations = () => {
             }
           }}
           currentUserId={currentUserId || ""}
-          actualMaxPlayers={calculateActualMaxPlayers(selectedGameForDetails.maxPlayers)}
         />
       )}
     </div>
   );
 };
-
-/**
- * EmptyState component to display when there's no data.
- */
-const EmptyState = ({
-  title,
-  description,
-  actionText,
-  onActionClick,
-  icon,
-  actionIcon
-}: {
-  title: string;
-  description: string;
-  actionText?: string; 
-  onActionClick?: () => void;
-  icon?: React.ReactNode;
-  actionIcon?: React.ReactNode;
-}) => (
-  <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50">
-    <div className="p-3 bg-teal-500/10 dark:bg-teal-400/10 rounded-full mb-4">
-      {icon || <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-teal-600 dark:text-teal-400" />}
-    </div>
-    <h3 className="text-lg sm:text-xl font-medium mb-2 text-gray-800 dark:text-gray-100">{title}</h3>
-    <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-xs sm:max-w-md mx-auto">{description}</p>
-    {actionText && onActionClick && (
-      <Button 
-        onClick={onActionClick} 
-        className={cn(
-            "bg-teal-600 hover:bg-teal-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-5 py-2.5 text-sm",
-            actionText === "Clear Date Filter" && "bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
-        )}
-      >
-        {actionText}
-        {actionIcon || <ArrowRight className="ml-2 h-4 w-4" />}
-      </Button>
-    )}
-  </div>
-);
 
 export default Reservations;

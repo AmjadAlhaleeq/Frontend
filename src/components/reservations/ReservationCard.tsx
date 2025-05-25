@@ -1,9 +1,9 @@
+
 import React, { useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -15,21 +15,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useReservation, Reservation } from "@/context/ReservationContext";
-import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Clock, Users, ChevronLeft, ChevronRight, DollarSign, Eye } from "lucide-react";
 import GameSummaryDialog from "./GameSummaryDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -54,6 +50,7 @@ interface ReservationCardProps {
   suspendPlayer?: (userId: string, reason: string, duration: number) => void;
   kickPlayerFromGame?: (reservationId: number, userId: string) => void;
   onDeleteReservation?: (id: number) => void;
+  onViewDetails?: (reservation: Reservation) => void;
 }
 
 interface PlayerDetailsDialogProps {
@@ -66,7 +63,6 @@ interface PlayerDetailsDialogProps {
 // Email notification setup (placeholder function, ready for API)
 async function sendCancellationEmail(playerEmail: string, playerName: string, pitchName: string, date: string, startTime: string) {
   // TODO: Connect to real email API or use your backend endpoint here.
-  // Placeholder: log outgoing email.
   console.log(`Sending cancellation email to ${playerEmail} for reservation at ${pitchName} on ${date} at ${startTime}`);
 }
 
@@ -86,14 +82,24 @@ const PlayerDetailsDialog: React.FC<PlayerDetailsDialogProps> = ({
   onClose,
   userRole
 }) => {
+  // Generate initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
-              <AvatarFallback>{player.playerName.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-teal-600 text-white font-bold text-lg">
+                {getInitials(player.playerName)}
+              </AvatarFallback>
             </Avatar>
             {player.playerName}
           </DialogTitle>
@@ -165,8 +171,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   suspendPlayer,
   kickPlayerFromGame,
   onDeleteReservation,
+  onViewDetails,
 }) => {
-  const [playerName, setPlayerName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -185,9 +191,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       const gameStartTime = new Date(gameDate);
       gameStartTime.setHours(startHour, startMinute, 0, 0);
       
-      // Add duration to get end time (assuming duration is in hours)
+      // Add duration to get end time (duration is in minutes)
       const gameEndTime = new Date(gameStartTime);
-      gameEndTime.setHours(gameStartTime.getHours() + (reservation.duration || 2));
+      gameEndTime.setMinutes(gameStartTime.getMinutes() + (reservation.duration || 120));
       
       const now = new Date();
       
@@ -196,10 +202,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       } else if (now >= gameEndTime) {
         return 'completed';
       } else {
-        return 'in-progress'; // Currently playing
+        return 'in-progress';
       }
     } catch (error) {
-      // Fallback to reservation status if date parsing fails
       console.error("Error determining game status:", error);
       return reservation.status || 'upcoming';
     }
@@ -210,15 +215,25 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const isGameUpcoming = gameStatus === 'upcoming';
   const isAdmin = userRole === "admin";
 
-  // Get pitch photos (assuming we have them in the reservation or use defaults)
+  // Get pitch photos
   const pitchPhotos = reservation.additionalImages && reservation.additionalImages.length > 0
     ? [reservation.imageUrl, ...reservation.additionalImages].filter(Boolean)
     : [reservation.imageUrl || `https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=400&fit=crop&crop=center`];
 
   const handleJoin = async () => {
+    // Check if user is logged in
+    if (!userId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join a game.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsJoining(true);
     try {
-      onJoin(reservation.id, playerName, userId);
+      onJoin(reservation.id, "", userId);
       toast({
         title: "Joined Game",
         description: "You have successfully joined the game!",
@@ -254,6 +269,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   const handleJoinWaitingList = () => {
+    if (!userId) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to join the waiting list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     onJoinWaitingList(reservation.id, userId);
     toast({
       title: "Joined Waiting List",
@@ -279,16 +303,29 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     setShowSummaryDialog(false);
   };
 
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails(reservation);
+    }
+  };
+
   const isUserInWaitingList = reservation.waitingList?.includes(userId);
 
-  const getPlayerAvatar = (player: Player) => {
-    const nameParts = player.playerName.split(" ");
-    const initials = nameParts.map((part) => part[0].toUpperCase()).join("");
+  // Generate initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
+  };
 
+  const getPlayerAvatar = (player: Player) => {
     return (
       <Avatar className="h-8 w-8 cursor-pointer" onClick={() => handlePlayerClick(player)}>
-        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${player.playerName}`} />
-        <AvatarFallback>{initials}</AvatarFallback>
+        <AvatarFallback className="bg-teal-600 text-white font-bold">
+          {getInitials(player.playerName)}
+        </AvatarFallback>
       </Avatar>
     );
   };
@@ -303,13 +340,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   const handleDeleteReservation = async () => {
     setShowDeleteDialog(false);
-    // Call deletion
     onDeleteReservation?.(reservation.id);
 
     // Send email notifications to joined players, if emails exist
     if (reservation.lineup && reservation.lineup.length > 0) {
       reservation.lineup.forEach(player => {
-        // Try to get the email from localStorage based on userId
         const emailFromStorage = localStorage.getItem(`playerEmail_${player.userId}`);
         if (emailFromStorage) {
           sendCancellationEmail(
@@ -324,8 +359,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
-  // Correct end time calc (add duration in minutes to start time)
-  let startDisplay = reservation.startTime || reservation.time; // fallback to whatever is present
+  // Calculate end time
+  let startDisplay = reservation.startTime || reservation.time;
   let endDisplay = startDisplay;
   if (startDisplay && reservation.duration) {
     const minutes = Number(reservation.duration);
@@ -336,7 +371,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   return (
     <>
-      <Card className="bg-white dark:bg-gray-800 overflow-hidden">
+      <Card 
+        className="bg-white dark:bg-gray-800 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-teal-200"
+        onClick={handleViewDetails}
+      >
         <div className="flex">
           {/* Pitch Photo Section */}
           <div className="relative w-48 h-48 flex-shrink-0">
@@ -348,13 +386,19 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             {pitchPhotos.length > 1 && (
               <>
                 <button
-                  onClick={prevPhoto}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevPhoto();
+                  }}
                   className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={nextPhoto}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextPhoto();
+                  }}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -371,6 +415,21 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 </div>
               </>
             )}
+            {/* View Details Button Overlay */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-white/90 hover:bg-white text-gray-900"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewDetails();
+                }}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Details
+              </Button>
+            </div>
           </div>
 
           {/* Content Section */}
@@ -388,20 +447,28 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Clock className="h-4 w-4 mr-2" />
-                    Start: {startDisplay} | End: {endDisplay}
+                    {startDisplay} - {endDisplay}
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <MapPin className="h-4 w-4 mr-2" />
-                    {reservation.location}
+                    {reservation.location || reservation.city}
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Users className="h-4 w-4 mr-2" />
                     {reservation.lineup?.length || 0}/{reservation.maxPlayers}
                   </div>
                 </div>
+
+                {/* Price Display */}
+                {reservation.price && (
+                  <div className="flex items-center text-teal-600 dark:text-teal-400 mb-2">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    <span className="font-semibold">${reservation.price} per player</span>
+                  </div>
+                )}
               </div>
               
-              {/* Status Badge (replaces three dots) */}
+              {/* Status Badge */}
               <Badge 
                 className={`${
                   gameStatus === 'upcoming' ? 'bg-green-500' : 
@@ -416,7 +483,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
             <Separator className="my-3" />
 
-            {/* ADMIN ONLY: Expandable Accordion for Players Joined */}
+            {/* ADMIN ONLY: Expandable Players List */}
             {isAdmin && (
               <Accordion type="single" collapsible className="mb-4">
                 <AccordionItem value="players">
@@ -450,15 +517,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               </Accordion>
             )}
 
-            {/* Remove "Players Joined" for all users, only admin can see in accordion */}
-            {/* ...rest of UI... */}
-
             <div className="flex flex-col items-stretch mt-4">
               {isAdmin ? (
                 // Admin Actions
                 <Button
                   variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
                   className="w-full"
                   size="lg"
                 >
@@ -471,7 +538,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                     {isUserJoined(reservation.id, userId) ? (
                       <Button
                         variant="destructive"
-                        onClick={handleCancel}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancel();
+                        }}
                         disabled={isCancelling}
                         size="sm"
                       >
@@ -479,32 +549,40 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                       </Button>
                     ) : isFull ? (
                       !isUserInWaitingList ? (
-                        <Button variant="secondary" onClick={handleJoinWaitingList} size="sm">
+                        <Button 
+                          variant="secondary" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoinWaitingList();
+                          }} 
+                          size="sm"
+                        >
                           Join Waiting List
                         </Button>
                       ) : (
-                        <Button variant="secondary" onClick={handleLeaveWaitingList} size="sm">
+                        <Button 
+                          variant="secondary" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLeaveWaitingList();
+                          }} 
+                          size="sm"
+                        >
                           Leave Waiting List
                         </Button>
                       )
                     ) : (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          type="text"
-                          placeholder="Your Name"
-                          value={playerName}
-                          onChange={(e) => setPlayerName(e.target.value)}
-                          className="max-w-[120px] h-8"
-                        />
-                        <Button 
-                          onClick={handleJoin} 
-                          disabled={isJoining} 
-                          size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          {isJoining ? "Joining..." : "Join Game"}
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoin();
+                        }} 
+                        disabled={isJoining || !userId} 
+                        size="sm"
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        {isJoining ? "Joining..." : "Join Game"}
+                      </Button>
                     )}
                   </>
                 )

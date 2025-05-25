@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Trash2, CalendarIcon, Users, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Trash2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Pitch } from "@/context/ReservationContext";
 
 interface PitchCardProps {
@@ -24,7 +24,6 @@ const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
   isAdmin,
   onViewDetails,
-  onBookPitch,
   onDeleteClick
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -121,18 +120,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
         {/* Location with city */}
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-3">
           <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0" />
-          <div className="flex flex-col">
-            <span className="truncate">{pitch.city}</span>
-            <a 
-              href={pitch.location} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline flex items-center text-xs"
-              onClick={(e) => e.stopPropagation()}
-            >
-              View on Maps <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
-          </div>
+          <span className="truncate">{pitch.city}</span>
         </div>
         
         {/* Facilities */}
@@ -159,14 +147,13 @@ const PitchCard: React.FC<PitchCardProps> = ({
           </div>
         </div>
         
-        {/* Action buttons - removed edit button */}
+        {/* Action buttons */}
         <div className="flex gap-2">
           <Button 
-            onClick={onBookPitch} 
+            onClick={onViewDetails} 
             className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
           >
-            <CalendarIcon className="h-4 w-4 mr-1.5" />
-            Book Pitch
+            View Details
           </Button>
           
           {isAdmin && (

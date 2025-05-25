@@ -1,19 +1,20 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Check, Clock, DollarSign, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useReservation } from "@/context/ReservationContext";
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 
 /**
  * AddReservationDialog Component
- * Dialog for creating new game reservations with simplified fields
+ * Dialog for creating new game reservations with comprehensive fields
  */
 const AddReservationDialog = () => {
   const [open, setOpen] = useState(false);
@@ -23,6 +24,9 @@ const AddReservationDialog = () => {
   const [startTime, setStartTime] = useState("");
   const [duration, setDuration] = useState("90"); // Default 90 minutes
   const [maxPlayers, setMaxPlayers] = useState<number | null>(null);
+  const [price, setPrice] = useState("");
+  const [startPlayerName, setStartPlayerName] = useState("");
+  const [endPlayerName, setEndPlayerName] = useState("");
   
   const { addReservation, pitches } = useReservation();
   const { toast } = useToast();
@@ -37,17 +41,21 @@ const AddReservationDialog = () => {
         setStartTime("");
         setDuration("90");
         setMaxPlayers(null);
+        setPrice("");
+        setStartPlayerName("");
+        setEndPlayerName("");
       }, 200);
     }
   }, [open]);
 
-  // Update maxPlayers when pitch changes - add 2 players for substitutes
+  // Update maxPlayers when pitch changes - minimum 5 per side (10 players + 2 subs)
   useEffect(() => {
     if (pitchName) {
       const selectedPitch = pitches.find(p => p.name === pitchName);
       if (selectedPitch) {
-        // Calculate max players: (playersPerSide * 2) + 2 subs
-        setMaxPlayers(selectedPitch.playersPerSide * 2 + 2);
+        // Ensure minimum 5 players per side
+        const playersPerSide = Math.max(selectedPitch.playersPerSide, 5);
+        setMaxPlayers(playersPerSide * 2 + 2);
       }
     }
   }, [pitchName, pitches]);
@@ -66,24 +74,14 @@ const AddReservationDialog = () => {
     { value: "120", label: "2 hours" },
   ];
 
-  // Validate date - cannot book more than 3 days in advance
-  const isDateInvalid = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const maxDate = addDays(today, 3);
-    
-    return date > maxDate;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate required fields
-    if (!title || !date || !pitchName || !startTime || !duration) {
+    if (!title || !date || !pitchName || !startTime || !duration || !price) {
       toast({
         title: "Missing Fields",
-        description: "Please fill all required fields (title and start time are required).",
+        description: "Please fill all required fields.",
         variant: "destructive"
       });
       return;
@@ -123,14 +121,16 @@ const AddReservationDialog = () => {
       duration: durationMinutes,
       location: selectedPitch?.location || "",
       city: selectedPitch?.city || "",
-      maxPlayers: maxPlayers || (selectedPitch?.playersPerSide ? selectedPitch.playersPerSide * 2 + 2 : 12),
-      price: selectedPitch?.price || 0,
+      maxPlayers: maxPlayers || 12,
+      price: parseFloat(price) || 0,
       imageUrl: selectedPitch?.image,
       additionalImages: selectedPitch?.additionalImages || [],
+      startPlayerName: startPlayerName || "",
+      endPlayerName: endPlayerName || "",
     };
     
     // Add the reservation
-    const newReservation = addReservation(reservationData); // This should update state & localStorage together
+    const newReservation = addReservation(reservationData);
 
     if (newReservation) {
       toast({
@@ -155,12 +155,12 @@ const AddReservationDialog = () => {
           Add Reservation
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Create New Reservation</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           {/* Title Input - Required */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
@@ -190,14 +190,14 @@ const AddReservationDialog = () => {
               <SelectContent>
                 {pitches.map((pitch) => (
                   <SelectItem key={pitch.id} value={pitch.name}>
-                    {pitch.name} ({pitch.playersPerSide}v{pitch.playersPerSide})
+                    {pitch.name} ({Math.max(pitch.playersPerSide, 5)}v{Math.max(pitch.playersPerSide, 5)})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           
-          {/* Date Picker */}
+          {/* Date Picker - No restrictions */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Date*</label>
             <Popover>
@@ -219,16 +219,8 @@ const AddReservationDialog = () => {
                   selected={date}
                   onSelect={setDate}
                   initialFocus
-                  disabled={(date) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return date < today || isDateInvalid(date);
-                  }}
                   className="pointer-events-auto"
                 />
-                <div className="p-3 border-t text-xs text-muted-foreground">
-                  You can only book up to 3 days in advance.
-                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -258,7 +250,7 @@ const AddReservationDialog = () => {
             </Select>
           </div>
           
-          {/* Duration Select - Replaces time slot */}
+          {/* Duration Select */}
           <div className="space-y-2">
             <label htmlFor="duration" className="text-sm font-medium">
               Duration*
@@ -280,11 +272,80 @@ const AddReservationDialog = () => {
             </Select>
           </div>
 
+          {/* Price Input */}
+          <div className="space-y-2">
+            <label htmlFor="price" className="text-sm font-medium">
+              Price* (Per Player)
+            </label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="25.00"
+                className="pl-10"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Player Names */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="startPlayerName" className="text-sm font-medium">
+                Start Player Name
+              </label>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="startPlayerName"
+                  value={startPlayerName}
+                  onChange={(e) => setStartPlayerName(e.target.value)}
+                  placeholder="First player to join"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="endPlayerName" className="text-sm font-medium">
+                End Player Name
+              </label>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="endPlayerName"
+                  value={endPlayerName}
+                  onChange={(e) => setEndPlayerName(e.target.value)}
+                  placeholder="Last player to join"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Max Players Display */}
+          {maxPlayers && (
+            <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+              <div className="flex items-center text-sm text-teal-800 dark:text-teal-200">
+                <Users className="h-4 w-4 mr-2" />
+                Maximum players for this pitch: <strong className="ml-1">{maxPlayers}</strong>
+                <span className="ml-2 text-xs text-teal-600 dark:text-teal-400">
+                  (Minimum 5v5 + 2 substitutes)
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
           <div className="flex justify-end">
             <Button 
               type="submit" 
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6"
             >
               <Check className="h-4 w-4 mr-2" />
               Create Reservation

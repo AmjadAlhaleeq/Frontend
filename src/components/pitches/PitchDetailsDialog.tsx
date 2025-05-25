@@ -1,6 +1,24 @@
 
 import React, { useState } from "react";
-import { MapPin, Clock, Calendar, Users, Star, CheckCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { 
+  MapPin, 
+  Clock, 
+  Users, 
+  CheckCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  X,
+  Wifi,
+  Car,
+  Coffee,
+  Shield,
+  Shirt,
+  Droplets,
+  Camera,
+  TreePine,
+  Zap,
+  Wind
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,8 +26,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle,
-  DialogDescription,
-  DialogFooter 
+  DialogDescription 
 } from "@/components/ui/dialog";
 import { Pitch } from "@/context/ReservationContext";
 
@@ -27,7 +44,6 @@ interface PitchDetailsDialogProps {
 const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   pitch,
   onClose,
-  onBookPitch,
   userRole
 }) => {
   // State for the photo gallery
@@ -50,22 +66,54 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
   // Address all type issues by using optional chaining and fallbacks
   const address = pitch.location;
   const description = pitch.description;
-  const priceDisplay = `$${pitch.price} per hour`;
   const facilities = pitch.facilities || [];
   
   const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 
-  // Helper function to render facility icons
+  // Helper function to render facility icons with real icons
   const getFacilityIcon = (facilityName: string): JSX.Element => {
     const lowerFacilityName = facilityName.toLowerCase();
     
-    // Return appropriate SVG icon based on facility name
+    let IconComponent = CheckCircle; // default
+    let colorClass = "text-teal-600 dark:text-teal-400";
+    
+    // Map facility names to appropriate icons
+    if (lowerFacilityName.includes('wifi') || lowerFacilityName.includes('internet')) {
+      IconComponent = Wifi;
+      colorClass = "text-blue-600 dark:text-blue-400";
+    } else if (lowerFacilityName.includes('parking') || lowerFacilityName.includes('car')) {
+      IconComponent = Car;
+      colorClass = "text-gray-600 dark:text-gray-400";
+    } else if (lowerFacilityName.includes('cafe') || lowerFacilityName.includes('coffee') || lowerFacilityName.includes('restaurant')) {
+      IconComponent = Coffee;
+      colorClass = "text-orange-600 dark:text-orange-400";
+    } else if (lowerFacilityName.includes('security') || lowerFacilityName.includes('guard')) {
+      IconComponent = Shield;
+      colorClass = "text-red-600 dark:text-red-400";
+    } else if (lowerFacilityName.includes('changing') || lowerFacilityName.includes('locker') || lowerFacilityName.includes('room')) {
+      IconComponent = Shirt;
+      colorClass = "text-purple-600 dark:text-purple-400";
+    } else if (lowerFacilityName.includes('shower') || lowerFacilityName.includes('water') || lowerFacilityName.includes('toilet')) {
+      IconComponent = Droplets;
+      colorClass = "text-cyan-600 dark:text-cyan-400";
+    } else if (lowerFacilityName.includes('cctv') || lowerFacilityName.includes('camera')) {
+      IconComponent = Camera;
+      colorClass = "text-indigo-600 dark:text-indigo-400";
+    } else if (lowerFacilityName.includes('garden') || lowerFacilityName.includes('green') || lowerFacilityName.includes('outdoor')) {
+      IconComponent = TreePine;
+      colorClass = "text-green-600 dark:text-green-400";
+    } else if (lowerFacilityName.includes('light') || lowerFacilityName.includes('flood')) {
+      IconComponent = Zap;
+      colorClass = "text-yellow-600 dark:text-yellow-400";
+    } else if (lowerFacilityName.includes('air') || lowerFacilityName.includes('conditioning') || lowerFacilityName.includes('climate')) {
+      IconComponent = Wind;
+      colorClass = "text-sky-600 dark:text-sky-400";
+    }
+    
     return (
-      <span className="rounded-full bg-teal-100 dark:bg-teal-900 p-1 mr-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-teal-600 dark:text-teal-400">
-          <path d="M12 2L3 8V21H21V8L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </span>
+      <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-2 mr-3">
+        <IconComponent className={`h-5 w-5 ${colorClass}`} />
+      </div>
     );
   };
 
@@ -74,15 +122,15 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{pitch.name}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">{pitch.name}</DialogTitle>
             <DialogDescription>
-              <div className="flex items-center mt-1 mb-4">
-                <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+              <div className="flex items-center mt-2 mb-4">
+                <MapPin className="h-5 w-5 text-gray-500 mr-2" />
                 <a 
                   href={googleMapsUrl} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
+                  className="text-base text-gray-600 dark:text-gray-300 hover:underline hover:text-teal-600"
                   aria-label={`View ${address} on Google Maps`}
                 >
                   {pitch.location}
@@ -91,13 +139,13 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Main image and gallery thumbnails */}
             <div className="relative">
               <img
                 src={galleryPhotos[currentPhotoIndex]}
                 alt={pitch.name}
-                className="w-full h-60 object-cover rounded-md mb-2 cursor-pointer"
+                className="w-full h-72 object-cover rounded-lg mb-4 cursor-pointer shadow-lg"
                 onClick={() => setShowFullGallery(true)}
               />
               
@@ -111,9 +159,9 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                       e.stopPropagation();
                       prevPhoto();
                     }}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-white bg-black/50 hover:bg-black/70 rounded-full"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-10 w-10 text-white bg-black/60 hover:bg-black/80 rounded-full shadow-lg"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={24} />
                   </Button>
                   <Button 
                     variant="ghost" 
@@ -122,17 +170,21 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                       e.stopPropagation();
                       nextPhoto();
                     }}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-white bg-black/50 hover:bg-black/70 rounded-full"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-10 w-10 text-white bg-black/60 hover:bg-black/80 rounded-full shadow-lg"
                   >
-                    <ChevronRight size={20} />
+                    <ChevronRight size={24} />
                   </Button>
                   
                   {/* Gallery thumbnails */}
-                  <div className="flex justify-center mt-2 space-x-2">
+                  <div className="flex justify-center mt-3 space-x-2">
                     {galleryPhotos.map((photo, idx) => (
                       <div 
                         key={idx} 
-                        className={`w-12 h-12 rounded-md overflow-hidden cursor-pointer transition-all ${idx === currentPhotoIndex ? 'ring-2 ring-teal-500 ring-offset-2' : 'opacity-70 hover:opacity-100'}`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all shadow-md ${
+                          idx === currentPhotoIndex 
+                            ? 'ring-3 ring-teal-500 ring-offset-2 scale-105' 
+                            : 'opacity-70 hover:opacity-100 hover:scale-105'
+                        }`}
                         onClick={() => setCurrentPhotoIndex(idx)}
                       >
                         <img 
@@ -147,37 +199,39 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               )}
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-1 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2 text-[#0F766E]" />
+            {/* About Section */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg">
+              <h3 className="text-xl font-semibold mb-3 flex items-center">
+                <CheckCircle className="h-6 w-6 mr-3 text-teal-600" />
                 About this Pitch
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {description}
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                {description || "A premium football pitch perfect for competitive matches and training sessions."}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <Users className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+                  <Users className="h-6 w-6 text-teal-600 mr-3" />
                   <div>
-                    <h4 className="text-sm font-medium">Players Format</h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {pitch.playersPerSide} vs {pitch.playersPerSide}
+                    <h4 className="font-semibold text-lg">Players Format</h4>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {pitch.playersPerSide} vs {pitch.playersPerSide} players
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+                <div className="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <MapPin className="h-6 w-6 text-blue-600 mr-3" />
                   <div>
-                    <h4 className="text-sm font-medium">Address</h4>
+                    <h4 className="font-semibold text-lg">Location</h4>
                     <a 
                       href={googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
+                      className="text-gray-600 dark:text-gray-400 hover:underline hover:text-blue-600"
                       aria-label={`View ${address} on Google Maps`}
                     >
                       {address}
@@ -186,24 +240,26 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <Star className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
-                  <div>
-                    <h4 className="text-sm font-medium">Price</h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {priceDisplay}
-                    </p>
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <Badge 
+                    className={`text-lg px-3 py-1 ${
+                      pitch.type === 'indoor' 
+                        ? 'bg-purple-600 hover:bg-purple-700' 
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {pitch.type === 'indoor' ? 'Indoor Pitch' : 'Outdoor Pitch'}
+                  </Badge>
                 </div>
                 
-                {/* Opening hours section - only show if available */}
+                {/* Opening hours section */}
                 {pitch.openingHours && (
-                  <div className="flex items-start">
-                    <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+                  <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <Clock className="h-6 w-6 text-orange-600 mr-3" />
                     <div>
-                      <h4 className="text-sm font-medium">Opening Hours</h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                      <h4 className="font-semibold text-lg">Opening Hours</h4>
+                      <p className="text-gray-600 dark:text-gray-400">
                         {pitch.openingHours}
                       </p>
                     </div>
@@ -212,34 +268,33 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               </div>
             </div>
 
+            {/* Facilities Section */}
             {facilities && facilities.length > 0 && (
-              <div>
-                <h3 className="text-md font-semibold mb-2">Facilities</h3>
-                <div className="flex flex-wrap gap-3">
+              <div className="bg-white dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4 flex items-center">
+                  <CheckCircle className="h-6 w-6 mr-3 text-teal-600" />
+                  Available Facilities
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {facilities.map((facility, idx) => (
-                    <Badge
+                    <div
                       key={idx}
-                      variant="outline"
-                      className="bg-gray-100 dark:bg-gray-700 p-2 flex items-center gap-2"
+                      className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
                       {getFacilityIcon(facility)}
-                      <span className="text-xs">{facility}</span>
-                    </Badge>
+                      <span className="text-base font-medium capitalize">
+                        {facility.replace('_', ' ')}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-6 flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="mt-8 flex justify-end">
+            <Button variant="outline" onClick={onClose} className="px-6 py-2 text-base">
               Close
-            </Button>
-            <Button
-              className="bg-[#0F766E] hover:bg-[#0d6d66]"
-              onClick={onBookPitch}
-            >
-              Book Now
             </Button>
           </div>
         </DialogContent>
@@ -247,16 +302,16 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
       
       {/* Full-screen gallery */}
       <Dialog open={showFullGallery} onOpenChange={setShowFullGallery}>
-        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-black/90 border-0">
+        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-black/95 border-0">
           <div className="relative h-full w-full flex items-center justify-center">
             {/* Close button */}
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => setShowFullGallery(false)}
-              className="absolute top-4 right-4 h-8 w-8 text-white bg-black/50 hover:bg-black/70 z-10"
+              className="absolute top-4 right-4 h-10 w-10 text-white bg-black/50 hover:bg-black/70 z-10 rounded-full"
             >
-              <X size={20} />
+              <X size={24} />
             </Button>
             
             {/* Main image */}
@@ -264,7 +319,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
               <img 
                 src={galleryPhotos[currentPhotoIndex]} 
                 alt={`${pitch.name} - Photo ${currentPhotoIndex + 1}`}
-                className="max-h-[80vh] max-w-full object-contain"
+                className="max-h-[80vh] max-w-full object-contain rounded-lg"
               />
             </div>
             
@@ -275,22 +330,22 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                   variant="ghost" 
                   size="icon"
                   onClick={prevPhoto}
-                  className="absolute left-4 h-10 w-10 text-white bg-black/50 hover:bg-black/70 rounded-full"
+                  className="absolute left-4 h-12 w-12 text-white bg-black/50 hover:bg-black/70 rounded-full"
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft size={28} />
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="icon"
                   onClick={nextPhoto}
-                  className="absolute right-4 h-10 w-10 text-white bg-black/50 hover:bg-black/70 rounded-full"
+                  className="absolute right-4 h-12 w-12 text-white bg-black/50 hover:bg-black/70 rounded-full"
                 >
-                  <ChevronRight size={24} />
+                  <ChevronRight size={28} />
                 </Button>
                 
                 {/* Photo counter */}
-                <div className="absolute bottom-4 left-0 right-0 text-center text-white text-sm">
-                  {currentPhotoIndex + 1} / {galleryPhotos.length}
+                <div className="absolute bottom-6 left-0 right-0 text-center text-white text-lg bg-black/50 py-2 rounded-lg mx-4">
+                  Photo {currentPhotoIndex + 1} of {galleryPhotos.length}
                 </div>
               </>
             )}
