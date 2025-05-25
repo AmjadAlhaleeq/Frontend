@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +10,16 @@ import LeaderboardSkeleton from "@/components/ui/leaderboard-skeleton";
 
 interface Player {
   _id: string;
+  rank?: number;
+  userId?: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   avatar?: string;
+  profilePicture?: string;
   email: string;
+  matches?: number;
+  statValue?: number;
   stats: {
     gamesPlayed: number;
     wins: number;
@@ -33,6 +39,7 @@ interface LeaderboardProps {
   players?: Player[];
   loading?: boolean;
   onRefresh?: () => void;
+  onUpdateSort?: (sortBy: string) => void;
   apiEndpoint?: string;
 }
 
@@ -40,6 +47,7 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
   players = [],
   loading = false,
   onRefresh,
+  onUpdateSort,
   apiEndpoint
 }) => {
   const [sortBy, setSortBy] = useState<keyof Player['stats']>('wins');
@@ -129,17 +137,24 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
     const filtered = data
       .filter(player => 
         player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (player.email && player.email.toLowerCase().includes(searchTerm.toLowerCase()))
       )
       .sort((a, b) => {
-        const aValue = a.stats[sortBy] || 0;
-        const bValue = b.stats[sortBy] || 0;
+        const aValue = a.stats[sortBy] || a.statValue || 0;
+        const bValue = b.stats[sortBy] || b.statValue || 0;
         return bValue - aValue;
       })
       .slice(0, 50);
     
     setFilteredPlayers(filtered);
   }, [players, searchTerm, sortBy]);
+
+  const handleSortChange = (newSortBy: keyof Player['stats']) => {
+    setSortBy(newSortBy);
+    if (onUpdateSort) {
+      onUpdateSort(newSortBy as string);
+    }
+  };
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-6 w-6 text-yellow-500" />;
@@ -161,8 +176,8 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
     { key: 'goals', label: 'Goals' },
     { key: 'assists', label: 'Assists' },
     { key: 'cleanSheets', label: 'Clean Sheets' },
-    { key: 'rating', label: 'MVP Score' },
-    { key: 'interceptions', label: 'Tackles' },
+    { key: 'mvpScore', label: 'MVP' },
+    { key: 'interceptions', label: 'Interceptions' },
   ];
 
   if (loading) {
@@ -183,7 +198,7 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
           {sortOptions.map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => setSortBy(key as keyof Player['stats'])}
+              onClick={() => handleSortChange(key as keyof Player['stats'])}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 sortBy === key
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -223,8 +238,10 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
           </Card>
         ) : (
           filteredPlayers.map((player, index) => {
-            const rank = index + 1;
+            const rank = player.rank || index + 1;
             const isTopThree = rank <= 3;
+            const displayValue = player.stats[sortBy] || player.statValue || 0;
+            const gamesPlayed = player.stats.gamesPlayed || player.matches || 0;
             
             return (
               <Card 
@@ -242,7 +259,7 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
                     
                     {/* Avatar */}
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={player.avatar} />
+                      <AvatarImage src={player.avatar || player.profilePicture} />
                       <AvatarFallback className="bg-blue-600 text-white font-semibold">
                         {getInitials(player.name)}
                       </AvatarFallback>
@@ -251,14 +268,14 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
                     {/* Player Info */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{player.name}</h3>
-                      <p className="text-sm text-gray-600">Matches played: {player.stats.gamesPlayed}</p>
+                      <p className="text-sm text-gray-600">Matches played: {gamesPlayed}</p>
                     </div>
 
                     {/* Score */}
                     <div className="flex-shrink-0 text-right">
                       <div className="text-2xl font-bold text-blue-600 flex items-center space-x-1">
                         <Trophy className="h-5 w-5" />
-                        <span>{player.stats[sortBy] || 0}</span>
+                        <span>{displayValue}</span>
                       </div>
                     </div>
                   </div>

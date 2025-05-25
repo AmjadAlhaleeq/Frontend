@@ -1,3 +1,4 @@
+
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -66,7 +67,11 @@ class ApiService {
     }
   }
 
-  // Leaderboard APIs
+  // Leaderboard APIs - Updated to match backend
+  async getLeaderboardByType(type: string): Promise<ApiResponse<any>> {
+    return this.request(`/leaderboards/${type}`);
+  }
+
   async getLeaderboard(params?: {
     sortBy?: string;
     order?: 'asc' | 'desc';

@@ -5,10 +5,17 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Player {
   _id: string;
-  name: string;
+  rank: number;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string;
+  matches: number;
+  statValue: number;
+  name?: string;
+  email?: string;
   avatar?: string;
-  email: string;
-  stats: {
+  stats?: {
     gamesPlayed: number;
     wins: number;
     losses: number;
@@ -18,9 +25,9 @@ interface Player {
     cleanSheets: number;
     rating: number;
     winRate: number;
+    mvpScore?: number;
+    interceptions?: number;
   };
-  previousRank?: number;
-  rankChange?: 'up' | 'down' | 'same';
 }
 
 interface UseLeaderboardParams {
@@ -35,23 +42,13 @@ interface UseLeaderboardReturn {
   players: Player[];
   loading: boolean;
   error: string | null;
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  } | null;
   refresh: () => Promise<void>;
-  loadMore: () => Promise<void>;
-  search: (term: string) => Promise<void>;
-  updateSort: (sortBy: string, order?: 'asc' | 'desc') => Promise<void>;
+  updateSort: (sortBy: string) => Promise<void>;
 }
 
 export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboardReturn => {
   const {
-    sortBy = 'rating',
-    order = 'desc',
-    limit = 20,
+    sortBy = 'wins',
     autoRefresh = false,
     refreshInterval = 30000
   } = params;
@@ -59,47 +56,49 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<{
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentSort, setCurrentSort] = useState({ sortBy, order });
+  const [currentSort, setCurrentSort] = useState(sortBy);
 
   const { toast } = useToast();
 
-  const fetchLeaderboard = useCallback(async (
-    page = 1,
-    append = false,
-    search = searchTerm,
-    sort = currentSort
-  ) => {
+  const fetchLeaderboard = useCallback(async (type: string = currentSort) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await apiService.getLeaderboard({
-        sortBy: sort.sortBy,
-        order: sort.order,
-        page,
-        limit,
-        search: search || undefined,
-      });
+      const response = await apiService.getLeaderboardByType(type);
 
-      if (response.success && response.data) {
-        const { data: newPlayers, pagination: newPagination } = response.data;
+      if (response.success && response.data?.leaderboard) {
+        const { players: leaderboardPlayers } = response.data.leaderboard;
         
-        if (append) {
-          setPlayers(prev => [...prev, ...newPlayers]);
-        } else {
-          setPlayers(newPlayers);
-        }
+        // Transform backend data to match frontend Player interface
+        const transformedPlayers = leaderboardPlayers.map((player: any) => ({
+          _id: player.userId,
+          rank: player.rank,
+          userId: player.userId,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          name: `${player.firstName} ${player.lastName}`,
+          profilePicture: player.profilePicture,
+          avatar: player.profilePicture,
+          email: '',
+          matches: player.matches,
+          statValue: player.statValue,
+          stats: {
+            gamesPlayed: player.matches,
+            wins: type === 'wins' ? player.statValue : 0,
+            losses: 0,
+            draws: 0,
+            goals: type === 'goals' ? player.statValue : 0,
+            assists: type === 'assists' ? player.statValue : 0,
+            cleanSheets: type === 'cleanSheets' ? player.statValue : 0,
+            rating: player.statValue,
+            winRate: 0,
+            mvpScore: type === 'mvp' ? player.statValue : 0,
+            interceptions: type === 'interceptions' ? player.statValue : 0,
+          }
+        }));
         
-        setPagination(newPagination);
-        setCurrentPage(page);
+        setPlayers(transformedPlayers);
       } else {
         throw new Error(response.error || 'Failed to fetch leaderboard');
       }
@@ -114,28 +113,16 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
     } finally {
       setLoading(false);
     }
-  }, [limit, searchTerm, currentSort, toast]);
+  }, [currentSort, toast]);
 
   const refresh = useCallback(async () => {
-    await fetchLeaderboard(1, false);
+    await fetchLeaderboard(currentSort);
+  }, [fetchLeaderboard, currentSort]);
+
+  const updateSort = useCallback(async (newSortBy: string) => {
+    setCurrentSort(newSortBy);
+    await fetchLeaderboard(newSortBy);
   }, [fetchLeaderboard]);
-
-  const loadMore = useCallback(async () => {
-    if (pagination && currentPage < pagination.totalPages) {
-      await fetchLeaderboard(currentPage + 1, true);
-    }
-  }, [fetchLeaderboard, pagination, currentPage]);
-
-  const search = useCallback(async (term: string) => {
-    setSearchTerm(term);
-    await fetchLeaderboard(1, false, term);
-  }, [fetchLeaderboard]);
-
-  const updateSort = useCallback(async (newSortBy: string, newOrder: 'asc' | 'desc' = 'desc') => {
-    const newSort = { sortBy: newSortBy, order: newOrder };
-    setCurrentSort(newSort);
-    await fetchLeaderboard(1, false, searchTerm, newSort);
-  }, [fetchLeaderboard, searchTerm]);
 
   // Initial load
   useEffect(() => {
@@ -157,10 +144,7 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
     players,
     loading,
     error,
-    pagination,
     refresh,
-    loadMore,
-    search,
     updateSort,
   };
 };

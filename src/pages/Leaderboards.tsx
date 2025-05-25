@@ -4,10 +4,11 @@ import ModernLeaderboard from "@/components/leaderboards/ModernLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 const Leaderboards = () => {
-  const { players, loading, refresh } = useLeaderboard({
+  const { players, loading, refresh, updateSort } = useLeaderboard({
     limit: 50,
-    sortBy: 'rating',
-    order: 'desc'
+    sortBy: 'wins',
+    autoRefresh: true,
+    refreshInterval: 60000
   });
 
   return (
@@ -17,6 +18,7 @@ const Leaderboards = () => {
           players={players}
           loading={loading}
           onRefresh={refresh}
+          onUpdateSort={updateSort}
         />
       </div>
     </div>
