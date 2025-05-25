@@ -5,28 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-enum HighlightType {
-  GOAL = "goal",
-  ASSIST = "assist",
-  SAVE = "save",
-  TACKLE = "tackle",
-  OTHER = "other"
-}
-
-// Define simplified Highlight interface here to avoid circular dependency
-interface Highlight {
-  id: string;
-  playerId: string;
-  playerName: string;
-  type: HighlightType;
-  description: string;
-  timestamp: string;
-}
+import { Highlight } from "@/context/ReservationContext";
 
 interface HighlightFormProps {
   reservationId: number;
-  onSave: (highlight: Omit<Highlight, "id">) => void;
+  onSave: (highlight: Omit<Highlight, "id" | "timestamp">) => void;
   onCancel: () => void;
 }
 
@@ -40,8 +23,9 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
 }) => {
   const [playerId, setPlayerId] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [type, setType] = useState<HighlightType>(HighlightType.GOAL);
+  const [type, setType] = useState<"goal" | "assist" | "save" | "tackle">("goal");
   const [description, setDescription] = useState("");
+  const [minute, setMinute] = useState<number>(0);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,14 +39,15 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
       playerName,
       type,
       description,
-      timestamp: new Date().toISOString()
+      minute
     });
     
     // Reset form
     setPlayerId("");
     setPlayerName("");
-    setType(HighlightType.GOAL);
+    setType("goal");
     setDescription("");
+    setMinute(0);
   };
   
   return (
@@ -90,23 +75,37 @@ const HighlightForm: React.FC<HighlightFormProps> = ({
         </div>
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="highlight-type">Highlight Type</Label>
-        <Select 
-          value={type} 
-          onValueChange={(value: any) => setType(value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={HighlightType.GOAL}>Goal</SelectItem>
-            <SelectItem value={HighlightType.ASSIST}>Assist</SelectItem>
-            <SelectItem value={HighlightType.SAVE}>Save</SelectItem>
-            <SelectItem value={HighlightType.TACKLE}>Tackle</SelectItem>
-            <SelectItem value={HighlightType.OTHER}>Other</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="highlight-type">Highlight Type</Label>
+          <Select 
+            value={type} 
+            onValueChange={(value: "goal" | "assist" | "save" | "tackle") => setType(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="goal">Goal</SelectItem>
+              <SelectItem value="assist">Assist</SelectItem>
+              <SelectItem value="save">Save</SelectItem>
+              <SelectItem value="tackle">Tackle</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="minute">Minute</Label>
+          <Input 
+            id="minute"
+            type="number"
+            value={minute}
+            onChange={(e) => setMinute(parseInt(e.target.value) || 0)}
+            placeholder="Match minute"
+            min="0"
+            max="120"
+          />
+        </div>
       </div>
       
       <div className="space-y-2">

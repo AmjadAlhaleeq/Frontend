@@ -89,7 +89,6 @@ const EditReservationDialog: React.FC<EditReservationDialogProps> = ({
     const newHighlight: Highlight = {
       ...highlight,
       id: `highlight_${Date.now()}`,
-      minute: highlight.minute || 0,
       timestamp: new Date().toISOString()
     };
     
