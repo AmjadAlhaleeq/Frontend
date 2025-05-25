@@ -4,21 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Trophy, 
-  Target, 
-  Users, 
-  TrendingUp, 
-  Medal, 
-  Star,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  Filter,
-  Search
-} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trophy, Search, Filter, Crown, Medal, Star } from "lucide-react";
+import LeaderboardSkeleton from "@/components/ui/leaderboard-skeleton";
 
 interface Player {
   _id: string;
@@ -35,9 +24,9 @@ interface Player {
     cleanSheets: number;
     rating: number;
     winRate: number;
+    mvpScore?: number;
+    interceptions?: number;
   };
-  previousRank?: number;
-  rankChange?: 'up' | 'down' | 'same';
 }
 
 interface LeaderboardProps {
@@ -73,10 +62,10 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
         assists: 12,
         cleanSheets: 8,
         rating: 9.2,
-        winRate: 75
-      },
-      previousRank: 2,
-      rankChange: 'up'
+        winRate: 75,
+        mvpScore: 95.2,
+        interceptions: 45
+      }
     },
     {
       _id: "2", 
@@ -91,10 +80,10 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
         assists: 15,
         cleanSheets: 6,
         rating: 8.9,
-        winRate: 72.7
-      },
-      previousRank: 1,
-      rankChange: 'down'
+        winRate: 72.7,
+        mvpScore: 89.7,
+        interceptions: 38
+      }
     },
     {
       _id: "3",
@@ -109,10 +98,10 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
         assists: 18,
         cleanSheets: 10,
         rating: 8.7,
-        winRate: 70
-      },
-      previousRank: 3,
-      rankChange: 'same'
+        winRate: 70,
+        mvpScore: 87.3,
+        interceptions: 52
+      }
     }
   ];
 
@@ -125,38 +114,24 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
         player.email.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => {
-        const aValue = a.stats[sortBy];
-        const bValue = b.stats[sortBy];
+        const aValue = a.stats[sortBy] || 0;
+        const bValue = b.stats[sortBy] || 0;
         return bValue - aValue;
-      });
+      })
+      .slice(0, 50); // Top 50 players only
     
     setFilteredPlayers(filtered);
   }, [players, searchTerm, sortBy]);
 
-  const getRankBadge = (rank: number) => {
-    const badges = {
-      1: { icon: "🏆", color: "bg-yellow-500 text-white", label: "Champion" },
-      2: { icon: "🥈", color: "bg-gray-400 text-white", label: "Runner-up" },
-      3: { icon: "🥉", color: "bg-amber-600 text-white", label: "Third" }
-    };
-    
-    const badge = badges[rank as keyof typeof badges];
-    if (badge) {
-      return (
-        <Badge className={`${badge.color} hover:${badge.color}/80`}>
-          {badge.icon} {badge.label}
-        </Badge>
-      );
-    }
-    return <Badge variant="outline" className="font-medium">#{rank}</Badge>;
-  };
-
-  const getRankChangeIcon = (change?: string) => {
-    switch (change) {
-      case 'up': return <ArrowUp className="h-4 w-4 text-green-500" />;
-      case 'down': return <ArrowDown className="h-4 w-4 text-red-500" />;
-      default: return <Minus className="h-4 w-4 text-gray-400" />;
-    }
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-6 w-6 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />;
+    if (rank === 3) return <Trophy className="h-6 w-6 text-amber-600" />;
+    return (
+      <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center">
+        <span className="text-sm font-semibold text-gray-600">#{rank}</span>
+      </div>
+    );
   };
 
   const getInitials = (name: string) => {
@@ -164,37 +139,29 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
   };
 
   const sortOptions = [
-    { key: 'rating', label: 'Overall Rating', icon: Star },
-    { key: 'goals', label: 'Goals Scored', icon: Target },
-    { key: 'wins', label: 'Games Won', icon: Trophy },
-    { key: 'winRate', label: 'Win Rate', icon: TrendingUp },
-    { key: 'assists', label: 'Assists', icon: Users },
+    { key: 'rating', label: 'MVP Score' },
+    { key: 'wins', label: 'Wins' },
+    { key: 'goals', label: 'Goals' },
+    { key: 'assists', label: 'Assists' },
+    { key: 'cleanSheets', label: 'Clean Sheets' },
+    { key: 'interceptions', label: 'Interceptions' },
   ];
 
+  if (loading) {
+    return <LeaderboardSkeleton />;
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header with Controls */}
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Top 50 Players</h1>
+        <p className="text-gray-600">The best performers on the pitch</p>
+      </div>
+
+      {/* Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Medal className="h-6 w-6 text-teal-600" />
-              <span>Player Leaderboard</span>
-            </div>
-            {onRefresh && (
-              <Button
-                onClick={onRefresh}
-                variant="outline"
-                size="sm"
-                disabled={loading}
-              >
-                {loading ? "Loading..." : "Refresh"}
-              </Button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Search and Filter Controls */}
+        <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -211,12 +178,9 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
                 <SelectValue placeholder="Sort by..." />
               </SelectTrigger>
               <SelectContent>
-                {sortOptions.map(({ key, label, icon: Icon }) => (
+                {sortOptions.map(({ key, label }) => (
                   <SelectItem key={key} value={key}>
-                    <div className="flex items-center">
-                      <Icon className="h-4 w-4 mr-2" />
-                      {label}
-                    </div>
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -225,84 +189,70 @@ const ModernLeaderboard: React.FC<LeaderboardProps> = ({
         </CardContent>
       </Card>
 
-      {/* Leaderboard */}
-      <div className="space-y-3">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading leaderboard...</p>
-          </div>
-        ) : filteredPlayers.length === 0 ? (
+      {/* Player List */}
+      <div className="space-y-2">
+        {filteredPlayers.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-8">
-              <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <CardContent className="text-center py-12">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
               <p className="text-gray-600">Try adjusting your search criteria.</p>
             </CardContent>
           </Card>
         ) : (
-          filteredPlayers.map((player, index) => (
-            <Card 
-              key={player._id}
-              className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 border-l-4"
-              style={{
-                borderLeftColor: index < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][index] : '#e5e7eb'
-              }}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+          filteredPlayers.map((player, index) => {
+            const rank = index + 1;
+            const isTopThree = rank <= 3;
+            
+            return (
+              <Card 
+                key={player._id}
+                className={`transition-all duration-200 hover:shadow-md ${
+                  isTopThree ? 'border-l-4 border-l-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent' : ''
+                }`}
+              >
+                <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-500 w-8">
-                        #{index + 1}
-                      </span>
-                      {getRankChangeIcon(player.rankChange)}
+                    {/* Rank */}
+                    <div className="flex-shrink-0">
+                      {getRankIcon(rank)}
                     </div>
                     
-                    <Avatar className="h-14 w-14 border-2 border-gray-200">
+                    {/* Avatar */}
+                    <Avatar className="h-12 w-12">
                       <AvatarImage src={player.avatar} />
-                      <AvatarFallback className="bg-teal-600 text-white font-semibold text-lg">
+                      <AvatarFallback className="bg-blue-600 text-white font-semibold">
                         {getInitials(player.name)}
                       </AvatarFallback>
                     </Avatar>
                     
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">{player.name}</h3>
-                      <p className="text-sm text-gray-600">{player.email}</p>
-                      <div className="flex items-center mt-1">
-                        <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                        <span className="text-sm font-medium">{player.stats.rating.toFixed(1)}/10</span>
-                      </div>
+                    {/* Player Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{player.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{player.email}</p>
                     </div>
-                  </div>
 
-                  <div className="flex items-center space-x-6">
-                    <div className="grid grid-cols-3 gap-6 text-center">
-                      <div>
-                        <p className="text-2xl font-bold text-teal-600">{player.stats.goals}</p>
-                        <p className="text-xs text-gray-500">Goals</p>
+                    {/* Score */}
+                    <div className="flex-shrink-0 text-right">
+                      <div className="text-lg font-bold text-blue-600">
+                        {player.stats[sortBy] || 0}
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-blue-600">{player.stats.assists}</p>
-                        <p className="text-xs text-gray-500">Assists</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">{player.stats.winRate}%</p>
-                        <p className="text-xs text-gray-500">Win Rate</p>
+                      <div className="text-xs text-gray-500">
+                        {sortOptions.find(opt => opt.key === sortBy)?.label}
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      {getRankBadge(index + 1)}
-                      <p className="text-xs text-gray-500 mt-1">
-                        {player.stats.gamesPlayed} games played
-                      </p>
-                    </div>
+
+                    {/* Top 3 Badge */}
+                    {isTopThree && (
+                      <Badge className="bg-yellow-500 text-white">
+                        Top {rank}
+                      </Badge>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
