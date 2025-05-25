@@ -24,7 +24,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
   
   const upcomingGames = reservations
     .filter(res => 
-      res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined') && 
+      res.lineup && res.lineup.some(player => player.userId === userId && (player.status === 'joined' || !player.status)) && 
       isAfter(parseISO(res.date), today) // Ensure it's strictly after today
     )
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
@@ -76,7 +76,7 @@ const PlayerGameCards: React.FC<PlayerGameCardsProps> = ({ reservations, userId 
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Clock className="h-3.5 w-3.5 mr-1.5" />
-                      {game.startTime || game.time.split(' - ')[0]}
+                      {game.startTime || game.time?.split(' - ')[0]}
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <MapPin className="h-3.5 w-3.5 mr-1.5" />

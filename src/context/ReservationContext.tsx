@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -10,6 +11,9 @@ import { useNavigate } from "react-router-dom";
 interface Player {
   userId: string;
   name: string;
+  playerName?: string;
+  status?: "joined" | "pending" | "cancelled";
+  joinedAt?: string;
 }
 
 export interface Pitch {
@@ -37,7 +41,7 @@ export interface Reservation {
   title: string;
   maxPlayers: number;
   lineup?: Player[];
-  waitingList?: Player[];
+  waitingList?: string[];
   status: "upcoming" | "completed" | "cancelled";
   photos?: string[];
   backgroundImage?: string;
@@ -45,6 +49,10 @@ export interface Reservation {
   gameFormat?: string;
   description?: string;
   time?: string;
+  price?: number;
+  imageUrl?: string;
+  playersJoined?: number;
+  highlights?: any[];
 }
 
 interface ReservationContextProps {
@@ -63,6 +71,8 @@ interface ReservationContextProps {
   deletePitch: (id: number) => void;
   navigateToReservation: (pitchName: string) => void;
   setPitches: (pitches: Pitch[]) => void;
+  joinGame: (reservationId: number, playerName?: string, userId?: string) => void;
+  updateReservationStatus: (id: number, status: "upcoming" | "completed" | "cancelled") => void;
 }
 
 const ReservationContext = createContext<ReservationContextProps>({
@@ -80,7 +90,9 @@ const ReservationContext = createContext<ReservationContextProps>({
   updatePitch: () => {},
   deletePitch: () => {},
   navigateToReservation: () => {},
-  setPitches: () => [],
+  setPitches: () => {},
+  joinGame: () => {},
+  updateReservationStatus: () => {},
 });
 
 interface ReservationProviderProps {
@@ -110,6 +122,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     const newReservation: Reservation = {
       ...reservation,
       id: Date.now(),
+      playersJoined: 0,
     };
     setReservations([...reservations, newReservation]);
   };
@@ -132,13 +145,20 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     setReservations((prevReservations) =>
       prevReservations.map((reservation) => {
         if (reservation.id === reservationId) {
-          const newPlayer = { userId: userId, name: playerName };
+          const newPlayer = { 
+            userId: userId, 
+            name: playerName,
+            playerName: playerName,
+            status: "joined" as const,
+            joinedAt: new Date().toISOString()
+          };
           if (!reservation.lineup) {
             reservation.lineup = [];
           }
           return {
             ...reservation,
             lineup: [...reservation.lineup, newPlayer],
+            playersJoined: (reservation.lineup.length + 1)
           };
         }
         return reservation;
@@ -146,13 +166,20 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
     );
   };
 
+  const joinGame = (reservationId: number, playerName?: string, userId?: string) => {
+    if (!userId) return;
+    joinReservation(reservationId, userId, playerName || `Player ${userId.substring(0, 4)}`);
+  };
+
   const cancelReservation = (reservationId: number, userId: string) => {
     setReservations((prevReservations) =>
       prevReservations.map((reservation) => {
         if (reservation.id === reservationId) {
+          const updatedLineup = reservation.lineup?.filter((player) => player.userId !== userId) || [];
           return {
             ...reservation,
-            lineup: reservation.lineup?.filter((player) => player.userId !== userId),
+            lineup: updatedLineup,
+            playersJoined: updatedLineup.length
           };
         }
         return reservation;
@@ -166,7 +193,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         if (reservation.id === reservationId) {
           return {
             ...reservation,
-            waitingList: [...(reservation.waitingList || []), { userId: userId, name: 'Player' }],
+            waitingList: [...(reservation.waitingList || []), userId],
           };
         }
         return reservation;
@@ -180,7 +207,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         if (reservation.id === reservationId) {
           return {
             ...reservation,
-            waitingList: reservation.waitingList?.filter(player => player.userId !== userId),
+            waitingList: reservation.waitingList?.filter(id => id !== userId),
           };
         }
         return reservation;
@@ -191,6 +218,10 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   const isUserJoined = (reservationId: number, userId: string) => {
     const reservation = reservations.find((res) => res.id === reservationId);
     return !!reservation?.lineup?.some((player) => player.userId === userId);
+  };
+
+  const updateReservationStatus = (id: number, status: "upcoming" | "completed" | "cancelled") => {
+    updateReservation(id, { status });
   };
 
   const addPitch = (pitch: Pitch) => {
@@ -231,6 +262,8 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         deletePitch,
         navigateToReservation,
         setPitches,
+        joinGame,
+        updateReservationStatus,
       }}
     >
       {children}
@@ -241,3 +274,4 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
 export const useReservation = () => useContext(ReservationContext);
 
 export default ReservationContext;
+export { Player };

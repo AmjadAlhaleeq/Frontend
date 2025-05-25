@@ -1,3 +1,4 @@
+
 // PitchCard.tsx
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -137,7 +138,7 @@ const PitchCard: React.FC<PitchCardProps> = ({
           <h3 className="font-semibold text-white text-lg line-clamp-1">
             {pitch.name}
           </h3>
-          {pitch.services?.type && (
+          {pitch.services?.type && typeof pitch.services.type === 'string' && (
             <Badge
               variant="outline"
               className={`mt-1 text-xs ${

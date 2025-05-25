@@ -42,7 +42,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   showAdminControls = false
 }) => {
   const formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
-  const joinedPlayers = reservation.lineup?.filter(p => p.status === 'joined') || [];
+  const joinedPlayers = reservation.lineup?.filter(p => (p.status === 'joined' || !p.status)) || [];
 
   // Get initials from player name
   const getInitials = (name?: string) => {
@@ -77,7 +77,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         {/* Game image */}
         <div className="relative h-48 w-full">
           <img
-            src={reservation.imageUrl || `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`}
+            src={reservation.backgroundImage || `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`}
             alt={reservation.pitchName}
             className="h-full w-full object-cover"
           />
@@ -108,7 +108,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
               <div className="flex items-center">
                 <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{`${reservation.playersJoined}/${actualMaxPlayers} players`}</span>
+                <span>{`${reservation.lineup?.length || 0}/${actualMaxPlayers} players`}</span>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -128,10 +128,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center mt-1 text-sm">
-              <span className="font-medium mr-1">Price:</span>
-              <span>${reservation.price} per player</span>
-            </div>
+            {reservation.price && (
+              <div className="flex items-center mt-1 text-sm">
+                <span className="font-medium mr-1">Price:</span>
+                <span>${reservation.price} per player</span>
+              </div>
+            )}
           </div>
 
           <Separator className="my-4" />
@@ -152,10 +154,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                       <div key={player.userId || index} className="flex items-center justify-between p-2 rounded-md bg-muted/40">
                         <div className="flex items-center">
                           <Avatar className="h-8 w-8 mr-2">
-                            <AvatarFallback>{getInitials(player.playerName)}</AvatarFallback>
+                            <AvatarFallback>{getInitials(player.playerName || player.name)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-medium">{player.playerName || `Player ${player.userId.substring(0, 4)}`}</p>
+                            <p className="text-sm font-medium">{player.playerName || player.name || `Player ${player.userId?.substring(0, 4)}`}</p>
                             {player.joinedAt && (
                               <p className="text-xs text-muted-foreground">
                                 Joined: {format(new Date(player.joinedAt), "MMM d, h:mm a")}
