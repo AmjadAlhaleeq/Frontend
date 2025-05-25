@@ -21,12 +21,9 @@ const AddReservationDialog = () => {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [title, setTitle] = useState("");
   const [pitchName, setPitchName] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [duration, setDuration] = useState("90"); // Default 90 minutes
+  const [time, setTime] = useState("");
   const [maxPlayers, setMaxPlayers] = useState<number | null>(null);
   const [price, setPrice] = useState("");
-  const [startPlayerName, setStartPlayerName] = useState("");
-  const [endPlayerName, setEndPlayerName] = useState("");
   
   const { addReservation, pitches } = useReservation();
   const { toast } = useToast();
@@ -38,12 +35,9 @@ const AddReservationDialog = () => {
         setDate(undefined);
         setTitle("");
         setPitchName("");
-        setStartTime("");
-        setDuration("90");
+        setTime("");
         setMaxPlayers(null);
         setPrice("");
-        setStartPlayerName("");
-        setEndPlayerName("");
       }, 200);
     }
   }, [open]);
@@ -60,28 +54,25 @@ const AddReservationDialog = () => {
     }
   }, [pitchName, pitches]);
 
-  // Time slots for the start time select dropdown
-  const timeSlots = [
-    "08:00", "09:00", "10:00", "11:00", "12:00",
-    "13:00", "14:00", "15:00", "16:00", "17:00",
-    "18:00", "19:00", "20:00", "21:00", "22:00"
-  ];
-
-  // Duration options in minutes
-  const durationOptions = [
-    { value: "60", label: "1 hour" },
-    { value: "90", label: "1.5 hours" },
-    { value: "120", label: "2 hours" },
-  ];
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate required fields
-    if (!title || !date || !pitchName || !startTime || !duration || !price) {
+    if (!title || !date || !pitchName || !time || !price) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate time format (HH:MM or HH:MM-HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](\s*-\s*([0-1]?[0-9]|2[0-3]):[0-5][0-9])?$/;
+    if (!timeRegex.test(time)) {
+      toast({
+        title: "Invalid Time Format",
+        description: "Please use format HH:MM or HH:MM-HH:MM (e.g., 14:00 or 14:00-16:00)",
         variant: "destructive"
       });
       return;
@@ -98,35 +89,22 @@ const AddReservationDialog = () => {
       return;
     }
     
-    // Calculate end time
-    const durationMinutes = parseInt(duration);
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    
-    const endTimeDate = new Date();
-    endTimeDate.setHours(startHour);
-    endTimeDate.setMinutes(startMinute + durationMinutes);
-    
-    const endTime = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
-    
-    // Format time range
-    const timeRange = `${startTime} - ${endTime}`;
-    
     // Create the reservation data object
     const reservationData = {
       title,
       pitchName,
       date: format(date, 'yyyy-MM-dd'),
-      time: timeRange,
-      startTime,
-      duration: durationMinutes,
+      time: time,
+      startTime: time.split('-')[0]?.trim() || time,
+      duration: 90, // Default duration
       location: selectedPitch?.location || "",
       city: selectedPitch?.city || "",
       maxPlayers: maxPlayers || 12,
       price: parseFloat(price) || 0,
       imageUrl: selectedPitch?.image,
       additionalImages: selectedPitch?.additionalImages || [],
-      startPlayerName: startPlayerName || "",
-      endPlayerName: endPlayerName || "",
+      startPlayerName: "",
+      endPlayerName: "",
     };
     
     // Add the reservation
@@ -155,7 +133,7 @@ const AddReservationDialog = () => {
           Add Reservation
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Create New Reservation</DialogTitle>
         </DialogHeader>
@@ -164,13 +142,13 @@ const AddReservationDialog = () => {
           {/* Title Input - Required */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Title* (Required)
+              Game Title* (Required)
             </label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Game title"
+              placeholder="e.g., Friday Night Game"
               required
             />
           </div>
@@ -180,10 +158,7 @@ const AddReservationDialog = () => {
             <label htmlFor="pitchName" className="text-sm font-medium">
               Pitch*
             </label>
-            <Select
-              value={pitchName}
-              onValueChange={setPitchName}
-            >
+            <Select value={pitchName} onValueChange={setPitchName}>
               <SelectTrigger id="pitchName" className="w-full">
                 <SelectValue placeholder="Select a pitch" />
               </SelectTrigger>
@@ -225,51 +200,25 @@ const AddReservationDialog = () => {
             </Popover>
           </div>
           
-          {/* Start Time Select - Required */}
+          {/* Manual Time Input */}
           <div className="space-y-2">
-            <label htmlFor="startTime" className="text-sm font-medium">
-              Start Time* (Required)
+            <label htmlFor="time" className="text-sm font-medium">
+              Time* (Required)
             </label>
-            <Select
-              value={startTime}
-              onValueChange={setStartTime}
-            >
-              <SelectTrigger id="startTime" className="w-full">
-                <SelectValue placeholder="Select start time" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map((slot) => (
-                  <SelectItem key={slot} value={slot}>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {slot}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Duration Select */}
-          <div className="space-y-2">
-            <label htmlFor="duration" className="text-sm font-medium">
-              Duration*
-            </label>
-            <Select
-              value={duration}
-              onValueChange={setDuration}
-            >
-              <SelectTrigger id="duration" className="w-full">
-                <SelectValue placeholder="Select duration" />
-              </SelectTrigger>
-              <SelectContent>
-                {durationOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                placeholder="e.g., 14:00 or 14:00-16:00"
+                className="pl-10"
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Format: HH:MM (e.g., 14:00) or HH:MM-HH:MM (e.g., 14:00-16:00)
+            </p>
           </div>
 
           {/* Price Input */}
@@ -290,41 +239,6 @@ const AddReservationDialog = () => {
                 className="pl-10"
                 required
               />
-            </div>
-          </div>
-
-          {/* Player Names */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="startPlayerName" className="text-sm font-medium">
-                Start Player Name
-              </label>
-              <div className="relative">
-                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="startPlayerName"
-                  value={startPlayerName}
-                  onChange={(e) => setStartPlayerName(e.target.value)}
-                  placeholder="First player to join"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="endPlayerName" className="text-sm font-medium">
-                End Player Name
-              </label>
-              <div className="relative">
-                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="endPlayerName"
-                  value={endPlayerName}
-                  onChange={(e) => setEndPlayerName(e.target.value)}
-                  placeholder="Last player to join"
-                  className="pl-10"
-                />
-              </div>
             </div>
           </div>
 

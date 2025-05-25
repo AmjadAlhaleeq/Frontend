@@ -3,7 +3,23 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Trash2, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  MapPin, 
+  Trash2, 
+  Users, 
+  ChevronLeft, 
+  ChevronRight,
+  Wifi,
+  Car,
+  Coffee,
+  Shield,
+  Shirt,
+  Droplets,
+  Camera,
+  TreePine,
+  Zap,
+  Wind
+} from "lucide-react";
 import { Pitch } from "@/context/ReservationContext";
 
 interface PitchCardProps {
@@ -15,10 +31,36 @@ interface PitchCardProps {
   onDeleteClick: () => void;
 }
 
+const facilityIcons: Record<string, any> = {
+  wifi: Wifi,
+  parking: Car,
+  cafe: Coffee,
+  security: Shield,
+  changing_rooms: Shirt,
+  showers: Droplets,
+  cctv: Camera,
+  outdoor_area: TreePine,
+  floodlights: Zap,
+  air_conditioning: Wind,
+};
+
+const facilityColors: Record<string, string> = {
+  wifi: "text-blue-600",
+  parking: "text-gray-600",
+  cafe: "text-orange-600",
+  security: "text-red-600",
+  changing_rooms: "text-purple-600",
+  showers: "text-cyan-600",
+  cctv: "text-indigo-600",
+  outdoor_area: "text-green-600",
+  floodlights: "text-yellow-600",
+  air_conditioning: "text-sky-600",
+};
+
 /**
  * PitchCard component
  * Displays a card with pitch information and action buttons
- * Now supports multiple images with navigation
+ * Now supports multiple images with navigation and real facility icons
  */
 const PitchCard: React.FC<PitchCardProps> = ({
   pitch,
@@ -42,8 +84,11 @@ const PitchCard: React.FC<PitchCardProps> = ({
     setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   };
 
+  // Ensure minimum 5 players per side
+  const playersPerSide = Math.max(pitch.playersPerSide, 5);
+
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
       {/* Card image with navigation for multiple images */}
       <div 
         className="h-48 relative cursor-pointer group" 
@@ -123,27 +168,37 @@ const PitchCard: React.FC<PitchCardProps> = ({
           <span className="truncate">{pitch.city}</span>
         </div>
         
-        {/* Facilities */}
-        <div className="mb-3">
-          <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
-          <div className="flex flex-wrap gap-1.5">
-            {pitch.facilities && pitch.facilities.length > 0 ? (
-              pitch.facilities.map((facility, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {facility.replace('_', ' ')}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-xs text-gray-500 italic">No facilities listed</span>
-            )}
-          </div>
-        </div>
-        
         {/* Players info */}
         <div className="flex justify-between items-center mb-3 text-sm">
           <div className="flex items-center text-gray-600">
             <Users className="h-4 w-4 mr-1" />
-            {pitch.playersPerSide}v{pitch.playersPerSide}
+            {playersPerSide}v{playersPerSide}
+          </div>
+        </div>
+        
+        {/* Facilities with real icons */}
+        <div className="mb-3">
+          <h4 className="text-sm font-medium mb-1.5">Facilities:</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {pitch.facilities && pitch.facilities.length > 0 ? (
+              pitch.facilities.slice(0, 3).map((facility, index) => {
+                const IconComponent = facilityIcons[facility];
+                const iconColor = facilityColors[facility] || "text-gray-500";
+                return (
+                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
+                    {IconComponent && <IconComponent className={`h-3 w-3 ${iconColor}`} />}
+                    {facility.replace('_', ' ')}
+                  </Badge>
+                );
+              })
+            ) : (
+              <span className="text-xs text-gray-500 italic">No facilities listed</span>
+            )}
+            {pitch.facilities && pitch.facilities.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{pitch.facilities.length - 3} more
+              </Badge>
+            )}
           </div>
         </div>
         

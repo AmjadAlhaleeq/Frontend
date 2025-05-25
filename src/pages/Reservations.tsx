@@ -465,23 +465,41 @@ const Reservations = () => {
               </div>
 
               {upcomingReservations.map((reservation) => (
-                <ReservationCard
+                <div 
                   key={reservation.id}
-                  reservation={reservation}
-                  userId={currentUserId || ""}
-                  userRole={userRole || "player"}
-                  onJoin={(id, playerName) => handleJoinGame(id)}
-                  onCancel={(id, userId) => handleCancelReservation(id)}
-                  onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
-                  onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
-                  isUserJoined={isUserJoinedFunction}
-                  isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
-                  onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
-                  onViewDetails={(reservation) => {
+                  className="cursor-pointer transition-transform hover:scale-[1.02]"
+                  onClick={() => {
                     setSelectedGameForDetails(reservation);
                     setIsGameDetailsDialogOpen(true);
                   }}
-                />
+                >
+                  <ReservationCard
+                    reservation={reservation}
+                    userId={currentUserId || ""}
+                    userRole={userRole || "player"}
+                    onJoin={(id, playerName) => {
+                      if (!currentUserId) {
+                        toast({ 
+                          title: "Login Required", 
+                          description: "Please log in to join a game.", 
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      handleJoinGame(id);
+                    }}
+                    onCancel={(id, userId) => handleCancelReservation(id)}
+                    onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
+                    onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
+                    isUserJoined={isUserJoinedFunction}
+                    isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
+                    onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
+                    onViewDetails={(reservation) => {
+                      setSelectedGameForDetails(reservation);
+                      setIsGameDetailsDialogOpen(true);
+                    }}
+                  />
+                </div>
               ))}
             </>
           )}
