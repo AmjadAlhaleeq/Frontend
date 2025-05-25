@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from 'react-router-dom'; // Replace next/router with react-router-dom
 import { Button } from "@/components/ui/button";
@@ -49,12 +50,8 @@ const pitchSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  price: z.coerce.number().min(1, {
-    message: "Price must be at least 1.",
-  }),
   facilities: z.array(z.string()).optional(),
   type: z.enum(["indoor", "outdoor"]).optional(),
-  openingHours: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -79,10 +76,8 @@ const EditPitch = () => {
           image: pitch.image,
           playersPerSide: pitch.playersPerSide,
           description: pitch.description,
-          price: pitch.price,
           facilities: pitch.facilities,
           type: pitch.type || "outdoor",
-          openingHours: pitch.openingHours || "",
           address: pitch.details?.address || "",
         });
       }
@@ -101,10 +96,8 @@ const EditPitch = () => {
       image: "",
       playersPerSide: 5,
       description: "",
-      price: 25,
       facilities: [],
       type: "outdoor",
-      openingHours: "",
       address: "",
     },
     mode: "onChange",
@@ -125,10 +118,9 @@ const EditPitch = () => {
       image: values.image || 'https://placehold.co/600x400?text=Football+Pitch', // Provide default image
       description: values.description,
       playersPerSide: values.playersPerSide,
-      price: values.price,
+      price: 25, // Default price since removed from form
       facilities: facilities,
       type: values.type || 'outdoor',
-      openingHours: values.openingHours || '',
       details: {
         address: values.address || '',
       }
@@ -249,23 +241,6 @@ const EditPitch = () => {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price per Player</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter price per player"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
           <FormField
             control={form.control}
@@ -314,19 +289,6 @@ const EditPitch = () => {
                     <SelectItem value="outdoor">Outdoor</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="openingHours"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Opening Hours (optional)</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter opening hours" {...field} />
-                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

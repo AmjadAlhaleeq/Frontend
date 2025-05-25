@@ -252,19 +252,6 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                     {pitch.type === 'indoor' ? 'Indoor Pitch' : 'Outdoor Pitch'}
                   </Badge>
                 </div>
-                
-                {/* Opening hours section */}
-                {pitch.openingHours && (
-                  <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                    <Clock className="h-6 w-6 text-orange-600 mr-3" />
-                    <div>
-                      <h4 className="font-semibold text-lg">Opening Hours</h4>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {pitch.openingHours}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
