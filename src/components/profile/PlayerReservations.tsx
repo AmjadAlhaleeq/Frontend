@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import LeaveGameDialog from '../reservations/LeaveGameDialog';
 import { useToast } from '@/hooks/use-toast';
 import WaitlistConfirmationDialog from '../reservations/WaitlistConfirmationDialog';
 import { sendGameJoinedConfirmation } from '@/utils/emailNotifications';
+import { cancelReservation as cancelReservationApi } from '@/services/playerReservationApi';
 
 interface PlayerReservationsProps {
   userId: string;
@@ -160,6 +162,12 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
     if (!selectedReservation) return;
     
     try {
+      // Call backend API first
+      if (selectedReservation.backendId) {
+        await cancelReservationApi(selectedReservation.backendId);
+      }
+      
+      // Then update local state
       await cancelReservation(selectedReservation.id, userId);
       setShowLeaveDialog(false);
       

@@ -9,6 +9,7 @@ export const joinReservation = async (reservationId: string): Promise<void> => {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
   });
   
@@ -25,12 +26,30 @@ export const cancelReservation = async (reservationId: string): Promise<void> =>
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
   });
   
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to cancel reservation');
+  }
+};
+
+export const addToWaitlist = async (reservationId: string): Promise<void> => {
+  const token = requireAuth();
+  
+  const response = await fetch(`${API_BASE}/reservations/${reservationId}/waitlist/add`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to add to waitlist');
   }
 };
 
@@ -41,6 +60,7 @@ export const removeFromWaitlist = async (reservationId: string): Promise<void> =
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
   });
   

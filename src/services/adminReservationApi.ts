@@ -1,16 +1,16 @@
 
-import { BackendReservation, CreateReservationRequest, KickPlayerRequest, AddSummaryRequest } from './reservationTypes';
+import { CreateReservationRequest, KickPlayerRequest, GameSummary } from './reservationTypes';
 import { API_BASE, requireAuth } from './reservationHelpers';
 
 // Admin routes
-export const createReservation = async (reservationData: CreateReservationRequest): Promise<BackendReservation> => {
+export const createReservation = async (reservationData: CreateReservationRequest): Promise<any> => {
   const token = requireAuth();
   
   const response = await fetch(`${API_BASE}/reservations`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(reservationData),
   });
@@ -21,16 +21,17 @@ export const createReservation = async (reservationData: CreateReservationReques
   }
   
   const data = await response.json();
-  return data.data?.reservation || data.data;
+  return data.data || data;
 };
 
-export const deleteReservationApi = async (id: string): Promise<void> => {
+export const deleteReservationApi = async (reservationId: string): Promise<void> => {
   const token = requireAuth();
   
-  const response = await fetch(`${API_BASE}/reservations/${id}`, {
+  const response = await fetch(`${API_BASE}/reservations/${reservationId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
   });
   
@@ -40,16 +41,16 @@ export const deleteReservationApi = async (id: string): Promise<void> => {
   }
 };
 
-export const kickPlayer = async (reservationId: string, kickData: KickPlayerRequest): Promise<void> => {
+export const kickPlayer = async (reservationId: string, playerId: string): Promise<void> => {
   const token = requireAuth();
   
   const response = await fetch(`${API_BASE}/reservations/${reservationId}/kick`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(kickData),
+    body: JSON.stringify({ playerId }),
   });
   
   if (!response.ok) {
@@ -58,20 +59,20 @@ export const kickPlayer = async (reservationId: string, kickData: KickPlayerRequ
   }
 };
 
-export const addGameSummary = async (reservationId: string, summaryData: AddSummaryRequest): Promise<void> => {
+export const addGameSummary = async (reservationId: string, summaryData: { summary: string; playerStats: any[] }): Promise<void> => {
   const token = requireAuth();
   
   const response = await fetch(`${API_BASE}/reservations/${reservationId}/summary`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(summaryData),
   });
   
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to add summary');
+    throw new Error(errorData.message || 'Failed to add game summary');
   }
 };

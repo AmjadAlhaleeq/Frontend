@@ -6,11 +6,13 @@ import {
   joinReservation as joinReservationApi,
   cancelReservation as cancelReservationApi,
   removeFromWaitlist,
+  addToWaitlist
+} from '@/services/playerReservationApi';
+import {
   deleteReservationApi,
   kickPlayer as kickPlayerApi,
-  addGameSummary,
-  addToWaitlist
-} from '@/lib/reservationApi';
+  addGameSummary
+} from '@/services/adminReservationApi';
 
 export const useReservationActions = (
   currentUserId: string | null,
@@ -54,6 +56,7 @@ export const useReservationActions = (
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
+      console.log('Attempting to join reservation with ID:', reservation.backendId);
       await joinReservationApi(reservation.backendId);
       joinGame(reservationId, undefined, currentUserId);
       

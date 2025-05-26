@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAllReservations } from '@/lib/reservationApi';
-import { fetchPitches } from '@/lib/api';
+import { getAllReservations } from '@/services/reservationApi';
+import { fetchPitches } from '@/services/publicReservationApi';
 import { useReservation, Reservation } from '@/context/ReservationContext';
 
 export const useReservationsData = () => {
