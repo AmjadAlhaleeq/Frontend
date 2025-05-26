@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -107,6 +108,7 @@ interface ReservationContextProps {
   updateReservationStatus: (id: number, status: "upcoming" | "completed" | "cancelled") => void;
   getUserStats: (userId: string) => UserStats;
   deleteHighlight: (reservationId: number, highlightId: string) => void;
+  removePlayerFromReservation: (reservationId: number, playerId: string) => void;
 }
 
 const ReservationContext = createContext<ReservationContextProps>({
@@ -143,6 +145,7 @@ const ReservationContext = createContext<ReservationContextProps>({
     mvps: 0
   }),
   deleteHighlight: () => {},
+  removePlayerFromReservation: () => {},
 });
 
 interface ReservationProviderProps {
@@ -230,6 +233,22 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
       prevReservations.map((reservation) => {
         if (reservation.id === reservationId) {
           const updatedLineup = reservation.lineup?.filter((player) => player.userId !== userId) || [];
+          return {
+            ...reservation,
+            lineup: updatedLineup,
+            playersJoined: updatedLineup.length
+          };
+        }
+        return reservation;
+      })
+    );
+  };
+
+  const removePlayerFromReservation = (reservationId: number, playerId: string) => {
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          const updatedLineup = reservation.lineup?.filter((player) => player.userId !== playerId) || [];
           return {
             ...reservation,
             lineup: updatedLineup,
@@ -374,6 +393,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         updateReservationStatus,
         getUserStats,
         deleteHighlight,
+        removePlayerFromReservation,
       }}
     >
       {children}
