@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -9,8 +10,7 @@ import {
 } from '@/services/playerReservationApi';
 import {
   deleteReservationApi,
-  kickPlayer as kickPlayerApi,
-  addGameSummary
+  kickPlayer as kickPlayerApi
 } from '@/services/adminReservationApi';
 
 export const useReservationActions = (
