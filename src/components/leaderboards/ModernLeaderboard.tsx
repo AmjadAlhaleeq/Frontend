@@ -30,13 +30,15 @@ interface ModernLeaderboardProps {
     color: string;
     description: string;
   };
+  onPlayerClick?: (playerId: string) => void;
 }
 
 const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({ 
   players = [], 
   loading = false, 
   currentType = 'goals',
-  typeConfig = {}
+  typeConfig = {},
+  onPlayerClick
 }) => {
   // Get rank icon based on position
   const getRankIcon = (rank: number) => {
@@ -156,12 +158,25 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
         const stats = formatStatValue(player, currentType);
         const isTopThree = player.rank <= 3;
         
+        // Define card styling based on rank
+        const getCardStyling = (rank: number) => {
+          switch (rank) {
+            case 1:
+              return 'border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-500';
+            case 2:
+              return 'border-2 border-gray-400 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/20 dark:border-gray-400';
+            case 3:
+              return 'border-2 border-amber-600 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:border-amber-600';
+            default:
+              return '';
+          }
+        };
+        
         return (
           <Card
             key={player.userId}
-            className={`transition-all duration-200 hover:shadow-md ${
-              isTopThree ? 'border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-700' : ''
-            }`}
+            className={`transition-all duration-200 hover:shadow-md cursor-pointer ${getCardStyling(player.rank)}`}
+            onClick={() => onPlayerClick?.(player.userId)}
           >
             <CardContent className="p-4">
               <div className="flex items-center space-x-4">

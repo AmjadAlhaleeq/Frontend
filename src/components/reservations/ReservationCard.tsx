@@ -11,7 +11,6 @@ import {
   Users,
   Trash2,
   FileText,
-  Eye,
   UserPlus,
   UserMinus,
   AlertCircle,
@@ -102,8 +101,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
     if (userRole === 'admin') {
       return (
-        <div className="flex gap-2">
-          {onAddSummary && reservation.status === 'upcoming' && (
+        <div className="flex gap-2 w-full">
+          {reservation.status === 'completed' && onAddSummary && (
             <Button 
               size="sm" 
               variant="outline"
@@ -111,9 +110,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 e.stopPropagation();
                 onAddSummary(reservation);
               }}
+              className="flex-1"
             >
               <FileText className="h-4 w-4 mr-1" />
-              Summary
+              Add Summary
             </Button>
           )}
           {onDeleteReservation && (
@@ -124,22 +124,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 e.stopPropagation();
                 onDeleteReservation(reservation.id);
               }}
+              className="flex-1"
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </Button>
           )}
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails(reservation);
-            }}
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Details
-          </Button>
         </div>
       );
     }
@@ -147,7 +137,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // Player actions
     if (isJoined) {
       return (
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center w-full">
           <Badge className="bg-green-100 text-green-800 border-green-200">
             Joined
           </Badge>
@@ -158,7 +148,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               e.stopPropagation();
               onCancel(reservation.id, userId);
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
           >
             <UserMinus className="h-4 w-4 mr-1" />
             Leave
@@ -169,7 +159,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
     if (isInWaitingList) {
       return (
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center w-full">
           <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
             Waiting List #{reservation.waitingList?.indexOf(userId)! + 1}
           </Badge>
@@ -180,7 +170,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               e.stopPropagation();
               onLeaveWaitingList(reservation.id, userId);
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
           >
             <UserMinus className="h-4 w-4 mr-1" />
             Leave List
@@ -192,7 +182,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     if (gameIsFull) {
       if (waitingListCount >= 3) {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full">
             <Badge variant="destructive">Full</Badge>
             <span className="text-sm text-muted-foreground">Waiting list full</span>
           </div>
@@ -206,7 +196,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             e.stopPropagation();
             onJoinWaitingList(reservation.id, userId);
           }}
-          className="border-amber-500 text-amber-600 hover:bg-amber-50"
+          className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
         >
           <UserPlus className="h-4 w-4 mr-1" />
           Join Waiting List
@@ -221,7 +211,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           e.stopPropagation();
           onJoin(reservation.id);
         }}
-        className="bg-teal-500 hover:bg-teal-600 text-white"
+        className="bg-teal-500 hover:bg-teal-600 text-white w-full"
       >
         <UserPlus className="h-4 w-4 mr-1" />
         Join Game
@@ -297,7 +287,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               <Users className="h-4 w-4 mr-2 text-muted-foreground" />
               <span className="text-sm">
                 {currentPlayers}/{actualMaxPlayers} players
-                {waitingListCount > 0 && (
+                {userRole === 'admin' && waitingListCount > 0 && (
+                  <span className="text-amber-600 ml-1">
+                    (+{waitingListCount} waiting)
+                  </span>
+                )}
+                {userRole === 'player' && waitingListCount > 0 && (
                   <span className="text-amber-600 ml-1">
                     (+{waitingListCount} waiting)
                   </span>
@@ -306,7 +301,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             </div>
             {reservation.price && (
               <span className="text-sm font-medium text-teal-600">
-                ${reservation.price}
+                {reservation.price} JD per player
               </span>
             )}
           </div>

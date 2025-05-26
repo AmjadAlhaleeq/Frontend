@@ -1,110 +1,74 @@
 
-import { useState } from "react";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CalendarIcon } from "lucide-react";
+import { addDays, isSameDay } from "date-fns";
 
 interface EnhancedDatePickerProps {
   date: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
-  hasReservations?: (date: Date) => boolean;
+  hasReservations: (date: Date) => boolean;
 }
 
-const EnhancedDatePicker = ({ date, onDateChange, hasReservations }: EnhancedDatePickerProps) => {
-  // Generate quick access dates
+const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
+  date,
+  onDateChange,
+  hasReservations,
+}) => {
   const today = new Date();
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  const nextWeek = new Date();
-  nextWeek.setDate(nextWeek.getDate() + 7);
+  const minBookingDate = addDays(today, 5); // 5 days from today
 
-  const quickDates = [
-    { label: "Today", date: today, icon: <CalendarIcon className="w-4 h-4 mr-2" /> },
-    { label: "Tomorrow", date: tomorrow, icon: <ChevronRight className="w-4 h-4 mr-2" /> },
-    { label: "Next Week", date: nextWeek, icon: <ChevronRight className="w-4 h-4 mr-2 rotate-45" /> },
-  ];
+  const isDateDisabled = (checkDate: Date) => {
+    return checkDate < minBookingDate;
+  };
+
+  const modifiers = {
+    hasReservations: (day: Date) => hasReservations(day),
+    disabled: isDateDisabled,
+  };
+
+  const modifiersStyles = {
+    hasReservations: {
+      backgroundColor: '#059669',
+      color: 'white',
+      fontWeight: 'bold',
+    },
+    disabled: {
+      color: '#d1d5db',
+      backgroundColor: '#f3f4f6',
+      cursor: 'not-allowed',
+    },
+  };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-0 shadow-md overflow-hidden">
+    <Card className="w-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold text-teal-600 dark:text-teal-400 flex items-center">
+          <CalendarIcon className="h-5 w-5 mr-2" />
+          Select Date
+        </CardTitle>
+      </CardHeader>
       <CardContent className="p-0">
-        <div className="bg-gradient-to-r from-[#0F766E] to-[#0d6d66] text-white p-4">
-          <h3 className="text-lg font-semibold flex items-center">
-            <CalendarIcon className="mr-2 h-5 w-5" />
-            Select Date
-          </h3>
-          <p className="text-sm opacity-90">Choose when you want to play</p>
-        </div>
-        
-        <div className="p-4 grid grid-cols-3 gap-2">
-          {quickDates.map((quickDate, index) => (
-            <Button
-              key={index}
-              variant={date && format(date, 'yyyy-MM-dd') === format(quickDate.date, 'yyyy-MM-dd') 
-                ? "default" 
-                : "outline"}
-              className={cn(
-                "h-auto py-3 justify-start",
-                date && format(date, 'yyyy-MM-dd') === format(quickDate.date, 'yyyy-MM-dd') 
-                  ? "bg-[#0F766E] hover:bg-[#0d6d66]" 
-                  : "hover:bg-[#ecfdf5] hover:text-[#0F766E]"
-              )}
-              onClick={() => onDateChange(quickDate.date)}
-            >
-              <div className="flex flex-col items-start">
-                <span className="flex items-center text-sm font-medium">
-                  {quickDate.icon}
-                  {quickDate.label}
-                </span>
-                <span className="text-xs mt-1 opacity-80">
-                  {format(quickDate.date, 'MMM d')}
-                </span>
-              </div>
-            </Button>
-          ))}
-        </div>
-        
-        <div className="px-4 pb-4">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-between border border-dashed",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <span className="flex items-center">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : "Pick another date"}
-                </span>
-                {date && hasReservations && hasReservations(date) && (
-                  <Badge variant="outline" className="bg-[#ecfdf5] text-[#0F766E] border-[#d1fae5]">
-                    Has games
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={onDateChange}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={onDateChange}
+          className="rounded-md border-0"
+          modifiers={modifiers}
+          modifiersStyles={modifiersStyles}
+          disabled={isDateDisabled}
+          fromDate={minBookingDate}
+        />
+        <div className="p-4 border-t">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <div className="w-3 h-3 rounded bg-emerald-600"></div>
+            <span>Has games</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-3 h-3 rounded bg-gray-300"></div>
+            <span>Booking not allowed (min 5 days advance)</span>
+          </div>
         </div>
       </CardContent>
     </Card>

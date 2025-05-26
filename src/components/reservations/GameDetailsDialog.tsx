@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
-import { MapPin, Calendar, Clock, Users, X, ExternalLink, UserMinus, Ban } from "lucide-react";
+import { MapPin, Calendar, Clock, Users, X, ExternalLink, UserMinus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Reservation } from "@/context/ReservationContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +32,7 @@ interface GameDetailsDialogProps {
   onKickPlayer?: (reservationId: number, playerId: string) => void;
   onSuspendPlayer?: (playerId: string, days: number, reason: string) => void;
   pitchImage?: string;
+  onPlayerClick?: (playerId: string) => void;
 }
 
 const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
@@ -43,7 +44,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   actualMaxPlayers,
   onKickPlayer,
   onSuspendPlayer,
-  pitchImage
+  pitchImage,
+  onPlayerClick
 }) => {
   const { toast } = useToast();
   const [suspensionDialog, setSuspensionDialog] = useState<{
@@ -120,24 +122,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     setKickConfirmation({ isOpen: false, playerName: "", playerId: "" });
   };
 
-  const handleSuspendPlayer = (playerId: string, playerName: string) => {
-    setSuspensionDialog({
-      isOpen: true,
-      playerName,
-      playerId
-    });
-  };
-
-  const confirmSuspension = (playerId: string, days: number, reason: string) => {
-    if (onSuspendPlayer) {
-      onSuspendPlayer(playerId, days, reason);
-      toast({
-        title: "Player Suspended",
-        description: `Player has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
-      });
-    }
-  };
-
   const getGameImage = () => {
     if (pitchImage) return pitchImage;
     if (reservation.backgroundImage) return reservation.backgroundImage;
@@ -156,14 +140,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               <DialogTitle className="text-xl">
                 {reservation.title || reservation.pitchName || "Game Details"}
               </DialogTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
             <DialogDescription className="mt-2">
               Game details and player management
@@ -231,7 +207,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               {reservation.price && (
                 <div className="flex items-center mt-1 text-sm">
                   <span className="font-medium mr-1">Price:</span>
-                  <span>${reservation.price} per player</span>
+                  <span>{reservation.price} JD per player</span>
                 </div>
               )}
 
@@ -266,7 +242,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     <div className="space-y-2">
                       {joinedPlayers.map((player, index) => (
                         <div key={player.userId || index} className="flex items-center justify-between p-3 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors">
-                          <div className="flex items-center">
+                          <div className="flex items-center cursor-pointer" onClick={() => onPlayerClick?.(player.userId)}>
                             <Avatar className="h-10 w-10 mr-3">
                               <AvatarFallback className="bg-teal-100 text-teal-700">
                                 {getInitials(player.playerName || player.name)}
@@ -287,29 +263,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                               <Badge className="bg-blue-500">You</Badge>
                             )}
                             
-                            {isAdmin && player.userId !== currentUserId && (
-                              <div className="flex gap-1">
-                                {reservation.status === 'upcoming' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleKickPlayer(player.userId, player.playerName || player.name || 'Player')}
-                                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <UserMinus className="h-3 w-3 mr-1" />
-                                    Kick
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleSuspendPlayer(player.userId, player.playerName || player.name || 'Player')}
-                                  className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                >
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  Suspend
-                                </Button>
-                              </div>
+                            {isAdmin && player.userId !== currentUserId && reservation.status === 'upcoming' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleKickPlayer(player.userId, player.playerName || player.name || 'Player')}
+                                className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <UserMinus className="h-3 w-3 mr-1" />
+                                Kick Player
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -327,7 +290,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     <div className="space-y-2">
                       {waitingList.map((userId, index) => (
                         <div key={userId} className="flex items-center justify-between p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                          <div className="flex items-center">
+                          <div className="flex items-center cursor-pointer" onClick={() => onPlayerClick?.(userId)}>
                             <Avatar className="h-10 w-10 mr-3">
                               <AvatarFallback className="bg-amber-100 text-amber-700">
                                 {(index + 1).toString()}
@@ -348,18 +311,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                               <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
                                 You
                               </Badge>
-                            )}
-                            
-                            {isAdmin && userId !== currentUserId && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSuspendPlayer(userId, `Player ${userId.substring(0, 6)}`)}
-                                className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                              >
-                                <Ban className="h-3 w-3 mr-1" />
-                                Suspend
-                              </Button>
                             )}
                           </div>
                         </div>
@@ -383,7 +334,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         onClose={() => setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" })}
         playerName={suspensionDialog.playerName}
         playerId={suspensionDialog.playerId}
-        onConfirm={confirmSuspension}
+        onConfirm={onSuspendPlayer || (() => {})}
       />
 
       <ActionConfirmationDialog

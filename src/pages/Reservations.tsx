@@ -12,6 +12,7 @@ import PlayerSuspensionDialog from "@/components/reservations/PlayerSuspensionDi
 import ReservationsHeader from "@/components/reservations/ReservationsHeader";
 import ReservationsEmptyState from "@/components/reservations/ReservationsEmptyState";
 import ReservationsList from "@/components/reservations/ReservationsList";
+import PlayerProfileDialog from "@/components/ui/PlayerProfileDialog";
 
 import { useReservationsData } from "@/hooks/useReservationsData";
 import { useReservationActions } from "@/hooks/useReservationActions";
@@ -28,6 +29,16 @@ const Reservations = () => {
   
   const [selectedGameForSummary, setSelectedGameForSummary] = useState<Reservation | null>(null);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  
+  const [playerProfile, setPlayerProfile] = useState<{
+    isOpen: boolean;
+    playerId: string;
+    playerName?: string;
+  }>({
+    isOpen: false,
+    playerId: "",
+    playerName: ""
+  });
   
   const [suspensionDialog, setSuspensionDialog] = useState<{
     isOpen: boolean;
@@ -115,6 +126,14 @@ const Reservations = () => {
       isOpen: true,
       playerName,
       playerId
+    });
+  }, []);
+
+  const handlePlayerClick = useCallback((playerId: string, playerName?: string) => {
+    setPlayerProfile({
+      isOpen: true,
+      playerId,
+      playerName
     });
   }, []);
 
@@ -251,6 +270,7 @@ const Reservations = () => {
           onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
           onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
+          onPlayerClick={handlePlayerClick}
         />
       )}
 
@@ -267,6 +287,20 @@ const Reservations = () => {
           onSuspendPlayer={handleOpenSuspensionDialog}
         />
       )}
+
+      {/* Player Profile Dialog */}
+      <PlayerProfileDialog
+        isOpen={playerProfile.isOpen}
+        onClose={() => setPlayerProfile({ isOpen: false, playerId: "", playerName: "" })}
+        playerId={playerProfile.playerId}
+        playerName={playerProfile.playerName}
+        playerStats={{
+          gamesPlayed: 12,
+          goals: 8,
+          assists: 5,
+          wins: 9
+        }}
+      />
 
       {/* Player Suspension Dialog */}
       <PlayerSuspensionDialog
