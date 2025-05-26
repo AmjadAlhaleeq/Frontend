@@ -10,8 +10,15 @@ export interface BackendUserProfile {
   preferredPosition?: string;
   bio?: string;
   profilePicture?: string;
+  suspended?: boolean;
   suspendedUntil?: string | null;
-  badges?: Array<{ _id: string; name: string; description: string; level: number }>;
+  badges?: Array<{ 
+    _id: string; 
+    name: string; 
+    description: string; 
+    level: number;
+    requiredValue?: number;
+  }>;
   stats?: {
     matches: number;
     wins: number;

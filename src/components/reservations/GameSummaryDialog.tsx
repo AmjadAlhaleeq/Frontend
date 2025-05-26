@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -35,7 +34,7 @@ interface GameSummaryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   reservation: Reservation;
-  onSaveSummary: (reservationId: number, summary: string, playerStats: PlayerStat[], mvpPlayerId: string) => void;
+  onSaveSummary: (summary: string, playerStats: PlayerStat[], mvpPlayerId: string) => void;
 }
 
 const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
@@ -85,7 +84,7 @@ const GameSummaryDialog: React.FC<GameSummaryDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      await onSaveSummary(reservation.id, gameNotes, playerStats, mvpPlayerId);
+      await onSaveSummary(gameNotes, playerStats, mvpPlayerId);
       
       toast({
         title: "Summary Saved",
