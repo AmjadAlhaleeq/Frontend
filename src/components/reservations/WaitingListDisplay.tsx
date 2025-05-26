@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Users, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Reservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 
 interface WaitingListDisplayProps {
   reservation: Reservation;
