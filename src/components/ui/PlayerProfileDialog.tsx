@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   Dialog,
@@ -33,6 +32,20 @@ interface PlayerProfileDialogProps {
   };
 }
 
+interface PlayerStatsType {
+  matches: number;
+  gamesPlayed: number;
+  goals: number;
+  goalsScored: number;
+  assists: number;
+  wins: number;
+  mvp: number;
+  mvps: number;
+  cleanSheets: number;
+  cleansheets: number;
+  interceptions: number;
+}
+
 const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   isOpen,
   onClose,
@@ -57,20 +70,40 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
     return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
   };
 
-  // Compose stats for backend or fallback playerStats
-  const statsSource = profileData?.stats || playerStats || {};
+  // Default stats filled for typing & destructuring safety
+  const defaultStats: PlayerStatsType = {
+    matches: 0,
+    gamesPlayed: 0,
+    goals: 0,
+    goalsScored: 0,
+    assists: 0,
+    wins: 0,
+    mvp: 0,
+    mvps: 0,
+    cleanSheets: 0,
+    cleansheets: 0,
+    interceptions: 0,
+  };
+
+  // Compose stats for backend or fallback playerStats, with typing safety
+  const statsSource: PlayerStatsType = {
+    ...defaultStats,
+    ...(profileData?.stats || {}),
+    ...(playerStats || {}),
+  };
+
   const {
-    matches = 0,
-    gamesPlayed = 0,
-    goals = 0,
-    goalsScored = 0,
-    assists = 0,
-    wins = 0,
-    mvp = 0,
-    mvps = 0,
-    cleanSheets = 0,
-    cleansheets = 0,
-    interceptions = 0,
+    matches,
+    gamesPlayed,
+    goals,
+    goalsScored,
+    assists,
+    wins,
+    mvp,
+    mvps,
+    cleanSheets,
+    cleansheets,
+    interceptions,
   } = statsSource;
 
   return (
