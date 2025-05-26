@@ -143,7 +143,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       playerId: userId,
       playerName
     });
-    if (onPlayerClick) onPlayerClick(userId, playerName);
+    if (onPlayerClick) onPlayerClick(userId);
   };
 
   return (
@@ -305,7 +305,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     <div className="space-y-2">
                       {waitingList.map((userId, index) => (
                         <div key={userId} className="flex items-center justify-between p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                          <div className="flex items-center cursor-pointer" onClick={() => handleOpenPlayerProfile(userId, `Player ${userId.substring(0, 6)}`)}>
+                          <div className="flex items-center cursor-pointer" onClick={() => handleOpenPlayerProfile(userId)}>
                             <Avatar className="h-10 w-10 mr-3">
                               <AvatarFallback className="bg-amber-100 text-amber-700">
                                 {(index + 1).toString()}

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   Dialog,
@@ -116,7 +115,8 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
   // Map stats from API (prefer backend, fallback to prop)
   const stats = {
-    gamesPlayed: profileData?.stats?.gamesPlayed ?? playerStats?.gamesPlayed ?? 0,
+    // Map 'matches' from backend to gamesPlayed
+    gamesPlayed: profileData?.stats?.matches ?? playerStats?.gamesPlayed ?? 0,
     goals: profileData?.stats?.goals ?? playerStats?.goals ?? 0,
     assists: profileData?.stats?.assists ?? playerStats?.assists ?? 0,
     cleansheets: profileData?.stats?.cleanSheets ?? playerStats?.cleansheets ?? 0,
@@ -262,4 +262,3 @@ const StatBlock = ({
 );
 
 export default PlayerProfileDialog;
-
