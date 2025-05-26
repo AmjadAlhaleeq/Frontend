@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +31,7 @@ const Reservations = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [addDialogKey, setAddDialogKey] = useState(0);
+  const [pageError, setPageError] = useState<string | null>(null);
   
   // Dialog states
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
@@ -89,24 +91,55 @@ const Reservations = () => {
     gameName: ''
   });
   
-  const {
-    reservations,
-    isUserJoined,
-    updateReservationStatus,
-  } = useReservation();
+  // Get reservation context with error handling
+  let reservations: Reservation[] = [];
+  let isUserJoined = () => false;
+  let updateReservationStatus = () => {};
+  
+  try {
+    const reservationContext = useReservation();
+    reservations = reservationContext.reservations || [];
+    isUserJoined = reservationContext.isUserJoined || (() => false);
+    updateReservationStatus = reservationContext.updateReservationStatus || (() => {});
+  } catch (error) {
+    console.error('Error accessing reservation context:', error);
+    setPageError('Failed to load reservation data');
+  }
 
-  const { isLoading, pitchImages, loadReservations } = useReservationsData();
+  // Get hooks with error handling
+  let isLoading = false;
+  let pitchImages: Record<string, string> = {};
+  let loadReservations = async () => {};
+  
+  try {
+    const reservationsData = useReservationsData();
+    isLoading = reservationsData.isLoading;
+    pitchImages = reservationsData.pitchImages || {};
+    loadReservations = reservationsData.loadReservations || (async () => {});
+  } catch (error) {
+    console.error('Error accessing reservations data:', error);
+    setPageError('Failed to load reservations data');
+  }
+
+  let reservationActions: any = {};
+  
+  try {
+    reservationActions = useReservationActions(currentUserId, userRole, reservations, loadReservations);
+  } catch (error) {
+    console.error('Error accessing reservation actions:', error);
+    setPageError('Failed to initialize reservation actions');
+  }
 
   const {
-    handleJoinGame,
-    handleCancelReservation,
-    handleDeleteReservation,
-    handleJoinWaitingList,
-    handleLeaveWaitingList,
-    handleKickPlayer,
-    handleSaveSummary,
-    calculateActualMaxPlayers
-  } = useReservationActions(currentUserId, userRole, reservations, loadReservations);
+    handleJoinGame = () => {},
+    handleCancelReservation = () => {},
+    handleDeleteReservation = () => {},
+    handleJoinWaitingList = () => {},
+    handleLeaveWaitingList = () => {},
+    handleKickPlayer = () => {},
+    handleSaveSummary = () => {},
+    calculateActualMaxPlayers = (max: number) => max
+  } = reservationActions;
 
   // Initialize user data
   useEffect(() => {
@@ -122,6 +155,7 @@ const Reservations = () => {
       }
     } catch (error) {
       console.error('Error initializing user data:', error);
+      setPageError('Failed to load user data');
     }
   }, []);
 
@@ -191,9 +225,6 @@ const Reservations = () => {
     });
   }, [currentUserId, reservations, toast]);
 
-  /**
-   * Opens confirmation dialog for leaving a game
-   */
   const handleLeaveGameWithConfirmation = useCallback((reservationId: number) => {
     const reservation = reservations.find(r => r.id === reservationId);
     if (!reservation) return;
@@ -209,9 +240,6 @@ const Reservations = () => {
     });
   }, [reservations]);
 
-  /**
-   * Confirms the game action (join/leave)
-   */
   const confirmGameAction = useCallback(async () => {
     const { action, reservationId } = actionDialog;
     
@@ -236,9 +264,6 @@ const Reservations = () => {
     }
   }, [actionDialog, handleJoinGame, handleCancelReservation]);
 
-  /**
-   * Opens messages dialog for a game
-   */
   const handleOpenMessages = useCallback((reservationId: number) => {
     const reservation = reservations.find(r => r.id === reservationId);
     if (!reservation) return;
@@ -310,11 +335,31 @@ const Reservations = () => {
     return gameExists;
   }, [selectedGameForDetails, reservations]);
 
+  // Handle page error
+  if (pageError) {
+    return (
+      <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="text-red-500 text-lg font-semibold mb-2">Error Loading Page</div>
+          <p className="text-muted-foreground mb-4">{pageError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <Loader className="h-8 w-8 text-teal-500 animate-spin mb-4" />
-        <p className="text-muted-foreground">Loading reservations...</p>
+      <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <div className="flex flex-col items-center justify-center h-64">
+          <Loader className="h-8 w-8 text-teal-500 animate-spin mb-4" />
+          <p className="text-muted-foreground">Loading reservations...</p>
+        </div>
       </div>
     );
   }

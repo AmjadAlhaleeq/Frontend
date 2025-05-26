@@ -10,6 +10,7 @@ import { getAllReservations, transformReservation, BackendReservation } from '@/
 export const useReservationsData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [pitchImages, setPitchImages] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { setReservations } = useReservation();
 
   /**
@@ -19,6 +20,9 @@ export const useReservationsData = () => {
   const loadReservations = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
+      
+      console.log('Starting to load reservations...');
       
       // Fetch fresh data from backend
       const backendReservations = await getAllReservations();
@@ -47,20 +51,36 @@ export const useReservationsData = () => {
       console.log('Successfully loaded and transformed reservations:', frontendReservations.length);
     } catch (error) {
       console.error('Error loading reservations:', error);
-      // Don't throw error, just log it to prevent page crashes
+      setLoadError(error instanceof Error ? error.message : 'Failed to load reservations');
+      // Set empty data on error to prevent crashes
+      setReservations([]);
+      setPitchImages({});
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load reservations on mount
+  // Load reservations on mount only
   useEffect(() => {
-    loadReservations();
-  }, []);
+    let isMounted = true;
+    
+    const initializeData = async () => {
+      if (isMounted) {
+        await loadReservations();
+      }
+    };
+    
+    initializeData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array to run only once
 
   return {
     isLoading,
     pitchImages,
-    loadReservations
+    loadReservations,
+    loadError
   };
 };
