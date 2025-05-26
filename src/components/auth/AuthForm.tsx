@@ -1,313 +1,283 @@
-
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-
-/**
- * Schema definitions for form validation
- * These will be used with MongoDB & Node.js backend
- */
-
-// Define the schema for login
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z
-    .string()
-    .min(6, { message: "Password must be at least 6 characters" }),
-});
-
-// Define the schema for registration - Simplified by removing preferred position and bio
-const registerSchema = z
-  .object({
-    name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-    email: z.string().email({ message: "Please enter a valid email address" }),
-    password: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters" }),
-    confirmPassword: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters" }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+import { login, signup } from "@/services/authApi";
 
 interface AuthFormProps {
-  onLogin: (data: { email: string; password: string }) => void;
-  onRegister: (data: {
-    name: string;
-    email: string;
-    password: string;
-  }) => void;
-  isLoading?: boolean;
+  onClose: () => void;
 }
 
-/**
- * AuthForm component provides a unified interface for both login and registration.
- * It switches between the two forms and handles validation.
- * 
- * @remarks
- * This form is designed to work with a Node.js/MongoDB backend.
- * Form fields match expected backend schema.
- */
-const AuthForm: React.FC<AuthFormProps> = ({
-  onLogin,
-  onRegister,
-  isLoading = false,
-}) => {
-  const [isLoginForm, setIsLoginForm] = useState(true);
+const AuthForm: React.FC<AuthFormProps> = ({ onClose }) => {
   const { toast } = useToast();
-
-  // Setup form for login
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Login form state
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
   });
 
-  // Setup form for registration
-  const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+  // Signup form state
+  const [signupData, setSignupData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: '',
+    city: '',
+    age: ''
   });
 
-  // Handle login submission
-  const handleLoginSubmit = (data: LoginFormData) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
     try {
-      console.info("Attempting login with:", data);
-      // For API integration: This would connect to a Node.js backend
-      // with MongoDB for user authentication
-      onLogin({
-        email: data.email,
-        password: data.password,
-      });
+      const response = await login(loginData);
+      
+      if (response.status === 'success' && response.data) {
+        // Store token and user data
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+
+        // Dispatch login event for other components
+        window.dispatchEvent(new CustomEvent('userLoggedIn'));
+        onClose();
+      }
     } catch (error) {
-      console.error("Login error:", error);
       toast({
         title: "Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
+        description: error instanceof Error ? error.message : "Invalid credentials",
+        variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle registration submission
-  const handleRegisterSubmit = (data: RegisterFormData) => {
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
     try {
-      // For API integration: This would connect to a Node.js backend
-      // with MongoDB for user registration
-      onRegister({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      });
+      const signupPayload = {
+        ...signupData,
+        age: parseInt(signupData.age)
+      };
+
+      const response = await signup(signupPayload);
+      
+      if (response.status === 'success') {
+        toast({
+          title: "Signup Successful",
+          description: "Please login with your new account.",
+        });
+        
+        // Switch to login form
+        setIsLogin(true);
+        setSignupData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          password: '',
+          phone: '',
+          city: '',
+          age: ''
+        });
+      }
     } catch (error) {
-      console.error("Registration error:", error);
       toast({
-        title: "Registration Failed",
-        description: "Please check your information and try again.",
-        variant: "destructive",
+        title: "Signup Failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Toggle between login and registration forms
-  const toggleForm = () => {
-    setIsLoginForm(!isLoginForm);
-    loginForm.reset();
-    registerForm.reset();
+  const handleForgotPassword = () => {
+    console.log('Navigating to forgot password page');
+    onClose(); // Close the auth dialog
+    navigate('/forgot-password'); // Navigate to the forgot password page
   };
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl text-center text-teal-700 dark:text-teal-400">
-          {isLoginForm ? "Login" : "Create Account"}
-        </CardTitle>
-        <CardDescription className="text-center">
-          {isLoginForm
-            ? "Enter your credentials to access your account"
-            : "Fill in your details to create a new account"}
+        <CardTitle>{isLogin ? 'Login' : 'Sign Up'}</CardTitle>
+        <CardDescription>
+          {isLogin 
+            ? 'Welcome back! Please login to your account.' 
+            : 'Create a new account to get started.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoginForm ? (
-          <Form {...loginForm}>
-            <form
-              onSubmit={loginForm.handleSubmit(handleLoginSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={loginForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="your.email@example.com"
-                        {...field}
-                        type="email"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        {isLogin ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={loginData.email}
+                onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                required
+                disabled={isLoading}
               />
-              <FormField
-                control={loginForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={loginData.password}
+                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                required
+                disabled={isLoading}
               />
+            </div>
+
+            <div className="text-right">
               <Button
-                type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700"
+                type="button"
+                variant="link"
+                className="p-0 h-auto text-sm text-blue-600 hover:text-blue-800 font-medium"
+                onClick={handleForgotPassword}
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : "Login"}
+                Forgot Password?
               </Button>
-            </form>
-          </Form>
+            </div>
+            
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Login'}
+            </Button>
+          </form>
         ) : (
-          <Form {...registerForm}>
-            <form
-              onSubmit={registerForm.handleSubmit(handleRegisterSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={registerForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={registerForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="your.email@example.com"
-                        {...field}
-                        type="email"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={registerForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      At least 6 characters long
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={registerForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700"
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  placeholder="First name"
+                  value={signupData.firstName}
+                  onChange={(e) => setSignupData({...signupData, firstName: e.target.value})}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Last name"
+                  value={signupData.lastName}
+                  onChange={(e) => setSignupData({...signupData, lastName: e.target.value})}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="signupEmail">Email</Label>
+              <Input
+                id="signupEmail"
+                type="email"
+                placeholder="Enter your email"
+                value={signupData.email}
+                onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                required
                 disabled={isLoading}
-              >
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
-          </Form>
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="signupPassword">Password</Label>
+              <Input
+                id="signupPassword"
+                type="password"
+                placeholder="Enter your password"
+                value={signupData.password}
+                onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                placeholder="Enter your phone number"
+                value={signupData.phone}
+                onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="Your city"
+                  value={signupData.city}
+                  onChange={(e) => setSignupData({...signupData, city: e.target.value})}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="age">Age</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  placeholder="Your age"
+                  value={signupData.age}
+                  onChange={(e) => setSignupData({...signupData, age: e.target.value})}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Creating account...' : 'Sign Up'}
+            </Button>
+          </form>
         )}
+        
+        <div className="mt-4 text-center">
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => setIsLogin(!isLogin)}
+            disabled={isLoading}
+          >
+            {isLogin 
+              ? "Don't have an account? Sign up" 
+              : "Already have an account? Login"}
+          </Button>
+        </div>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <Button
-          variant="link"
-          onClick={toggleForm}
-          className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
-        >
-          {isLoginForm
-            ? "Don't have an account? Sign up"
-            : "Already have an account? Login"}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
