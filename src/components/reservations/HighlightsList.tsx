@@ -3,7 +3,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useReservation, Highlight } from "@/context/ReservationContext";
+import { useReservation } from "@/context/ReservationContext";
+import { Highlight } from "@/types/reservation";
 import { toast } from "@/components/ui/use-toast";
 
 interface HighlightsListProps {

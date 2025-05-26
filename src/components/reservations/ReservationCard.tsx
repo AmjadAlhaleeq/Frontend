@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,7 @@ import {
   UserMinus,
   AlertCircle,
 } from "lucide-react";
-import { Reservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 
 interface ReservationCardProps {

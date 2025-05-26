@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useReservation, Pitch } from "@/context/ReservationContext";
+import { useReservation } from "@/context/ReservationContext";
+import { Pitch } from "@/types/reservation";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 import PitchCard from "@/components/pitches/PitchCard";

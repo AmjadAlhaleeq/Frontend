@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { useReservation, Reservation } from '@/context/ReservationContext';
+import { useReservation } from '@/context/ReservationContext';
+import { Reservation } from '@/types/reservation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';

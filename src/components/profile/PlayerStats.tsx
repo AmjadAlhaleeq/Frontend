@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserStats } from "@/context/ReservationContext";
+import { UserStats } from "@/types/reservation";
 import {
   Calendar,
   Target,

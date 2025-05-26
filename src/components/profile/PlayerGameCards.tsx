@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, ChevronRight } from "lucide-react";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isAfter } from "date-fns";
-import { Reservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 
 interface PlayerGameCardsProps {
   reservations: Reservation[];

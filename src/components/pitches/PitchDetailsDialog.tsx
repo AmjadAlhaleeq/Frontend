@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   MapPin,
@@ -27,7 +26,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Pitch } from "@/context/ReservationContext";
+import { Pitch } from "@/types/reservation";
 
 interface PitchDetailsDialogProps {
   pitch: Pitch;

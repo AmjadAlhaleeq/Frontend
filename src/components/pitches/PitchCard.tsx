@@ -1,4 +1,3 @@
-
 // PitchCard.tsx
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +20,7 @@ import {
   Zap,
   Wind,
 } from "lucide-react";
-import { Pitch } from "@/context/ReservationContext";
+import { Pitch } from "@/types/reservation";
 
 interface PitchCardProps {
   pitch: Pitch;

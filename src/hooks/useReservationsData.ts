@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAllReservations } from '@/services/publicReservationApi';
-import { fetchPitches } from '@/services/publicReservationApi';
-import { useReservation, Reservation } from '@/context/ReservationContext';
+import { useReservation } from '@/context/ReservationContext';
+import { Reservation } from '@/types/reservation';
+import { fetchReservations, fetchPitches } from '@/lib/api';
 
 export const useReservationsData = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,7 @@ export const useReservationsData = () => {
   const loadReservations = useCallback(async () => {
     try {
       console.log('Loading reservations...');
-      const backendReservations = await getAllReservations();
+      const backendReservations = await fetchReservations();
       console.log('Raw backend response:', backendReservations);
       
       if (!Array.isArray(backendReservations)) {
@@ -114,3 +114,5 @@ export const useReservationsData = () => {
     loadReservations
   };
 };
+
+export { useReservationsData };

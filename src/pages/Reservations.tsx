@@ -1,7 +1,9 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useReservation, Reservation } from "@/context/ReservationContext";
+import { useReservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 import { format } from 'date-fns';
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";

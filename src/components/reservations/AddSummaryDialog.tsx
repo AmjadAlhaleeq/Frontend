@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -11,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ban } from "lucide-react";
-import { Reservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 
 interface AddSummaryDialogProps {
   isOpen: boolean;
