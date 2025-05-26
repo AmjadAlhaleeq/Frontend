@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Reservation, Player } from "@/context/ReservationContext";
 import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { addGameSummary, kickPlayer, AddSummaryRequest, KickPlayerRequest } from "@/services/reservationApi";
+import { addGameSummary, kickPlayer } from "@/services/adminReservationApi";
 import PlayerStatsForm from './PlayerStatsForm';
 import PlayerActionsPanel from './PlayerActionsPanel';
 import GameSummaryForm from './GameSummaryForm';
@@ -83,13 +83,11 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
 
     setIsLoading(true);
     try {
-      const summaryData: AddSummaryRequest = {
-        mvp: mvpPlayerId || undefined,
-        players: playerStats,
-        absentees: absentees
-      };
-
-      await addGameSummary(reservation.id.toString(), summaryData);
+      // Call the backend API with the correct format
+      await addGameSummary(reservation.backendId || reservation.id.toString(), {
+        summary,
+        playerStats
+      });
 
       onSave(summary, playerStats);
       toast({
@@ -111,13 +109,8 @@ const AddSummaryDialog: React.FC<AddSummaryDialogProps> = ({
 
   const handleKickPlayer = async (playerId: string, playerName: string) => {
     try {
-      const kickData: KickPlayerRequest = {
-        userId: playerId,
-        reason: "Inappropriate behavior during game",
-        suspensionDays: 7
-      };
-
-      await kickPlayer(reservation.id.toString(), kickData);
+      // Call the kick player API with just the player ID
+      await kickPlayer(reservation.backendId || reservation.id.toString(), playerId);
       onSuspendPlayer(playerId, playerName);
       toast({
         title: "Player Kicked and Suspended",
