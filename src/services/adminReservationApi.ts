@@ -1,78 +1,98 @@
 
-import { CreateReservationRequest, KickPlayerRequest, GameSummary } from './reservationTypes';
-import { API_BASE, requireAuth } from './reservationHelpers';
+const API_BASE_URL = 'http://127.0.0.1:3000';
 
-// Admin routes
-export const createReservation = async (reservationData: CreateReservationRequest): Promise<any> => {
-  const token = requireAuth();
-  
-  const response = await fetch(`${API_BASE}/reservations`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(reservationData),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to create reservation');
-  }
-  
-  const data = await response.json();
-  return data.data || data;
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('authToken');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
 };
 
-export const deleteReservationApi = async (reservationId: string): Promise<void> => {
-  const token = requireAuth();
-  
-  const response = await fetch(`${API_BASE}/reservations/${reservationId}`, {
+// Delete a reservation
+export const deleteReservationApi = async (reservationId: string) => {
+  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to delete reservation');
   }
+
+  const result = await response.json();
+  
+  if (result.status !== 'success') {
+    throw new Error(result.message || 'Failed to delete reservation');
+  }
+  
+  return result;
 };
 
-export const kickPlayer = async (reservationId: string, playerId: string): Promise<void> => {
-  const token = requireAuth();
-  
-  const response = await fetch(`${API_BASE}/reservations/${reservationId}/kick`, {
+// Kick a player from reservation
+export const kickPlayer = async (reservationId: string, playerId: string) => {
+  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/kick`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ playerId }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || 'Failed to kick player');
   }
+
+  const result = await response.json();
+  
+  if (result.status !== 'success') {
+    throw new Error(result.message || 'Failed to kick player');
+  }
+  
+  return result;
 };
 
-export const addGameSummary = async (reservationId: string, summaryData: { summary: string; playerStats: any[] }): Promise<void> => {
-  const token = requireAuth();
-  
-  const response = await fetch(`${API_BASE}/reservations/${reservationId}/summary`, {
+// Add game summary
+export const addGameSummary = async (reservationId: string, summaryData: { summary: string; playerStats: any[] }) => {
+  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/summary`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(summaryData),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to add game summary');
+    throw new Error(errorData.message || 'Failed to add summary');
   }
+
+  const result = await response.json();
+  
+  if (result.status !== 'success') {
+    throw new Error(result.message || 'Failed to add summary');
+  }
+  
+  return result;
+};
+
+// Create a reservation
+export const createReservation = async (reservationData: any) => {
+  const response = await fetch(`${API_BASE_URL}/reservations`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(reservationData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to create reservation');
+  }
+
+  const result = await response.json();
+  
+  if (result.status !== 'success') {
+    throw new Error(result.message || 'Failed to create reservation');
+  }
+  
+  return result;
 };
