@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAllReservations } from '@/services/publicReservationApi';
@@ -32,6 +31,11 @@ export const useReservationsData = () => {
         const pitchId = res.pitch?._id || 'unknown';
         const pitchName = res.pitch?.name || `Pitch ${pitchId.substring(0, 8)}`;
         
+        const now = new Date();
+        const endTime = new Date(res.endTime);
+        let status: "upcoming" | "completed" | "cancelled" = res.status || 'upcoming';
+        if (endTime < now && status === 'upcoming') status = "completed";
+        
         return {
           id: index + 1,
           backendId: res._id,
@@ -54,7 +58,7 @@ export const useReservationsData = () => {
             avatar: player.profilePicture || ''
           })),
           waitingList: res.waitList || [],
-          status: (res.status || 'upcoming') as 'upcoming' | 'completed' | 'cancelled',
+          status,
           createdBy: 'admin',
           price: res.price,
           time: `${new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,

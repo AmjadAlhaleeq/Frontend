@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { XCircle } from 'lucide-react';
@@ -41,52 +40,74 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   onAddSummary,
   onClearDateFilter
 }) => {
-  const upcomingGamesHeader = React.useMemo(() => {
-    if (currentDate) {
-      const formattedDate = format(currentDate, "MMM d, yyyy");
-      if (upcomingReservations.length > 0) {
-        return `Showing ${upcomingReservations.length} game${upcomingReservations.length === 1 ? '' : 's'} on ${formattedDate}`;
-      }
-      return `No upcoming games found for ${formattedDate}`;
+  // Separate into upcoming and completed
+  const todayISO = new Date().toISOString().slice(0,10);
+  const completedReservations = upcomingReservations.filter(
+    r => r.status === "completed" || new Date(r.date) < new Date(todayISO)
+  );
+  const filteredUpcoming = upcomingReservations.filter(
+    r => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
+  );
+
+  // Determine sections based on role
+  const sections = [
+    {
+      title: userRole === 'admin' ? 'Upcoming Games' : 'My Upcoming Games',
+      data: filteredUpcoming,
+    },
+    {
+      title: userRole === 'admin' ? 'Completed Games' : 'My Completed Games',
+      data: completedReservations,
     }
-    return `Showing ${upcomingReservations.length} upcoming game${upcomingReservations.length === 1 ? '' : 's'}`;
-  }, [currentDate, upcomingReservations.length]);
+  ];
 
   return (
     <>
       <div className="flex justify-between items-center mb-1 px-1">
         <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
-          {upcomingGamesHeader}
+          {currentDate 
+            ? `Showing games on ${format(currentDate, "MMM d, yyyy")}` 
+            : `Showing all games`
+          }
         </div>
         {currentDate && (
-           <Button variant="ghost" size="sm" onClick={onClearDateFilter} className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
-             <XCircle className="h-3.5 w-3.5 mr-1" /> Clear Filter
-           </Button>
+          <Button variant="ghost" size="sm" onClick={onClearDateFilter} className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
+            <XCircle className="h-3.5 w-3.5 mr-1" /> Clear Filter
+          </Button>
         )}
       </div>
 
-      {upcomingReservations.map((reservation) => (
-        <div 
-          key={`reservation-${reservation.id}`}
-          className="cursor-pointer transition-transform hover:scale-[1.02]"
-          onClick={() => onViewDetails(reservation)}
-        >
-          <ReservationCard
-            reservation={reservation}
-            userId={currentUserId || ""}
-            userRole={userRole || "player"}
-            onJoin={onJoin}
-            onCancel={onCancel}
-            onJoinWaitingList={onJoinWaitingList}
-            onLeaveWaitingList={onLeaveWaitingList}
-            isUserJoined={isUserJoined}
-            isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
-            onDeleteReservation={onDeleteReservation}
-            onViewDetails={onViewDetails}
-            onAddSummary={onAddSummary}
-            isUserLoggedIn={!!currentUserId}
-            pitchImage={pitchImages[reservation.pitchId]}
-          />
+      {sections.map(s => (
+        <div key={s.title}>
+          <div className="text-sm text-teal-700 mt-4 mb-2 font-semibold">{s.title}</div>
+          {s.data.length === 0 ? (
+            <div className="text-xs text-muted-foreground px-2 pb-4">No games found.</div>
+          ) : (
+            s.data.map((reservation) => (
+              <div 
+                key={`reservation-${reservation.id}`}
+                className="cursor-pointer transition-transform hover:scale-[1.02]"
+                onClick={() => onViewDetails(reservation)}
+              >
+                <ReservationCard
+                  reservation={reservation}
+                  userId={currentUserId || ""}
+                  userRole={userRole || "player"}
+                  onJoin={onJoin}
+                  onCancel={onCancel}
+                  onJoinWaitingList={onJoinWaitingList}
+                  onLeaveWaitingList={onLeaveWaitingList}
+                  isUserJoined={isUserJoined}
+                  isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
+                  onDeleteReservation={onDeleteReservation}
+                  onViewDetails={onViewDetails}
+                  onAddSummary={onAddSummary}
+                  isUserLoggedIn={!!currentUserId}
+                  pitchImage={pitchImages[reservation.pitchId]}
+                />
+              </div>
+            ))
+          )}
         </div>
       ))}
     </>

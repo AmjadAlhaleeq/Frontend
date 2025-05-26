@@ -297,19 +297,20 @@ export const useReservationActions = (
 
   const handleKickPlayer = useCallback(async (reservationId: number, playerId: string) => {
     if (userRole !== 'admin') return;
-    
+
     try {
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
-      
+      if (!reservation.backendId) throw new Error('Reservation backendId missing');
+
       await kickPlayerApi(reservation.backendId, playerId);
       cancelReservation(reservationId, playerId);
-      
+
       toast({
         title: "Player Kicked",
         description: "The player has been removed from the game.",
       });
-      
+
       await loadReservations();
     } catch (error) {
       console.error("Error kicking player:", error);

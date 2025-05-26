@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -111,9 +110,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     });
   };
 
-  const confirmKickPlayer = () => {
+  const confirmKickPlayer = async () => {
     if (onKickPlayer && kickConfirmation.playerId) {
-      onKickPlayer(reservation.id, kickConfirmation.playerId);
+      await onKickPlayer(reservation.id, kickConfirmation.playerId);
       toast({
         title: "Player Kicked",
         description: `${kickConfirmation.playerName} has been removed from the game.`,

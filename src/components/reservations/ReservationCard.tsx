@@ -1,9 +1,9 @@
-
 import React from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import LoadingSkeleton from "@/components/shared/LoadingSkeleton";
 import {
   MapPin,
   Calendar,
@@ -50,6 +50,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   isUserLoggedIn,
   pitchImage,
 }) => {
+  const [deleting, setDeleting] = React.useState(false);
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when clicking on buttons
     if ((e.target as HTMLElement).closest('button')) {
@@ -57,6 +59,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       return;
     }
     onViewDetails(reservation);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDeleteReservation) return;
+    if (!window.confirm("Are you sure you want to delete this reservation?")) return;
+    setDeleting(true);
+    try {
+      await onDeleteReservation(reservation.id);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const isJoined = isUserLoggedIn && isUserJoined(reservation.id, userId);
@@ -111,24 +125,29 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
                 onAddSummary(reservation);
               }}
               className="flex-1"
+              disabled={deleting}
             >
               <FileText className="h-4 w-4 mr-1" />
               Add Summary
             </Button>
           )}
           {onDeleteReservation && (
-            <Button 
-              size="sm" 
-              variant="destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteReservation(reservation.id);
-              }}
-              className="flex-1"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
+            <div className="flex-1">
+              {deleting ? (
+                <LoadingSkeleton className="h-9 w-full" />
+              ) : (
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={handleDelete}
+                  className="flex-1"
+                  disabled={deleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
       );
