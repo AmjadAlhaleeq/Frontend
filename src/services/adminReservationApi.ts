@@ -32,11 +32,15 @@ export const deleteReservationApi = async (reservationId: string) => {
 };
 
 // Kick a player from reservation
-export const kickPlayer = async (reservationId: string, playerId: string) => {
+export const kickPlayer = async (reservationId: string, playerId: string, reason: string, suspensionDays: number) => {
   const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/kick`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ playerId }),
+    body: JSON.stringify({ 
+      userId: playerId,
+      reason,
+      suspensionDays
+    }),
   });
 
   if (!response.ok) {
@@ -53,28 +57,28 @@ export const kickPlayer = async (reservationId: string, playerId: string) => {
   return result;
 };
 
-// Add game summary with enhanced player stats and MVP
-export const addGameSummary = async (reservationId: string, summaryData: { 
-  summary: string; 
-  playerStats: any[];
-  mvpPlayerId?: string;
+// Add game summary with backend format
+export const addGameSummary = async (reservationId: string, summaryData: {
+  mvp?: string;
+  players: Array<{
+    userId: string;
+    played: boolean;
+    won: boolean;
+    goals?: number;
+    assists?: number;
+    interceptions?: number;
+    cleanSheet?: boolean;
+  }>;
+  absentees?: Array<{
+    userId: string;
+    reason: string;
+    suspensionDays: number;
+  }>;
 }) => {
   const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/summary`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({
-      summary: summaryData.summary,
-      playerStats: summaryData.playerStats.map(stat => ({
-        userId: stat.userId,
-        goals: stat.goals || 0,
-        assists: stat.assists || 0,
-        interceptions: stat.interceptions || 0,
-        cleanSheet: stat.cleanSheet || false,
-        won: stat.won || false,
-        attended: stat.attended !== false, // default to true
-        mvp: stat.userId === summaryData.mvpPlayerId
-      }))
-    }),
+    body: JSON.stringify(summaryData),
   });
 
   if (!response.ok) {
@@ -108,6 +112,31 @@ export const createReservation = async (reservationData: any) => {
   
   if (result.status !== 'success') {
     throw new Error(result.message || 'Failed to create reservation');
+  }
+  
+  return result;
+};
+
+// Add user suspension API
+export const suspendUser = async (userId: string, reason: string, suspensionDays: number) => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/suspend`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      reason,
+      suspensionDays
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to suspend user');
+  }
+
+  const result = await response.json();
+  
+  if (result.status !== 'success') {
+    throw new Error(result.message || 'Failed to suspend user');
   }
   
   return result;

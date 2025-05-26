@@ -10,7 +10,8 @@ import {
 import {
   deleteReservationApi,
   kickPlayer as kickPlayerApi,
-  addGameSummary
+  addGameSummary,
+  suspendUser
 } from '@/services/adminReservationApi';
 
 export const useReservationActions = (
@@ -306,7 +307,7 @@ export const useReservationActions = (
     }
   }, [currentUserId, userRole, reservations, deleteReservation, toast, loadReservations]);
 
-  const handleKickPlayer = useCallback(async (reservationId: number, playerId: string) => {
+  const handleKickPlayer = useCallback(async (reservationId: number, playerId: string, reason: string, suspensionDays: number) => {
     if (userRole !== 'admin') return;
 
     try {
@@ -314,13 +315,12 @@ export const useReservationActions = (
       if (!reservation) throw new Error('Reservation not found');
       if (!reservation.backendId) throw new Error('Reservation backendId missing');
 
-      await kickPlayerApi(reservation.backendId, playerId);
-      // **Do not update count locally.** Just reload from DB, will reflect correct player count
+      await kickPlayerApi(reservation.backendId, playerId, reason, suspensionDays);
       await loadReservations();
 
       toast({
         title: "Player Kicked",
-        description: "The player has been removed from the game.",
+        description: "The player has been removed and suspended from the game.",
       });
 
     } catch (error) {
@@ -332,12 +332,49 @@ export const useReservationActions = (
     }
   }, [userRole, reservations, toast, loadReservations]);
 
-  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[]) => {
+  const handleSuspendPlayer = useCallback(async (playerId: string, suspensionDays: number, reason: string) => {
+    if (userRole !== 'admin') return;
+
+    try {
+      await suspendUser(playerId, reason, suspensionDays);
+      
+      toast({
+        title: "Player Suspended",
+        description: `Player has been suspended for ${suspensionDays} day${suspensionDays > 1 ? 's' : ''}.`,
+      });
+      
+      await loadReservations();
+    } catch (error) {
+      toast({
+        title: "Failed to Suspend Player",
+        description: error instanceof Error ? error.message : "Failed to suspend the player",
+        variant: "destructive",
+      });
+    }
+  }, [userRole, toast, loadReservations]);
+
+  const handleSaveSummary = useCallback(async (reservationId: number, summaryData: {
+    mvp?: string;
+    players: Array<{
+      userId: string;
+      played: boolean;
+      won: boolean;
+      goals?: number;
+      assists?: number;
+      interceptions?: number;
+      cleanSheet?: boolean;
+    }>;
+    absentees?: Array<{
+      userId: string;
+      reason: string;
+      suspensionDays: number;
+    }>;
+  }) => {
     try {
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      await addGameSummary(reservation.backendId, { summary, playerStats });
+      await addGameSummary(reservation.backendId, summaryData);
       
       toast({
         title: "Summary Saved",
@@ -361,6 +398,7 @@ export const useReservationActions = (
     handleLeaveWaitingList,
     handleDeleteReservation,
     handleKickPlayer,
+    handleSuspendPlayer,
     handleSaveSummary,
     calculateActualMaxPlayers
   };

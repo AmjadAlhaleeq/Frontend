@@ -64,6 +64,7 @@ const Reservations = () => {
     handleLeaveWaitingList,
     handleDeleteReservation,
     handleKickPlayer,
+    handleSuspendPlayer,
     handleSaveSummary,
     calculateActualMaxPlayers
   } = useReservationActions(currentUserId, userRole, reservations, loadReservations);
@@ -104,7 +105,6 @@ const Reservations = () => {
                  new Date(res.date) >= today
       );
     }
-    // Two-way binding: latest always loaded
     return gamesToShow.sort((a,b) => {
       const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
       if (dateCompare !== 0) return dateCompare;
@@ -128,15 +128,6 @@ const Reservations = () => {
     return reservations.some(res => res.date === dateString);
   };
 
-  const handleSuspendPlayer = useCallback((playerId: string, days: number, reason: string) => {
-    if (userRole !== 'admin') return;
-    
-    toast({
-      title: "Player Suspended",
-      description: `Player has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
-    });
-  }, [userRole, toast]);
-
   const handleOpenSuspensionDialog = useCallback((playerId: string, playerName: string) => {
     setSuspensionDialog({
       isOpen: true,
@@ -150,18 +141,26 @@ const Reservations = () => {
     setIsSummaryDialogOpen(true);
   }, []);
 
-  const handleSaveSummaryWrapper = useCallback(async (summary: string, playerStats: any[], mvpPlayerId: string) => {
+  const handleSaveSummaryWrapper = useCallback(async (summaryData: {
+    mvp?: string;
+    players: Array<{
+      userId: string;
+      played: boolean;
+      won: boolean;
+      goals?: number;
+      assists?: number;
+      interceptions?: number;
+      cleanSheet?: boolean;
+    }>;
+    absentees?: Array<{
+      userId: string;
+      reason: string;
+      suspensionDays: number;
+    }>;
+  }) => {
     if (!selectedGameForSummary) return;
     
-    // Create enhanced summary with MVP info
-    const enhancedSummary = {
-      notes: summary,
-      mvpPlayerId,
-      completedAt: new Date().toISOString(),
-      playerStats
-    };
-    
-    await handleSaveSummary(selectedGameForSummary.id, JSON.stringify(enhancedSummary), playerStats);
+    await handleSaveSummary(selectedGameForSummary.id, summaryData);
     
     setIsSummaryDialogOpen(false);
     setSelectedGameForSummary(null);
@@ -283,7 +282,10 @@ const Reservations = () => {
           }}
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
-          onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
+          onKickPlayer={userRole === 'admin' ? (reservationId, playerId) => {
+            // For kick from game details, we need reason and suspension days
+            handleOpenSuspensionDialog(playerId, "Player");
+          } : undefined}
           onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
           onPlayerClick={handlePlayerClick}

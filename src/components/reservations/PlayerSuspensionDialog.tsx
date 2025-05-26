@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader } from "lucide-react";
+import { suspendUser } from "@/services/adminReservationApi";
 
 interface PlayerSuspensionDialogProps {
   isOpen: boolean;
@@ -34,8 +35,9 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
   const { toast } = useToast();
   const [suspensionDays, setSuspensionDays] = useState("1");
   const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!reason.trim()) {
       toast({
         title: "Missing Information",
@@ -55,10 +57,29 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
       return;
     }
 
-    onConfirm(playerId, days, reason);
-    setReason("");
-    setSuspensionDays("1");
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      await suspendUser(playerId, reason, days);
+      onConfirm(playerId, days, reason);
+      
+      toast({
+        title: "Player Suspended",
+        description: `${playerName} has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
+      });
+      
+      setReason("");
+      setSuspensionDays("1");
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Failed to Suspend Player",
+        description: error instanceof Error ? error.message : "Failed to suspend the player",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -118,13 +139,15 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit}
+            disabled={isSubmitting}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
+            {isSubmitting && <Loader className="h-4 w-4 mr-2 animate-spin" />}
             Suspend Player
           </Button>
         </DialogFooter>
