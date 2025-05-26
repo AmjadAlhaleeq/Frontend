@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Home from "./Home";
@@ -10,6 +11,7 @@ import Faq from "./Faq";
 import Rules from "./Rules";
 import NotFound from "./NotFound";
 import AddPitch from "./admin/AddPitch";
+import ForgotPassword from "./ForgotPassword";
 // import EditPitch from "./admin/EditPitch";
 import MyBookings from "./MyBookings";
 import Layout from "@/components/layout/Layout";
@@ -156,6 +158,14 @@ const Index = () => {
           element={
             <PageTransition>
               <PrivacyPolicy />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PageTransition>
+              <ForgotPassword />
             </PageTransition>
           }
         />
