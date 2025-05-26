@@ -3,21 +3,29 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/context/ReservationContext";
 import {
-  BadgePlus,
   Calendar,
-  Star,
-  Trophy,
-  ShieldCheck,
+  BadgePlus,
   Zap,
+  ShieldCheck,
+  Trophy,
+  Star,
+  // No more achievements/awards
 } from "lucide-react";
 
 interface PlayerStatsProps {
-  stats: UserStats;
+  stats: UserStats & { interceptions?: number }; // allow new field
   className?: string;
 }
 
-// Component for stat item with icon, value, and label
-const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: number }) => (
+const StatItem = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+}) => (
   <div className="flex flex-col items-center flex-1 justify-center">
     <Icon className="h-7 w-7 text-teal-500 mb-1" />
     <div className="text-lg font-bold">{value ?? 0}</div>
@@ -26,6 +34,7 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 );
 
 const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
+  // Inline all stats in the same row (responsive)
   return (
     <Card className={className}>
       <CardHeader>
@@ -39,6 +48,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
           <StatItem icon={ShieldCheck} label="Clean Sheets" value={stats.cleansheets} />
           <StatItem icon={Trophy} label="MVP Awards" value={stats.mvps} />
           <StatItem icon={Star} label="Wins" value={stats.wins} />
+          <StatItem icon={Star} label="Interceptions" value={stats.interceptions ?? 0} />
         </div>
       </CardContent>
     </Card>
@@ -46,4 +56,3 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
 };
 
 export default PlayerStats;
-

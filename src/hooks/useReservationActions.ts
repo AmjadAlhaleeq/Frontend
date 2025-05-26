@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -208,6 +207,18 @@ export const useReservationActions = (
       return;
     }
     
+    // --- FIX: Only allow waitlist if all slots are full ---
+    const currentPlayers = reservation.lineup?.length || 0;
+    const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
+    if (currentPlayers < maxPlayers) {
+      toast({
+        title: "Game Not Full",
+        description: `You can only join the waiting list after all ${maxPlayers} slots are full.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       console.log('Adding to waiting list for reservation:', reservation.backendId);
       await addToWaitlist(reservation.backendId);
@@ -304,14 +315,14 @@ export const useReservationActions = (
       if (!reservation.backendId) throw new Error('Reservation backendId missing');
 
       await kickPlayerApi(reservation.backendId, playerId);
-      cancelReservation(reservationId, playerId);
+      // DO NOT update local count immediately: force refresh from DB, will reflect upon reload
+      await loadReservations();
 
       toast({
         title: "Player Kicked",
         description: "The player has been removed from the game.",
       });
 
-      await loadReservations();
     } catch (error) {
       console.error("Error kicking player:", error);
       toast({
@@ -320,7 +331,7 @@ export const useReservationActions = (
         variant: "destructive",
       });
     }
-  }, [userRole, reservations, cancelReservation, toast, loadReservations]);
+  }, [userRole, reservations, toast, loadReservations]);
 
   const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[]) => {
     try {

@@ -49,7 +49,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     r => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
   );
 
-  // For users, only show "Upcoming Games" section, for admins show both sections
+  // Only show completed games section for admin
   const sections = userRole === 'admin' ? [
     {
       title: 'Upcoming Games',
@@ -64,8 +64,19 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       title: 'My Upcoming Games',
       data: filteredUpcoming,
     }
-    // Do not show completed games section for users
+    // No completed section for non-admins
   ];
+
+  // For completed games section/exclude after summary is added
+  const getSectionData = (section: string, data: Reservation[]) => {
+    if (section === "Completed Games" && userRole === "admin" && !!onAddSummary) {
+      // Hide if already has summary
+      return data.filter(res =>
+        !(typeof res.summary === 'object' && res.summary?.completed)
+      );
+    }
+    return data;
+  };
 
   return (
     <>
@@ -86,10 +97,10 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       {sections.map(s => (
         <div key={s.title}>
           <div className="text-sm text-teal-700 mt-4 mb-2 font-semibold">{s.title}</div>
-          {s.data.length === 0 ? (
+          {(getSectionData(s.title, s.data)).length === 0 ? (
             <div className="text-xs text-muted-foreground px-2 pb-4">No games found.</div>
           ) : (
-            s.data.map((reservation) => (
+            getSectionData(s.title, s.data).map((reservation) => (
               <div 
                 key={`reservation-${reservation.id}`}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
