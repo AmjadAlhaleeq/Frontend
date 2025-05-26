@@ -66,8 +66,24 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     playerId: ""
   });
 
-  const formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
+  // Add null checks and error handling
+  if (!reservation) {
+    console.error("No reservation data provided to GameDetailsDialog");
+    return null;
+  }
+
+  let formattedDate = "Invalid Date";
+  try {
+    if (reservation.date) {
+      formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
+    }
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    formattedDate = reservation.date || "Invalid Date";
+  }
+
   const joinedPlayers = reservation.lineup?.filter(p => (p.status === 'joined' || !p.status)) || [];
+  const waitingList = reservation.waitingList || [];
 
   const getInitials = (name?: string) => {
     if (!name) return "?";
@@ -125,8 +141,11 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   const getGameImage = () => {
     if (pitchImage) return pitchImage;
     if (reservation.backgroundImage) return reservation.backgroundImage;
-    return `https://source.unsplash.com/800x400/?football,pitch,${reservation.pitchName.split(" ").join(",")}`;
+    return `https://source.unsplash.com/800x400/?football,pitch,${encodeURIComponent(reservation.pitchName || 'football').split(" ").join(",")}`;
   };
+
+  const isUserInGame = joinedPlayers.some(player => player.userId === currentUserId);
+  const isUserInWaitingList = waitingList.includes(currentUserId);
 
   return (
     <>
@@ -135,7 +154,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           <DialogHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl">
-                {reservation.title || reservation.pitchName}
+                {reservation.title || reservation.pitchName || "Game Details"}
               </DialogTitle>
               <Button
                 variant="ghost"
@@ -154,8 +173,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           <div className="relative h-48 w-full">
             <img
               src={getGameImage()}
-              alt={reservation.pitchName}
+              alt={reservation.pitchName || "Game pitch"}
               className="h-full w-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://source.unsplash.com/800x400/?football,pitch";
+              }}
             />
           </div>
 
@@ -168,7 +191,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   reservation.status === 'completed' ? 'bg-blue-500' :
                   'bg-red-500'
                 }`}>
-                  {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                  {(reservation.status || 'upcoming').charAt(0).toUpperCase() + (reservation.status || 'upcoming').slice(1)}
                 </Badge>
               </div>
 
@@ -181,16 +204,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span>{reservation.startTime && reservation.endTime 
                     ? `${reservation.startTime} - ${reservation.endTime}`
-                    : reservation.time}</span>
+                    : reservation.time || "Time not specified"}</span>
                 </div>
                 <div className="flex items-center">
                   <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span>{`${reservation.lineup?.length || 0}/${actualMaxPlayers} players`}</span>
+                  <span>{`${joinedPlayers.length}/${actualMaxPlayers} players`}</span>
                 </div>
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                   <div className="flex flex-col">
-                    <span>{reservation.city || reservation.location}</span>
+                    <span>{reservation.city || reservation.location || "Location not specified"}</span>
                     {reservation.location && (
                       <a 
                         href={`https://maps.google.com/?q=${encodeURIComponent(reservation.location)}`} 
@@ -211,6 +234,22 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   <span>${reservation.price} per player</span>
                 </div>
               )}
+
+              {/* Show current user status */}
+              {currentUserId && (
+                <div className="flex items-center mt-2 text-sm">
+                  {isUserInGame && (
+                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                      You're in this game
+                    </Badge>
+                  )}
+                  {isUserInWaitingList && (
+                    <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                      You're on the waiting list
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             <Separator className="my-4" />
@@ -218,7 +257,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             <Tabs defaultValue="players">
               <TabsList className="mb-4">
                 <TabsTrigger value="players">Players ({joinedPlayers.length})</TabsTrigger>
-                <TabsTrigger value="waiting">Waiting List ({reservation.waitingList?.length || 0})</TabsTrigger>
+                <TabsTrigger value="waiting">Waiting List ({waitingList.length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="players">
@@ -284,9 +323,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
               <TabsContent value="waiting">
                 <ScrollArea className="h-[250px] border rounded-md p-2">
-                  {reservation.waitingList && reservation.waitingList.length > 0 ? (
+                  {waitingList.length > 0 ? (
                     <div className="space-y-2">
-                      {reservation.waitingList.map((userId, index) => (
+                      {waitingList.map((userId, index) => (
                         <div key={userId} className="flex items-center justify-between p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                           <div className="flex items-center">
                             <Avatar className="h-10 w-10 mr-3">

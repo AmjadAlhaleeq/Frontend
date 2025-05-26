@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import {
   Facebook,
@@ -13,6 +14,13 @@ import { useLanguage } from "@/context/LanguageContext";
 const Footer = () => {
   const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
+
+  const handleEmailClick = () => {
+    const subject = encodeURIComponent("Contact from BOKIT Website");
+    const body = encodeURIComponent("Hello BOKIT Team,\n\nI would like to get in touch regarding:\n\n");
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=bookitandkickit@gmail.com&su=${subject}&body=${body}`;
+    window.open(gmailUrl, '_blank');
+  };
 
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
@@ -73,12 +81,12 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
-                <a 
-                  href="mailto:bookitandkickit@gmail.com?subject=Contact%20from%20BOKIT%20Website&body=Hello%20BOKIT%20Team,%0A%0AI%20would%20like%20to%20get%20in%20touch%20regarding:%0A%0A"
-                  className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors"
+                <button 
+                  onClick={handleEmailClick}
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
                 >
                   bookitandkickit@gmail.com
-                </a>
+                </button>
               </div>
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />

@@ -52,10 +52,49 @@ export const useReservationActions = (
       return;
     }
 
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) {
+      toast({ 
+        title: "Error", 
+        description: "Reservation not found.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user is already in the game
+    const isUserJoined = reservation.lineup?.some((player: any) => player.userId === currentUserId);
+    if (isUserJoined) {
+      toast({ 
+        title: "Already Joined", 
+        description: "You have already joined this game.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user is in waiting list
+    const isUserInWaitingList = reservation.waitingList?.includes(currentUserId);
+    if (isUserInWaitingList) {
+      toast({ 
+        title: "On Waiting List", 
+        description: "You are already on the waiting list for this game.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const currentPlayers = reservation.lineup?.length || 0;
+    const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
+
+    // If game is full, automatically add to waiting list
+    if (currentPlayers >= maxPlayers) {
+      console.log('Game is full, attempting to join waiting list');
+      await handleJoinWaitingList(reservationId);
+      return;
+    }
+
     try {
-      const reservation = reservations.find(r => r.id === reservationId);
-      if (!reservation) throw new Error('Reservation not found');
-      
       console.log('Attempting to join reservation with ID:', reservation.backendId);
       await joinReservationApi(reservation.backendId);
       joinGame(reservationId, undefined, currentUserId);
@@ -129,16 +168,38 @@ export const useReservationActions = (
     }
     
     const reservation = reservations.find(r => r.id === reservationId);
-    if (reservation && reservation.lineup && reservation.lineup.length < calculateActualMaxPlayers(reservation.maxPlayers)) {
+    if (!reservation) {
+      toast({ 
+        title: "Error", 
+        description: "Reservation not found.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user is already in the game
+    const isUserJoined = reservation.lineup?.some((player: any) => player.userId === currentUserId);
+    if (isUserJoined) {
       toast({
-        title: "Game not full",
-        description: "You can only join the waiting list when the game is full.",
+        title: "Already in Game",
+        description: "You are already part of this game.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user is already in waiting list
+    const isUserInWaitingList = reservation.waitingList?.includes(currentUserId);
+    if (isUserInWaitingList) {
+      toast({
+        title: "Already on Waiting List",
+        description: "You are already on the waiting list for this game.",
         variant: "destructive"
       });
       return;
     }
     
-    if (reservation && reservation.waitingList && reservation.waitingList.length >= 3) {
+    if (reservation.waitingList && reservation.waitingList.length >= 3) {
       toast({
         title: "Waiting List Full",
         description: "The waiting list is limited to 3 players",
@@ -148,6 +209,7 @@ export const useReservationActions = (
     }
     
     try {
+      console.log('Adding to waiting list for reservation:', reservation.backendId);
       await addToWaitlist(reservation.backendId);
       joinWaitingList(reservationId, currentUserId);
       
