@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -10,7 +9,8 @@ import {
 } from '@/services/playerReservationApi';
 import {
   deleteReservationApi,
-  kickPlayer as kickPlayerApi
+  kickPlayer as kickPlayerApi,
+  addGameSummary
 } from '@/services/adminReservationApi';
 
 export const useReservationActions = (
@@ -332,54 +332,16 @@ export const useReservationActions = (
     }
   }, [userRole, reservations, toast, loadReservations]);
 
-  const handleSaveSummary = useCallback(async (reservationId: number, mvpPlayerId: string, playerStats: any[], absentees: any[]) => {
+  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[]) => {
     try {
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      // Transform data to match backend API format
-      const requestBody = {
-        mvp: mvpPlayerId,
-        players: playerStats.map(player => ({
-          userId: player.userId,
-          played: player.attended,
-          won: player.won,
-          goals: player.goals || 0,
-          assists: player.assists || 0,
-          interceptions: player.interceptions || 0,
-          cleanSheet: player.cleanSheet || false
-        })),
-        absentees: absentees.map(absentee => ({
-          userId: absentee.userId,
-          reason: absentee.reason,
-          suspensionDays: absentee.suspensionDays
-        }))
-      };
-      
-      // Call the backend API with the correct endpoint
-      const response = await fetch(`http://127.0.0.1:3000/reservations/${reservation.backendId}/summary`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save summary');
-      }
-
-      const result = await response.json();
-      
-      if (result.status !== 'success') {
-        throw new Error(result.message || 'Failed to save summary');
-      }
+      await addGameSummary(reservation.backendId, { summary, playerStats });
       
       toast({
         title: "Summary Saved",
-        description: "Game summary saved, stats updated, and reservation completed.",
+        description: "Game summary and player stats have been saved successfully.",
       });
       
       await loadReservations();
