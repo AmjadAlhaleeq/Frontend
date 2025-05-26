@@ -10,6 +10,142 @@ const getAuthHeaders = () => {
   };
 };
 
+// Backend User type definition
+export interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  age?: number;
+  preferredPosition?: string;
+  bio?: string;
+  profilePicture?: string;
+  suspendedUntil?: string;
+  badges?: Array<{
+    _id: string;
+    name: string;
+    description: string;
+    level: number;
+  }>;
+  stats?: {
+    gamesPlayed: number;
+    wins: number;
+    goals: number;
+    assists: number;
+    cleanSheets: number;
+    mvpScore: number;
+    interceptions: number;
+  };
+}
+
+// Get user's profile
+export const getMyProfile = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/me`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.data?.user) {
+      return result;
+    }
+    
+    throw new Error(result.message || 'Failed to fetch profile');
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+// Update user's profile
+export const updateMyProfile = async (profileData: Partial<User>, profilePictureFile?: File) => {
+  try {
+    let response;
+    
+    if (profilePictureFile) {
+      // Use FormData for file upload
+      const formData = new FormData();
+      formData.append('profilePicture', profilePictureFile);
+      
+      // Add other profile data as individual form fields
+      Object.entries(profileData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+
+      response = await fetch(`${API_BASE_URL}/users/me`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData,
+      });
+    } else {
+      // Regular JSON update
+      response = await fetch(`${API_BASE_URL}/users/me`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(profileData),
+      });
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.data?.user) {
+      return result;
+    }
+    
+    throw new Error(result.message || 'Failed to update profile');
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+// Transform backend user to frontend format
+export const transformUserToFrontend = (backendUser: User) => {
+  return {
+    id: backendUser._id,
+    firstName: backendUser.firstName,
+    lastName: backendUser.lastName,
+    email: backendUser.email,
+    phoneNumber: backendUser.phone,
+    city: backendUser.city,
+    age: backendUser.age?.toString(),
+    position: backendUser.preferredPosition,
+    bio: backendUser.bio,
+    avatarUrl: backendUser.profilePicture,
+    stats: {
+      gamesPlayed: backendUser.stats?.gamesPlayed || 0,
+      goalsScored: backendUser.stats?.goals || 0,
+      assists: backendUser.stats?.assists || 0,
+      cleansheets: backendUser.stats?.cleanSheets || 0,
+      mvps: backendUser.stats?.mvpScore || 0,
+      wins: backendUser.stats?.wins || 0,
+      losses: 0, // Calculate from total games if needed
+      draws: 0, // Calculate from total games if needed
+      goals: backendUser.stats?.goals || 0,
+      matchesPlayed: backendUser.stats?.gamesPlayed || 0,
+      winPercentage: backendUser.stats?.gamesPlayed > 0 ? 
+        Math.round((backendUser.stats.wins / backendUser.stats.gamesPlayed) * 100) : 0,
+      interceptions: backendUser.stats?.interceptions || 0
+    }
+  };
+};
+
 // Get user's bookings/reservations
 export const getMyBookings = async () => {
   try {

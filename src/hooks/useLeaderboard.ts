@@ -53,7 +53,7 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
         const limitedPlayers = limit ? leaderboardPlayers.slice(0, limit) : leaderboardPlayers;
         setPlayers(limitedPlayers);
       } else {
-        throw new Error(response.error || 'Failed to fetch leaderboard');
+        throw new Error('Failed to fetch leaderboard');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
