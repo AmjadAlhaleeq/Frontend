@@ -1,290 +1,231 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Search, Filter, Crown, Medal, Star } from "lucide-react";
-import LeaderboardSkeleton from "@/components/ui/leaderboard-skeleton";
 
-interface Player {
-  _id: string;
-  rank?: number;
-  userId?: string;
-  firstName?: string;
-  lastName?: string;
-  name: string;
-  avatar?: string;
-  profilePicture?: string;
-  email: string;
-  matches?: number;
-  statValue?: number;
-  stats: {
-    gamesPlayed: number;
-    wins: number;
-    losses: number;
-    draws: number;
-    goals: number;
-    assists: number;
-    cleanSheets: number;
-    rating: number;
-    winRate: number;
-    mvpScore?: number;
-    interceptions?: number;
-  };
-}
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Trophy, 
+  Medal, 
+  Award, 
+  Target,
+  Users,
+  Crown,
+  Gamepad2,
+  Shield,
+  Zap
+} from 'lucide-react';
+import { LeaderboardPlayer, LeaderboardType } from '@/lib/leaderboardApi';
+import LeaderboardSkeleton from '@/components/ui/leaderboard-skeleton';
 
-interface LeaderboardProps {
-  players?: Player[];
-  loading?: boolean;
+interface ModernLeaderboardProps {
+  players: LeaderboardPlayer[];
+  loading: boolean;
   onRefresh?: () => void;
-  onUpdateSort?: (sortBy: string) => void;
-  apiEndpoint?: string;
+  onUpdateSort?: (type: LeaderboardType) => void;
+  currentType: LeaderboardType;
+  typeConfig?: {
+    key: LeaderboardType;
+    label: string;
+    icon: any;
+    color: string;
+    description: string;
+  };
 }
 
-const ModernLeaderboard: React.FC<LeaderboardProps> = ({
-  players = [],
-  loading = false,
-  onRefresh,
-  onUpdateSort,
-  apiEndpoint
+const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({ 
+  players = [], 
+  loading = false, 
+  currentType = 'goals',
+  typeConfig = {}
 }) => {
-  const [sortBy, setSortBy] = useState<keyof Player['stats']>('wins');
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>(players);
-
-  // Mock data for demo (replace with API call)
-  const mockPlayers: Player[] = [
-    {
-      _id: "1",
-      name: "Rolando Daugherty",
-      email: "rolando@example.com",
-      avatar: "",
-      stats: {
-        gamesPlayed: 30,
-        wins: 9,
-        losses: 4,
-        draws: 2,
-        goals: 32,
-        assists: 12,
-        cleanSheets: 8,
-        rating: 9.2,
-        winRate: 75,
-        mvpScore: 95.2,
-        interceptions: 45
-      }
-    },
-    {
-      _id: "2", 
-      name: "Brenda Franey",
-      email: "brenda@example.com",
-      stats: {
-        gamesPlayed: 39,
-        wins: 8,
-        losses: 5,
-        draws: 1,
-        goals: 28,
-        assists: 15,
-        cleanSheets: 6,
-        rating: 8.9,
-        winRate: 72.7,
-        mvpScore: 89.7,
-        interceptions: 38
-      }
-    },
-    {
-      _id: "3",
-      name: "Rolando Kilback", 
-      email: "kilback@example.com",
-      stats: {
-        gamesPlayed: 19,
-        wins: 8,
-        losses: 4,
-        draws: 2,
-        goals: 24,
-        assists: 18,
-        cleanSheets: 10,
-        rating: 8.7,
-        winRate: 70,
-        mvpScore: 87.3,
-        interceptions: 52
-      }
-    },
-    {
-      _id: "4",
-      name: "Esther Pacocha", 
-      email: "esther@example.com",
-      stats: {
-        gamesPlayed: 38,
-        wins: 7,
-        losses: 6,
-        draws: 3,
-        goals: 20,
-        assists: 14,
-        cleanSheets: 5,
-        rating: 8.5,
-        winRate: 65,
-        mvpScore: 85.1,
-        interceptions: 42
-      }
-    }
-  ];
-
-  useEffect(() => {
-    const data = players.length > 0 ? players : mockPlayers;
-    
-    const filtered = data
-      .filter(player => 
-        player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (player.email && player.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-      .sort((a, b) => {
-        const aValue = a.stats[sortBy] || a.statValue || 0;
-        const bValue = b.stats[sortBy] || b.statValue || 0;
-        return bValue - aValue;
-      })
-      .slice(0, 50);
-    
-    setFilteredPlayers(filtered);
-  }, [players, searchTerm, sortBy]);
-
-  const handleSortChange = (newSortBy: keyof Player['stats']) => {
-    setSortBy(newSortBy);
-    if (onUpdateSort) {
-      onUpdateSort(newSortBy as string);
-    }
-  };
-
+  // Get rank icon based on position
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-6 w-6 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />;
-    if (rank === 3) return <Trophy className="h-6 w-6 text-amber-600" />;
-    return (
-      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-        <span className="text-sm font-bold text-blue-600">{rank}</span>
-      </div>
-    );
+    switch (rank) {
+      case 1:
+        return <Crown className="h-6 w-6 text-yellow-500" />;
+      case 2:
+        return <Medal className="h-6 w-6 text-gray-400" />;
+      case 3:
+        return <Trophy className="h-6 w-6 text-amber-600" />;
+      default:
+        return (
+          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+            <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
+              {rank}
+            </span>
+          </div>
+        );
+    }
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  // Get stat icon based on type
+  const getStatIcon = (type: LeaderboardType) => {
+    switch (type) {
+      case 'goals':
+        return <Target className="h-5 w-5" />;
+      case 'assists':
+        return <Users className="h-5 w-5" />;
+      case 'wins':
+        return <Trophy className="h-5 w-5" />;
+      case 'mvp':
+        return <Award className="h-5 w-5" />;
+      case 'interceptions':
+        return <Zap className="h-5 w-5" />;
+      case 'cleanSheets':
+        return <Shield className="h-5 w-5" />;
+      default:
+        return <Award className="h-5 w-5" />;
+    }
   };
 
-  const sortOptions = [
-    { key: 'wins', label: 'Wins' },
-    { key: 'goals', label: 'Goals' },
-    { key: 'assists', label: 'Assists' },
-    { key: 'cleanSheets', label: 'Clean Sheets' },
-    { key: 'mvpScore', label: 'MVP' },
-    { key: 'interceptions', label: 'Interceptions' },
-  ];
+  // Format stat value and description based on type
+  const formatStatValue = (player: LeaderboardPlayer, type: LeaderboardType) => {
+    const { statValue, matches } = player;
+    
+    switch (type) {
+      case 'goals':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+        };
+      case 'assists':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+        };
+      case 'wins':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${((statValue / matches) * 100).toFixed(1)}% win rate` : '0% win rate'
+        };
+      case 'mvp':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+        };
+      case 'interceptions':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+        };
+      case 'cleanSheets':
+        return {
+          main: statValue,
+          sub: matches > 0 ? `${((statValue / matches) * 100).toFixed(1)}% clean sheet rate` : '0% clean sheet rate'
+        };
+      default:
+        return {
+          main: statValue,
+          sub: `${matches} matches`
+        };
+    }
+  };
+
+  // Get player initials for avatar fallback
+  const getPlayerInitials = (player: LeaderboardPlayer) => {
+    const first = player.firstName || '';
+    const last = player.lastName || '';
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || 'U';
+  };
 
   if (loading) {
     return <LeaderboardSkeleton />;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Current Season Top 10</h1>
-        <p className="text-gray-600">Track top performers across seasons</p>
-      </div>
-
-      {/* Stats Tabs */}
-      <div className="flex justify-center">
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          {sortOptions.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => handleSortChange(key as keyof Player['stats'])}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                sortBy === key
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Controls */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search players..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+  if (!players || players.length === 0) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-12 text-center">
+          <div className="text-gray-400 mb-4">
+            <Trophy className="h-12 w-12 mx-auto" />
           </div>
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
+            No Data Available
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            No players found for the {currentType.replace('_', ' ')} leaderboard.
+          </p>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Player List */}
-      <div className="space-y-3">
-        {filteredPlayers.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
-              <p className="text-gray-600">Try adjusting your search criteria.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredPlayers.map((player, index) => {
-            const rank = player.rank || index + 1;
-            const isTopThree = rank <= 3;
-            const displayValue = player.stats[sortBy] || player.statValue || 0;
-            const gamesPlayed = player.stats.gamesPlayed || player.matches || 0;
-            
-            return (
-              <Card 
-                key={player._id}
-                className={`transition-all duration-200 hover:shadow-md ${
-                  isTopThree ? 'border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-transparent' : ''
-                }`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    {/* Rank */}
-                    <div className="flex-shrink-0">
-                      {getRankIcon(rank)}
-                    </div>
-                    
-                    {/* Avatar */}
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={player.avatar || player.profilePicture} />
-                      <AvatarFallback className="bg-blue-600 text-white font-semibold">
-                        {getInitials(player.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    {/* Player Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">{player.name}</h3>
-                      <p className="text-sm text-gray-600">Matches played: {gamesPlayed}</p>
-                    </div>
+  return (
+    <div className="space-y-3">
+      {players.map((player, index) => {
+        const stats = formatStatValue(player, currentType);
+        const isTopThree = player.rank <= 3;
+        
+        return (
+          <Card
+            key={player.userId}
+            className={`transition-all duration-200 hover:shadow-md ${
+              isTopThree ? 'border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-700' : ''
+            }`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4">
+                {/* Rank */}
+                <div className="flex-shrink-0">
+                  {getRankIcon(player.rank)}
+                </div>
 
-                    {/* Score */}
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-2xl font-bold text-blue-600 flex items-center space-x-1">
-                        <Trophy className="h-5 w-5" />
-                        <span>{displayValue}</span>
-                      </div>
+                {/* Avatar */}
+                <Avatar className="h-12 w-12">
+                  <AvatarImage 
+                    src={player.profilePicture || player.avatar} 
+                    alt={player.name}
+                  />
+                  <AvatarFallback className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-semibold">
+                    {getPlayerInitials(player)}
+                  </AvatarFallback>
+                </Avatar>
+
+                {/* Player Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {player.name || 'Unknown Player'}
+                    </h3>
+                    {isTopThree && (
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${
+                          player.rank === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                          player.rank === 2 ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' :
+                          'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                        }`}
+                      >
+                        #{player.rank}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 mt-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {stats.sub}
+                    </p>
+                    <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                      <Gamepad2 className="h-3 w-3" />
+                      {player.matches} games
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+                    {getStatIcon(currentType)}
+                    <span>{stats.main}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                    {currentType.replace('_', ' ')}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

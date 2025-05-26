@@ -1,109 +1,64 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '@/services/apiService';
+import { getLeaderboardByType, LEADERBOARD_TYPES, LeaderboardPlayer, LeaderboardType } from '@/lib/leaderboardApi';
 import { useToast } from '@/hooks/use-toast';
 
-interface Player {
-  _id: string;
-  rank: number;
-  userId: string;
-  firstName: string;
-  lastName: string;
-  name: string; // Made required to match ModernLeaderboard expectations
-  profilePicture?: string;
-  avatar?: string;
-  email: string;
-  matches: number;
-  statValue: number;
-  stats: {
-    gamesPlayed: number;
-    wins: number;
-    losses: number;
-    draws: number;
-    goals: number;
-    assists: number;
-    cleanSheets: number;
-    rating: number;
-    winRate: number;
-    mvpScore?: number;
-    interceptions?: number;
-  };
-}
-
 interface UseLeaderboardParams {
-  sortBy?: string;
-  order?: 'asc' | 'desc';
+  sortBy?: LeaderboardType;
   limit?: number;
   autoRefresh?: boolean;
   refreshInterval?: number;
+  initialType?: LeaderboardType;
 }
 
 interface UseLeaderboardReturn {
-  players: Player[];
+  players: LeaderboardPlayer[];
   loading: boolean;
   error: string | null;
+  currentType: LeaderboardType;
   refresh: () => Promise<void>;
-  updateSort: (sortBy: string) => Promise<void>;
+  updateSort: (sortBy: LeaderboardType) => Promise<void>;
+  getTotalPlayers: () => number;
+  getPlayerByRank: (rank: number) => LeaderboardPlayer | undefined;
+  getPlayerById: (userId: string) => LeaderboardPlayer | undefined;
 }
 
 export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboardReturn => {
   const {
-    sortBy = 'wins',
+    limit = 50,
+    sortBy = 'goals',
     autoRefresh = false,
-    refreshInterval = 30000
+    refreshInterval = 60000,
+    initialType = 'goals'
   } = params;
 
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentSort, setCurrentSort] = useState(sortBy);
+  const [currentType, setCurrentType] = useState<LeaderboardType>(initialType);
 
   const { toast } = useToast();
 
-  const fetchLeaderboard = useCallback(async (type: string = currentSort) => {
+  const fetchLeaderboard = useCallback(async (type: LeaderboardType = currentType) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await apiService.getLeaderboardByType(type);
+      const response = await getLeaderboardByType(type);
 
       if (response.success && response.data?.leaderboard) {
         const { players: leaderboardPlayers } = response.data.leaderboard;
         
-        // Transform backend data to match frontend Player interface
-        const transformedPlayers = leaderboardPlayers.map((player: any) => ({
-          _id: player.userId,
-          rank: player.rank,
-          userId: player.userId,
-          firstName: player.firstName,
-          lastName: player.lastName,
-          name: `${player.firstName} ${player.lastName}`, // Always provide name
-          profilePicture: player.profilePicture,
-          avatar: player.profilePicture,
-          email: '', // Provide default empty email
-          matches: player.matches,
-          statValue: player.statValue,
-          stats: {
-            gamesPlayed: player.matches,
-            wins: type === 'wins' ? player.statValue : 0,
-            losses: 0,
-            draws: 0,
-            goals: type === 'goals' ? player.statValue : 0,
-            assists: type === 'assists' ? player.statValue : 0,
-            cleanSheets: type === 'cleanSheets' ? player.statValue : 0,
-            rating: player.statValue,
-            winRate: 0,
-            mvpScore: type === 'mvp' ? player.statValue : 0,
-            interceptions: type === 'interceptions' ? player.statValue : 0,
-          }
-        }));
-        
-        setPlayers(transformedPlayers);
+        // Apply limit if specified
+        const limitedPlayers = limit ? leaderboardPlayers.slice(0, limit) : leaderboardPlayers;
+        setPlayers(limitedPlayers);
       } else {
         throw new Error(response.error || 'Failed to fetch leaderboard');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
+      setPlayers([]);
       toast({
         title: "Error",
         description: errorMessage,
@@ -112,39 +67,48 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
     } finally {
       setLoading(false);
     }
-  }, [currentSort, toast]);
+  }, [currentType, limit, toast]);
 
   const refresh = useCallback(async () => {
-    await fetchLeaderboard(currentSort);
-  }, [fetchLeaderboard, currentSort]);
+    await fetchLeaderboard(currentType);
+  }, [fetchLeaderboard, currentType]);
 
-  const updateSort = useCallback(async (newSortBy: string) => {
-    setCurrentSort(newSortBy);
-    await fetchLeaderboard(newSortBy);
+  const updateSort = useCallback(async (newType: LeaderboardType) => {
+    setCurrentType(newType);
+    await fetchLeaderboard(newType);
   }, [fetchLeaderboard]);
 
   // Initial load
   useEffect(() => {
-    fetchLeaderboard();
+    fetchLeaderboard(initialType);
   }, []);
 
   // Auto-refresh functionality
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || refreshInterval <= 0) return;
 
     const interval = setInterval(() => {
-      refresh();
+      fetchLeaderboard(currentType);
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, refresh]);
+  }, [autoRefresh, refreshInterval, fetchLeaderboard, currentType]);
+
+  // Utility functions
+  const getTotalPlayers = useCallback(() => players.length, [players]);
+  const getPlayerByRank = useCallback((rank: number) => players.find(p => p.rank === rank), [players]);
+  const getPlayerById = useCallback((userId: string) => players.find(p => p.userId === userId), [players]);
 
   return {
     players,
     loading,
     error,
+    currentType,
     refresh,
     updateSort,
+    getTotalPlayers,
+    getPlayerByRank,
+    getPlayerById,
   };
 };
 

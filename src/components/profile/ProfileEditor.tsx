@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Upload } from "lucide-react";
 
@@ -14,36 +15,33 @@ interface ProfileEditorProps {
     id: string;
     firstName: string;
     lastName: string;
-    gender?: string;
+    email: string;
+    phoneNumber?: string;
     age?: string;
     city?: string;
     position?: string;
-    phoneNumber?: string;
-    email: string;
+    bio?: string;
     avatarUrl?: string;
   };
-  onSave: (updatedProfile: any) => void;
+  onSave: (updatedProfile: any, profilePictureFile?: File) => void;
   onCancel: () => void;
 }
 
-/**
- * ProfileEditor component
- * Allows users to edit their profile information
- */
 const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSave, onCancel }) => {
   const { toast } = useToast();
   const [profile, setProfile] = useState({
     firstName: currentUserDetails.firstName || "",
     lastName: currentUserDetails.lastName || "",
     email: currentUserDetails.email || "",
-    gender: currentUserDetails.gender || "",
+    phoneNumber: currentUserDetails.phoneNumber || "",
     age: currentUserDetails.age || "",
     city: currentUserDetails.city || "",
     position: currentUserDetails.position || "",
-    phoneNumber: currentUserDetails.phoneNumber || "",
+    bio: currentUserDetails.bio || "",
     avatarUrl: currentUserDetails.avatarUrl || ""
   });
   
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Handle file input change for photo upload
@@ -71,6 +69,8 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
       return;
     }
     
+    setSelectedFile(file);
+    
     // Create a data URL for preview
     const reader = new FileReader();
     reader.onload = () => {
@@ -93,7 +93,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     }
   };
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProfile(prev => ({
       ...prev,
@@ -110,26 +110,22 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(profile);
+    onSave(profile, selectedFile || undefined);
   };
   
-  // Available positions for football
   const positions = [
     "Goalkeeper",
-    "Defender",
+    "Defender", 
     "Right Back",
     "Left Back",
     "Center Back",
     "Defensive Midfielder",
-    "Central Midfielder",
+    "Central Midfielder", 
     "Attacking Midfielder",
     "Winger",
     "Forward",
     "Striker"
   ];
-
-  // Real profile photos urls (realistic looking player photos from professional stock)
-  const defaultAvatarUrl = `https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=faces`;
 
   return (
     <Card className="w-full">
@@ -138,7 +134,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-24 w-24 mb-4 border-2 border-gray-200">
               <AvatarImage 
-                src={profile.avatarUrl || defaultAvatarUrl} 
+                src={profile.avatarUrl} 
                 alt={`${profile.firstName} ${profile.lastName}`}
               />
               <AvatarFallback>
@@ -176,6 +172,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
                 value={profile.firstName}
                 onChange={handleChange}
                 required
+                maxLength={10}
               />
             </div>
             
@@ -187,6 +184,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
                 value={profile.lastName}
                 onChange={handleChange}
                 required
+                maxLength={15}
               />
             </div>
             
@@ -209,7 +207,9 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
                 name="phoneNumber"
                 value={profile.phoneNumber}
                 onChange={handleChange}
-                placeholder="+1 (555) 123-4567"
+                placeholder="+962790123456"
+                pattern="^\+9627[789]\d{7}$"
+                title="Please enter a valid Jordanian phone number"
               />
             </div>
             
@@ -218,28 +218,13 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
               <Input 
                 id="age"
                 name="age"
+                type="number"
                 value={profile.age}
                 onChange={handleChange}
+                min="15"
+                max="45"
                 placeholder="25"
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select 
-                value={profile.gender} 
-                onValueChange={(value) => handleSelectChange("gender", value)}
-              >
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             
             <div className="space-y-2">
@@ -249,11 +234,12 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
                 name="city"
                 value={profile.city}
                 onChange={handleChange}
-                placeholder="New York"
+                placeholder="Amman"
+                required
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="position">Preferred Position</Label>
               <Select 
                 value={profile.position} 
@@ -264,10 +250,22 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map(position => (
-                    <SelectItem key={position} value={position.toLowerCase()}>{position}</SelectItem>
+                    <SelectItem key={position} value={position}>{position}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea 
+                id="bio"
+                name="bio"
+                value={profile.bio}
+                onChange={handleChange}
+                placeholder="Tell us about yourself..."
+                rows={3}
+              />
             </div>
           </div>
           

@@ -21,7 +21,7 @@ const Footer = () => {
           {/* Logo and about section */}
           <div className="space-y-4">
             <div className="flex items-center">
-              <Logo height={40} />
+              <Logo height={145} />
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
               {t("footer.about")}
@@ -56,7 +56,10 @@ const Footer = () => {
               <FooterLink to="/about">About Us</FooterLink>
               <FooterLink to="/faq">FAQ</FooterLink>
               <FooterLink to="/rules">Rules</FooterLink>
-              <Link to="/privacy-policy" className="text-gray-600 hover:text-teal-500 dark:text-gray-400 dark:hover:text-teal-400 transition-colors">
+              <Link
+                to="/privacy-policy"
+                className="text-gray-600 hover:text-teal-500 dark:text-gray-400 dark:hover:text-teal-400 transition-colors"
+              >
                 Privacy Policy
               </Link>
             </div>

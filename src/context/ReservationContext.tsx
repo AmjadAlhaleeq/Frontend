@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -58,6 +57,7 @@ export interface Pitch {
 
 export interface Reservation {
   id: number;
+  backendId?: string; // Add support for backend MongoDB ID
   pitchId: string;
   pitchName: string;
   location: string;
