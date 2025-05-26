@@ -332,16 +332,14 @@ export const useReservationActions = (
     }
   }, [userRole, reservations, toast, loadReservations]);
 
-  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[], absentees: any[]) => {
+  const handleSaveSummary = useCallback(async (reservationId: number, mvpPlayerId: string, playerStats: any[], absentees: any[]) => {
     try {
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      // Get MVP from the playerStats (this should be passed separately in the updated function)
-      const mvpPlayer = playerStats.find(p => p.userId === summary); // This will be fixed in the component
-      
+      // Transform data to match backend API format
       const requestBody = {
-        mvp: mvpPlayer?.userId,
+        mvp: mvpPlayerId,
         players: playerStats.map(player => ({
           userId: player.userId,
           played: player.attended,
@@ -358,7 +356,26 @@ export const useReservationActions = (
         }))
       };
       
-      await addGameSummary(reservation.backendId, requestBody);
+      // Call the backend API with the correct endpoint
+      const response = await fetch(`http://127.0.0.1:3000/reservations/${reservation.backendId}/summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save summary');
+      }
+
+      const result = await response.json();
+      
+      if (result.status !== 'success') {
+        throw new Error(result.message || 'Failed to save summary');
+      }
       
       toast({
         title: "Summary Saved",
