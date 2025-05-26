@@ -315,7 +315,7 @@ export const useReservationActions = (
       if (!reservation.backendId) throw new Error('Reservation backendId missing');
 
       await kickPlayerApi(reservation.backendId, playerId);
-      // DO NOT update local count immediately: force refresh from DB, will reflect upon reload
+      // **Do not update count locally.** Just reload from DB, will reflect correct player count
       await loadReservations();
 
       toast({
@@ -324,7 +324,6 @@ export const useReservationActions = (
       });
 
     } catch (error) {
-      console.error("Error kicking player:", error);
       toast({
         title: "Failed to Kick Player",
         description: error instanceof Error ? error.message : "Failed to kick the player",
@@ -347,7 +346,6 @@ export const useReservationActions = (
       
       await loadReservations();
     } catch (error) {
-      console.error("Error saving summary:", error);
       toast({
         title: "Failed to Save Summary",
         description: error instanceof Error ? error.message : "Failed to save the game summary",

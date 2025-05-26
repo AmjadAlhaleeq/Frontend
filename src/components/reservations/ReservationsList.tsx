@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { XCircle } from 'lucide-react';
@@ -40,7 +41,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   onAddSummary,
   onClearDateFilter
 }) => {
-  // Separate into upcoming and completed
+  // "Two-way-pending" = live update both upcoming/completed sections for admin; Only show upcoming to users
   const todayISO = new Date().toISOString().slice(0,10);
   const completedReservations = upcomingReservations.filter(
     r => r.status === "completed" || new Date(r.date) < new Date(todayISO)
@@ -49,7 +50,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     r => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
   );
 
-  // Only show completed games section for admin
+  // Only admins see completed games section
   const sections = userRole === 'admin' ? [
     {
       title: 'Upcoming Games',
@@ -67,12 +68,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     // No completed section for non-admins
   ];
 
-  // For completed games section/exclude after summary is added
+  // When admin adds a summary, remove from completed section (exclude those with summary.completed)
   const getSectionData = (section: string, data: Reservation[]) => {
     if (section === "Completed Games" && userRole === "admin" && !!onAddSummary) {
-      // Hide if already has summary
+      // Hide if already has summary.completed === true
       return data.filter(res =>
-        !(typeof res.summary === 'object' && res.summary?.completed)
+        !(typeof res.summary === 'object' && (res.summary as any)?.completed)
       );
     }
     return data;
@@ -132,3 +133,4 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
 };
 
 export default ReservationsList;
+

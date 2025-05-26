@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import {
   Dialog,
@@ -10,13 +11,15 @@ import { Badge as UiBadge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  Calendar,      // Games Played
-  BadgePlus,     // Goals Scored
-  Zap,           // Assists
-  ShieldCheck,   // Clean Sheets
-  Award,         // MVP
-  Star,          // Wins
-  Check,         // Level up or completed
+  Trophy,   // Wins
+  Award,    // MVP
+  Zap,      // Interceptions
+  Target,   // Goals
+  Users,    // Assists
+  Shield,   // Clean sheets
+  Calendar, // Games Played
+  Star,
+  Check,
 } from "lucide-react";
 import { BackendUserProfile } from "@/hooks/usePlayerProfile";
 
@@ -29,7 +32,6 @@ interface PlayerProfileDialogProps {
   profileData?: BackendUserProfile;
   loading?: boolean;
   error?: string | null;
-  // fallback stats for static profiles
   playerStats?: {
     gamesPlayed: number;
     goals: number;
@@ -41,21 +43,52 @@ interface PlayerProfileDialogProps {
   };
 }
 
-interface PlayerStatsType {
-  matches: number;
-  gamesPlayed: number;
-  goals: number;
-  goalsScored: number;
-  assists: number;
-  wins: number;
-  mvp: number;
-  mvps: number;
-  cleanSheets: number;
-  cleansheets: number;
-  interceptions: number;
-}
+const ICON_CLASSES = "h-7 w-7 mx-auto";
 
-const ICON_CLASSES = "h-7 w-7 text-teal-500 mb-1 mx-auto";
+const statConfig = [
+  {
+    key: "gamesPlayed",
+    label: "Games Played",
+    icon: Calendar,
+    color: "text-gray-700",
+  },
+  {
+    key: "goals",
+    label: "Goals Scored",
+    icon: Target,
+    color: "text-green-600",
+  },
+  {
+    key: "assists",
+    label: "Assists",
+    icon: Users,
+    color: "text-blue-600",
+  },
+  {
+    key: "cleansheets",
+    label: "Clean Sheets",
+    icon: Shield,
+    color: "text-cyan-600",
+  },
+  {
+    key: "mvps",
+    label: "MVP Awards",
+    icon: Award,
+    color: "text-purple-700",
+  },
+  {
+    key: "wins",
+    label: "Wins",
+    icon: Trophy,
+    color: "text-yellow-600",
+  },
+  {
+    key: "interceptions",
+    label: "Interceptions",
+    icon: Zap,
+    color: "text-orange-600",
+  }
+];
 
 const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   isOpen,
@@ -81,147 +114,117 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
     return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
   };
 
-  // Default stats
-  const defaultStats: PlayerStatsType = {
-    matches: 0,
-    gamesPlayed: 0,
-    goals: 0,
-    goalsScored: 0,
-    assists: 0,
-    wins: 0,
-    mvp: 0,
-    mvps: 0,
-    cleanSheets: 0,
-    cleansheets: 0,
-    interceptions: 0,
+  // Map stats from API (prefer backend, fallback to prop)
+  const stats = {
+    gamesPlayed: profileData?.stats?.gamesPlayed ?? playerStats?.gamesPlayed ?? 0,
+    goals: profileData?.stats?.goals ?? playerStats?.goals ?? 0,
+    assists: profileData?.stats?.assists ?? playerStats?.assists ?? 0,
+    cleansheets: profileData?.stats?.cleanSheets ?? playerStats?.cleansheets ?? 0,
+    mvps: profileData?.stats?.mvp ?? playerStats?.mvps ?? 0,
+    wins: profileData?.stats?.wins ?? playerStats?.wins ?? 0,
+    interceptions: profileData?.stats?.interceptions ?? playerStats?.interceptions ?? 0,
   };
 
-  // Compose stats with strict mapping from the backend (don't fudge numbers!)
-  // For MVP, show profileData.stats.mvp or playerStats.mvps as is, don't mix with games played.
-  const statsSource: PlayerStatsType = {
-    ...defaultStats,
-    ...(profileData?.stats || {}),
-    ...(playerStats || {}),
-  };
-
-  const {
-    matches,
-    gamesPlayed,
-    goals,
-    goalsScored,
-    assists,
-    wins,
-    mvp,
-    mvps,
-    cleanSheets,
-    cleansheets,
-    interceptions,
-  } = statsSource;
-
-  // --- Visual utilities ---
-  // Show clean badge adornments for higher-level badges
+  // Colorful badge border by level 5+ = gold, 3+ = blue, else neutral
   const getBadgeLevelColor = (level: number) => {
-    if (level >= 5) return "border-yellow-400 bg-yellow-100 text-yellow-900 shadow-[0_2px_8px_#fde04740]";
+    if (level >= 5) return "border-yellow-500 bg-yellow-200/80 text-yellow-900 shadow-[0_2px_8px_#fde04760]";
     if (level >= 3) return "border-blue-400 bg-blue-100 text-blue-900";
-    return "border-gray-300 bg-gray-50 text-gray-800";
+    return "border-gray-200 bg-gray-50 text-gray-700";
   };
-
-  // For badge icons, make higher level more shiny
+  // Icon for badge level
   const getBadgeIcon = (level: number) => {
     if (level >= 5) return <Check className="inline ml-1 text-yellow-500" />;
     if (level >= 3) return <Star className="inline ml-1 text-blue-400" />;
     return null;
   };
 
+  // --- UI ---
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-[440px] rounded-xl shadow-lg border-2 border-teal-200 bg-gradient-to-br from-white to-slate-100 animate-fade-in">
         <DialogHeader>
-          <DialogTitle>Player Profile</DialogTitle>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <span className="text-teal-700">Player Profile</span>
+            <Shield className="h-6 w-6 text-teal-500" />
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          {/* Profile state */}
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : error ? (
             <div className="text-red-500 text-center py-8">{error}</div>
           ) : (
             <>
-              {/* Avatar and Info */}
+              {/* Avatar + Info */}
               <div className="flex flex-col items-center text-center">
-                <Avatar className="h-20 w-20 mb-4 ring ring-teal-300 ring-offset-2">
+                <Avatar className="h-24 w-24 mb-3 ring-4 ring-teal-300 ring-offset-4 shadow-md">
                   {profileData?.profilePicture ? (
                     <AvatarImage src={profileData.profilePicture} alt="Profile" />
                   ) : (
-                    <AvatarFallback className="bg-teal-100 text-teal-700 text-lg font-semibold">
-                      {getInitials(profileData?.firstName + ' ' + profileData?.lastName || playerName)}
+                    <AvatarFallback className="bg-teal-100 text-teal-700 text-3xl font-bold">
+                      {getInitials(profileData ? `${profileData.firstName} ${profileData.lastName}` : playerName)}
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <h3 className="text-xl font-semibold">
+                <h3 className="text-xl font-bold text-teal-700">
                   {profileData ? `${profileData.firstName} ${profileData.lastName}` : (playerName || `Player ${playerId.substring(0, 6)}`)}
                 </h3>
-                <p className="text-sm text-muted-foreground">Player ID: {playerId.substring(0,8)}</p>
-                {profileData && profileData.city && (
-                  <p className="text-sm text-gray-400">{profileData.city}</p>
-                )}
-                {profileData && profileData.bio && (
-                  <p className="text-xs mt-1">{profileData.bio}</p>
+                <p className="text-sm text-gray-400">ID: {playerId.substring(0,8)}</p>
+                {profileData && (
+                  <>
+                    {profileData.city && (
+                      <p className="text-xs text-gray-500">{profileData.city}</p>
+                    )}
+                    {profileData.bio && (
+                      <p className="text-xs mt-1">{profileData.bio}</p>
+                    )}
+                  </>
                 )}
               </div>
-
               {/* Stats */}
               <div>
-                <h4 className="font-medium text-center mb-4">Player Statistics</h4>
-                <div className="flex flex-row flex-wrap gap-y-2 gap-x-8 justify-center items-end">
-                  <StatBlock icon={Calendar} label="Games Played" value={gamesPlayed || matches} />
-                  <StatBlock icon={BadgePlus} label="Goals Scored" value={goalsScored || goals} />
-                  <StatBlock icon={Zap} label="Assists" value={assists} />
-                  <StatBlock icon={ShieldCheck} label="Clean Sheets" value={cleansheets || cleanSheets} />
-                  <StatBlock icon={Award} label="MVP Awards" value={mvps || mvp} />
-                  <StatBlock icon={Star} label="Wins" value={wins} />
-                </div>
-                <div className="flex flex-col items-center mt-4">
-                  <StatBlock
-                    icon={Check}
-                    label="Interceptions"
-                    value={interceptions}
-                    highlight
-                  />
+                <h4 className="font-medium text-center mb-3 text-gray-800">Player Statistics</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-center items-end">
+                  {statConfig.map((s, idx) => (
+                    <StatBlock
+                      key={s.key}
+                      icon={s.icon}
+                      label={s.label}
+                      value={stats[s.key as keyof typeof stats] ?? 0}
+                      iconColor={s.color}
+                      highlight={idx < 2}
+                    />
+                  ))}
                 </div>
               </div>
-
               {/* Badges */}
               <TooltipProvider>
-              {profileData?.badges && profileData.badges.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-center mt-6 mb-2">Player Badges</h4>
-                  <div className="flex flex-wrap gap-3 justify-center">
-                    {profileData.badges.map(badge => (
-                      <Tooltip key={badge._id}>
-                        <TooltipTrigger asChild>
-                          <UiBadge
-                            className={`border py-2 px-3 rounded-xl shadow-sm font-medium flex items-center gap-1 ${getBadgeLevelColor(badge.level)}`}
-                          >
-                            <span className="text-base">
-                              {badge.name}
-                            </span>
-                            <span className="ml-1 text-xs font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-gray-200">
-                              Lv{badge.level}
-                            </span>
-                            {getBadgeIcon(badge.level)}
-                          </UiBadge>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs text-center py-2 px-4 text-xs font-medium">
-                          {badge.description || "No description"}
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
+                {profileData?.badges && profileData.badges.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-center mt-6 mb-2 text-gray-700">Player Badges</h4>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      {profileData.badges.map(badge => (
+                        <Tooltip key={badge._id}>
+                          <TooltipTrigger asChild>
+                            <UiBadge
+                              className={`border-2 py-2 px-3 rounded-2xl shadow font-medium flex items-center gap-1 transition-transform hover:scale-110 cursor-pointer duration-150 ${getBadgeLevelColor(badge.level)}`}
+                            >
+                              <span className="text-base">{badge.name}</span>
+                              <span className="ml-1 text-xs font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-gray-200">
+                                Lv{badge.level}
+                              </span>
+                              {getBadgeIcon(badge.level)}
+                            </UiBadge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-center py-2 px-4 text-xs font-medium shadow bg-yellow-50 border-yellow-200">
+                            {badge.description || "No description"}
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </TooltipProvider>
-
               {/* Status Badge */}
               <div className="flex justify-center mt-4">
                 <UiBadge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-semibold px-5 py-1 text-base">
@@ -240,22 +243,23 @@ const StatBlock = ({
   icon: Icon,
   label,
   value,
+  iconColor = "",
   highlight = false,
 }: {
   icon: React.ElementType;
   label: string;
   value: number;
+  iconColor?: string;
   highlight?: boolean;
 }) => (
-  <Card className={highlight ? "border-2 border-primary shadow-lg scale-105" : ""}>
-    <CardContent className="py-2 px-4 text-center">
-      <div className={`flex flex-col items-center justify-center mb-1`}>
-        <Icon className={ICON_CLASSES + (highlight ? " text-primary" : "")} />
-        <span className={`text-lg font-bold ${highlight ? "text-primary" : ""}`}>{value}</span>
-      </div>
-      <p className={`text-xs ${highlight ? "text-primary font-semibold" : "text-muted-foreground"}`}>{label}</p>
+  <Card className={`rounded-xl border-2 ${highlight ? "border-primary shadow-lg scale-105" : "border-gray-100 shadow-sm"}`}>
+    <CardContent className="py-2 px-3 text-center flex flex-col items-center">
+      <Icon className={`${ICON_CLASSES} ${iconColor} ${highlight ? "scale-125" : ""}`} />
+      <span className={`text-lg font-bold mt-1 ${highlight ? "text-primary" : ""}`}>{value ?? 0}</span>
+      <span className={`text-xs ${highlight ? "font-semibold" : "text-muted-foreground"}`}>{label}</span>
     </CardContent>
   </Card>
 );
 
 export default PlayerProfileDialog;
+

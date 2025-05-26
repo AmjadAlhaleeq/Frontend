@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -81,32 +80,49 @@ const Reservations = () => {
     }
   }, []);
 
+  // NOTE: Handle player click to open profile dialog
+  const handlePlayerClick = useCallback((playerId: string, playerName?: string) => {
+    setPlayerProfile({
+      isOpen: true,
+      playerId,
+      playerName
+    });
+  }, []);
+
+  // --- Upcoming/Completed section admin filter ---
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
     const today = new Date(new Date().setHours(0, 0, 0, 0)); 
-
     if (currentDate) {
       const dateString = format(currentDate, 'yyyy-MM-dd');
-      const filtered = reservations.filter(
+      gamesToShow = reservations.filter(
         res => res.date === dateString && res.status === "upcoming"
       );
-      gamesToShow = filtered;
     } else {
       gamesToShow = reservations.filter(
         (res) => res.status === "upcoming" && 
                  new Date(res.date) >= today
       );
     }
+    // Two-way binding: latest always loaded
     return gamesToShow.sort((a,b) => {
       const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
       if (dateCompare !== 0) return dateCompare;
-      
       const aTime = a.startTime || a.time?.split(' - ')[0] || '00:00';
       const bTime = b.startTime || b.time?.split(' - ')[0] || '00:00';
       return aTime.localeCompare(bTime);
     });
   }, [reservations, currentDate]);
-  
+
+  // "Completed" section as separate for admin, with live update and removal after summary
+  const completedReservations = useMemo(() => {
+    const todayISO = new Date().toISOString().slice(0,10);
+    return reservations.filter(
+      r => (r.status === "completed" || new Date(r.date) < new Date(todayISO)) &&
+            !(typeof r.summary === 'object' && (r.summary as any)?.completed)
+    );
+  }, [reservations]);
+
   const checkHasReservationsOnDate = (date: Date): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
     return reservations.some(res => res.date === dateString);
@@ -126,14 +142,6 @@ const Reservations = () => {
       isOpen: true,
       playerName,
       playerId
-    });
-  }, []);
-
-  const handlePlayerClick = useCallback((playerId: string, playerName?: string) => {
-    setPlayerProfile({
-      isOpen: true,
-      playerId,
-      playerName
     });
   }, []);
 
@@ -200,7 +208,7 @@ const Reservations = () => {
           />
         </div>
 
-        {/* Right Column: Upcoming Games */}
+        {/* Right Column: Upcoming Games and (ADMIN) Completed Games */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between p-2 rounded-lg bg-gray-100 dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-teal-600 dark:text-teal-400 flex items-center">
@@ -217,7 +225,7 @@ const Reservations = () => {
             />
           ) : (
             <ReservationsList
-              upcomingReservations={upcomingReservations}
+              upcomingReservations={[...upcomingReservations, ...(userRole === 'admin' ? completedReservations : [])]}
               currentDate={currentDate}
               userRole={userRole}
               currentUserId={currentUserId}
@@ -288,18 +296,12 @@ const Reservations = () => {
         />
       )}
 
-      {/* Player Profile Dialog */}
+      {/* Player Profile Dialog on any player click */}
       <PlayerProfileDialog
         isOpen={playerProfile.isOpen}
         onClose={() => setPlayerProfile({ isOpen: false, playerId: "", playerName: "" })}
         playerId={playerProfile.playerId}
         playerName={playerProfile.playerName}
-        playerStats={{
-          gamesPlayed: 12,
-          goals: 8,
-          assists: 5,
-          wins: 9
-        }}
       />
 
       {/* Player Suspension Dialog */}

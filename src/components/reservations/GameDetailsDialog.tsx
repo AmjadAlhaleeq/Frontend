@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 import ActionConfirmationDialog from "./ActionConfirmationDialog";
 import { useToast } from "@/hooks/use-toast";
+import PlayerProfileDialog from "@/components/ui/PlayerProfileDialog";
 
 interface GameDetailsDialogProps {
   isOpen: boolean;
@@ -65,6 +66,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     isOpen: false,
     playerName: "",
     playerId: ""
+  });
+
+  const [playerProfile, setPlayerProfile] = useState<{ isOpen: boolean; playerId: string; playerName?: string; }>({
+    isOpen: false,
+    playerId: "",
+    playerName: ""
   });
 
   // Add null checks and error handling
@@ -129,6 +136,15 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
   const isUserInGame = joinedPlayers.some(player => player.userId === currentUserId);
   const isUserInWaitingList = waitingList.includes(currentUserId);
+
+  const handleOpenPlayerProfile = (userId: string, playerName?: string) => {
+    setPlayerProfile({
+      isOpen: true,
+      playerId: userId,
+      playerName
+    });
+    if (onPlayerClick) onPlayerClick(userId, playerName);
+  };
 
   return (
     <>
@@ -241,7 +257,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     <div className="space-y-2">
                       {joinedPlayers.map((player, index) => (
                         <div key={player.userId || index} className="flex items-center justify-between p-3 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors">
-                          <div className="flex items-center cursor-pointer" onClick={() => onPlayerClick?.(player.userId)}>
+                          <div className="flex items-center cursor-pointer" onClick={() => handleOpenPlayerProfile(player.userId, player.playerName || player.name)}>
                             <Avatar className="h-10 w-10 mr-3">
                               <AvatarFallback className="bg-teal-100 text-teal-700">
                                 {getInitials(player.playerName || player.name)}
@@ -289,7 +305,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     <div className="space-y-2">
                       {waitingList.map((userId, index) => (
                         <div key={userId} className="flex items-center justify-between p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                          <div className="flex items-center cursor-pointer" onClick={() => onPlayerClick?.(userId)}>
+                          <div className="flex items-center cursor-pointer" onClick={() => handleOpenPlayerProfile(userId, `Player ${userId.substring(0, 6)}`)}>
                             <Avatar className="h-10 w-10 mr-3">
                               <AvatarFallback className="bg-amber-100 text-amber-700">
                                 {(index + 1).toString()}
@@ -344,6 +360,13 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         description={`Are you sure you want to kick ${kickConfirmation.playerName} from this game? This action cannot be undone.`}
         confirmButtonText="Kick Player"
         confirmButtonVariant="destructive"
+      />
+
+      <PlayerProfileDialog
+        isOpen={playerProfile.isOpen}
+        onClose={() => setPlayerProfile({ isOpen: false, playerId: "", playerName: "" })}
+        playerId={playerProfile.playerId}
+        playerName={playerProfile.playerName}
       />
     </>
   );
