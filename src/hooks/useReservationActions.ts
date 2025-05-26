@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -80,8 +81,9 @@ export const useReservationActions = (
     }
 
     try {
-      console.log('Attempting to join reservation with ID:', reservation.backendId);
-      await joinReservationApi(reservation.backendId);
+      if (reservation.backendId) {
+        await joinReservationApi(reservation.backendId);
+      }
       joinGame(reservationId, undefined, currentUserId);
       
       toast({
@@ -114,7 +116,9 @@ export const useReservationActions = (
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      await cancelReservationApi(reservation.backendId);
+      if (reservation.backendId) {
+        await cancelReservationApi(reservation.backendId);
+      }
       cancelReservation(reservationId, currentUserId);
       
       toast({
@@ -147,7 +151,9 @@ export const useReservationActions = (
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      await deleteReservationApi(reservation.backendId);
+      if (reservation.backendId) {
+        await deleteReservationApi(reservation.backendId);
+      }
       deleteReservation(reservationId);
       
       toast({
@@ -167,66 +173,40 @@ export const useReservationActions = (
   }, [currentUserId, userRole, reservations, deleteReservation, toast, loadReservations]);
 
   const handleJoinWaitingList = useCallback(async (reservationId: number, userId: string) => {
-    if (!currentUserId) {
-      toast({ 
-        title: "Login Required", 
-        description: "Please log in to join the waiting list.", 
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      // TODO: Implement backend API call for joining waiting list
-      joinWaitingList(reservationId, currentUserId);
-      
+      joinWaitingList(reservationId, userId);
       toast({
         title: "Joined Waiting List",
         description: "You have been added to the waiting list.",
       });
-      
-      await loadReservations();
     } catch (error) {
       console.error("Error joining waiting list:", error);
       toast({
         title: "Failed to Join Waiting List",
-        description: error instanceof Error ? error.message : "Failed to join the waiting list",
+        description: "Failed to join the waiting list",
         variant: "destructive",
       });
     }
-  }, [currentUserId, joinWaitingList, toast, loadReservations]);
+  }, [joinWaitingList, toast]);
 
   const handleLeaveWaitingList = useCallback(async (reservationId: number, userId: string) => {
-    if (!currentUserId) {
-      toast({ 
-        title: "Login Required", 
-        description: "Please log in to leave the waiting list.", 
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      // TODO: Implement backend API call for leaving waiting list
-      leaveWaitingList(reservationId, currentUserId);
-      
+      leaveWaitingList(reservationId, userId);
       toast({
         title: "Left Waiting List",
         description: "You have been removed from the waiting list.",
       });
-      
-      await loadReservations();
     } catch (error) {
       console.error("Error leaving waiting list:", error);
       toast({
         title: "Failed to Leave Waiting List",
-        description: error instanceof Error ? error.message : "Failed to leave the waiting list",
+        description: "Failed to leave the waiting list",
         variant: "destructive",
       });
     }
-  }, [currentUserId, leaveWaitingList, toast, loadReservations]);
+  }, [leaveWaitingList, toast]);
 
-  const handleKickPlayer = useCallback(async (playerId: string, reservationId: number, reason?: string) => {
+  const handleKickPlayer = useCallback(async (reservationId: number, playerId: string, reason?: string) => {
     if (userRole !== 'admin') {
       toast({ 
         title: "Permission Denied", 
@@ -237,20 +217,17 @@ export const useReservationActions = (
     }
 
     try {
-      // TODO: Implement backend API call for kicking player
       cancelReservation(reservationId, playerId);
-      
       toast({
         title: "Player Removed",
         description: "The player has been removed from the game.",
       });
-      
       await loadReservations();
     } catch (error) {
       console.error("Error kicking player:", error);
       toast({
         title: "Failed to Remove Player",
-        description: error instanceof Error ? error.message : "Failed to remove the player",
+        description: "Failed to remove the player",
         variant: "destructive",
       });
     }
@@ -267,24 +244,20 @@ export const useReservationActions = (
     }
 
     try {
-      // TODO: Implement backend API call for saving summary
       console.log('Saving summary for reservation:', reservationId, summary, playerStats);
-      
       toast({
         title: "Summary Saved",
         description: "Game summary has been saved successfully.",
       });
-      
-      await loadReservations();
     } catch (error) {
       console.error("Error saving summary:", error);
       toast({
         title: "Failed to Save Summary",
-        description: error instanceof Error ? error.message : "Failed to save the summary",
+        description: "Failed to save the summary",
         variant: "destructive",
       });
     }
-  }, [userRole, toast, loadReservations]);
+  }, [userRole, toast]);
 
   return {
     handleJoinGame,

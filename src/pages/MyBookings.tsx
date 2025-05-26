@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Calendar, Loader, MapPin, Users, Clock, MessageSquare } from "lucide-react";
@@ -50,11 +51,15 @@ const MyBookings = () => {
   const [currentUserName, setCurrentUserName] = useState<string>('');
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setCurrentUserId(userData.id);
-      setCurrentUserName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Player');
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setCurrentUserId(userData.id);
+        setCurrentUserName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Player');
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
     }
   }, []);
 

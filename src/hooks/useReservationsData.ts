@@ -47,6 +47,7 @@ export const useReservationsData = () => {
       console.log('Successfully loaded and transformed reservations:', frontendReservations.length);
     } catch (error) {
       console.error('Error loading reservations:', error);
+      // Don't throw error, just log it to prevent page crashes
     } finally {
       setIsLoading(false);
     }

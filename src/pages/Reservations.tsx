@@ -100,9 +100,9 @@ const Reservations = () => {
   const {
     handleJoinGame,
     handleCancelReservation,
+    handleDeleteReservation,
     handleJoinWaitingList,
     handleLeaveWaitingList,
-    handleDeleteReservation,
     handleKickPlayer,
     handleSaveSummary,
     calculateActualMaxPlayers
@@ -110,51 +110,62 @@ const Reservations = () => {
 
   // Initialize user data
   useEffect(() => {
-    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
-    setUserRole(role);
-    
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setCurrentUserId(userData.id);
-      setCurrentUserName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Player');
+    try {
+      const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+      setUserRole(role);
+      
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setCurrentUserId(userData.id);
+        setCurrentUserName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Player');
+      }
+    } catch (error) {
+      console.error('Error initializing user data:', error);
     }
   }, []);
 
   const upcomingReservations = useMemo(() => {
-    let gamesToShow: Reservation[];
-    const today = new Date(new Date().setHours(0, 0, 0, 0)); 
+    try {
+      let gamesToShow: Reservation[];
+      const today = new Date(new Date().setHours(0, 0, 0, 0)); 
 
-    if (currentDate) {
-      const dateString = format(currentDate, 'yyyy-MM-dd');
-      const filtered = reservations.filter(
-        res => res.date === dateString && res.status === "upcoming"
-      );
-      gamesToShow = filtered;
-    } else {
-      gamesToShow = reservations.filter(
-        (res) => res.status === "upcoming" && 
-                 new Date(res.date) >= today
-      );
+      if (currentDate) {
+        const dateString = format(currentDate, 'yyyy-MM-dd');
+        const filtered = reservations.filter(
+          res => res.date === dateString && res.status === "upcoming"
+        );
+        gamesToShow = filtered;
+      } else {
+        gamesToShow = reservations.filter(
+          (res) => res.status === "upcoming" && 
+                   new Date(res.date) >= today
+        );
+      }
+      return gamesToShow.sort((a,b) => {
+        const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateCompare !== 0) return dateCompare;
+        
+        const aTime = a.startTime || a.time?.split(' - ')[0] || '00:00';
+        const bTime = b.startTime || b.time?.split(' - ')[0] || '00:00';
+        return aTime.localeCompare(bTime);
+      });
+    } catch (error) {
+      console.error('Error filtering reservations:', error);
+      return [];
     }
-    return gamesToShow.sort((a,b) => {
-      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
-      if (dateCompare !== 0) return dateCompare;
-      
-      const aTime = a.startTime || a.time?.split(' - ')[0] || '00:00';
-      const bTime = b.startTime || b.time?.split(' - ')[0] || '00:00';
-      return aTime.localeCompare(bTime);
-    });
   }, [reservations, currentDate]);
   
   const checkHasReservationsOnDate = (date: Date): boolean => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    return reservations.some(res => res.date === dateString);
+    try {
+      const dateString = format(date, 'yyyy-MM-dd');
+      return reservations.some(res => res.date === dateString);
+    } catch (error) {
+      console.error('Error checking reservations on date:', error);
+      return false;
+    }
   };
 
-  /**
-   * Opens confirmation dialog for joining a game
-   */
   const handleJoinGameWithConfirmation = useCallback((reservationId: number) => {
     if (!currentUserId) {
       toast({ 
