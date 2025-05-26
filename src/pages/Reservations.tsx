@@ -396,7 +396,7 @@ const Reservations = () => {
           }}
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
-          onKickPlayer={userRole === 'admin' ? (reservationId: number, playerId: string) => handleKickPlayer(playerId, reservationId) : undefined}
+          onKickPlayer={userRole === 'admin' ? (reservationId: number, playerId: string) => handleKickPlayer(reservationId, playerId) : undefined}
           onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
           onPlayerClick={handlePlayerClick}
