@@ -1,90 +1,14 @@
 
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  useContext,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface Player {
-  userId: string;
-  name: string;
-  playerName: string;
-  status: "joined" | "pending" | "cancelled";
-  joinedAt: string;
-  avatar?: string;
-}
-
-export interface UserStats {
-  wins: number;
-  losses: number;
-  draws: number;
-  goals: number;
-  assists: number;
-  matchesPlayed: number;
-  winPercentage: number;
-  gamesPlayed: number;
-  goalsScored: number;
-  cleansheets: number;
-  mvps: number;
-}
-
-export interface Highlight {
-  id: string;
-  type: 'goal' | 'assist' | 'save' | 'tackle';
-  playerId: string;
-  playerName: string;
-  minute: number;
-  description?: string;
-  timestamp: string;
-}
-
-export interface Pitch {
-  _id: string;
-  id?: string;
-  name: string;
-  location: string;
-  city: string;
-  backgroundImage: string;
-  images: string[];
-  image?: string;
-  additionalImages?: string[];
-  playersPerSide: number;
-  description: string;
-  services: Record<string, boolean | string>;
-}
-
-export interface Reservation {
-  id: number;
-  backendId?: string; // Add support for backend MongoDB ID
-  pitchId: string;
-  pitchName: string;
-  location: string;
-  city: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  title: string;
-  maxPlayers: number;
-  lineup?: Player[];
-  waitingList?: string[];
-  status: "upcoming" | "completed" | "cancelled";
-  photos?: string[];
-  backgroundImage?: string;
-  createdBy: string;
-  gameFormat?: string;
-  description?: string;
-  time?: string;
-  price?: number;
-  imageUrl?: string;
-  playersJoined?: number;
-  highlights?: Highlight[];
-  summary?: string | { homeScore: number; awayScore: number; completed: boolean; completedAt: string };
-  additionalImages?: string[];
-}
+import { Reservation, Pitch, UserStats, Player } from "@/types/reservation";
+import { useReservationStorage } from "@/hooks/useReservationStorage";
+import { useReservationOperations } from "@/hooks/useReservationOperations";
+import { usePlayerOperations } from "@/hooks/usePlayerOperations";
+import { useWaitingListOperations } from "@/hooks/useWaitingListOperations";
+import { usePitchOperations } from "@/hooks/usePitchOperations";
+import { useUserStats } from "@/hooks/useUserStats";
+import { useHighlightOperations } from "@/hooks/useHighlightOperations";
 
 interface ReservationContextProps {
   reservations: Reservation[];
@@ -155,214 +79,19 @@ interface ReservationProviderProps {
 export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   children,
 }) => {
-  const [reservations, setReservations] = useState<Reservation[]>(() => {
-    try {
-      const storedReservations = localStorage.getItem("reservations");
-      return storedReservations ? JSON.parse(storedReservations) : [];
-    } catch (error) {
-      console.error("Error parsing reservations from localStorage:", error);
-      return [];
-    }
-  });
-  const [pitches, setPitches] = useState<Pitch[]>([]);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    localStorage.setItem("reservations", JSON.stringify(reservations));
-  }, [reservations]);
-
-  const addReservation = (reservation: Omit<Reservation, "id">) => {
-    const newReservation: Reservation = {
-      ...reservation,
-      id: Date.now(),
-      playersJoined: 0,
-    };
-    setReservations([...reservations, newReservation]);
-  };
-
-  const updateReservation = (id: number, updates: Partial<Reservation>) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) =>
-        reservation.id === id ? { ...reservation, ...updates } : reservation
-      )
-    );
-  };
+  
+  // Custom hooks for different functionalities
+  const { reservations, setReservations } = useReservationStorage();
+  const { addReservation, updateReservation, deleteReservation, updateReservationStatus } = useReservationOperations(reservations, setReservations);
+  const { joinReservation, cancelReservation, removePlayerFromReservation, joinGame, isUserJoined } = usePlayerOperations(reservations, setReservations);
+  const { joinWaitingList, leaveWaitingList } = useWaitingListOperations(setReservations);
+  const { pitches, setPitches, addPitch, updatePitch, deletePitch } = usePitchOperations();
+  const { getUserStats } = useUserStats(reservations);
+  const { deleteHighlight } = useHighlightOperations(setReservations);
 
   const editReservation = (id: number, updates: Partial<Reservation>) => {
     updateReservation(id, updates);
-  };
-
-  const deleteReservation = (id: number) => {
-    setReservations((prevReservations) =>
-      prevReservations.filter((reservation) => reservation.id !== id)
-    );
-  };
-
-  const joinReservation = (reservationId: number, userId: string, playerName: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          const newPlayer: Player = { 
-            userId: userId, 
-            name: playerName,
-            playerName: playerName,
-            status: "joined",
-            joinedAt: new Date().toISOString()
-          };
-          if (!reservation.lineup) {
-            reservation.lineup = [];
-          }
-          return {
-            ...reservation,
-            lineup: [...reservation.lineup, newPlayer],
-            playersJoined: (reservation.lineup.length + 1)
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const joinGame = (reservationId: number, playerName?: string, userId?: string) => {
-    if (!userId) return;
-    joinReservation(reservationId, userId, playerName || `Player ${userId.substring(0, 4)}`);
-  };
-
-  const cancelReservation = (reservationId: number, userId: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          const updatedLineup = reservation.lineup?.filter((player) => player.userId !== userId) || [];
-          return {
-            ...reservation,
-            lineup: updatedLineup,
-            playersJoined: updatedLineup.length
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const removePlayerFromReservation = (reservationId: number, playerId: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          const updatedLineup = reservation.lineup?.filter((player) => player.userId !== playerId) || [];
-          return {
-            ...reservation,
-            lineup: updatedLineup,
-            playersJoined: updatedLineup.length
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const joinWaitingList = (reservationId: number, userId: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          return {
-            ...reservation,
-            waitingList: [...(reservation.waitingList || []), userId],
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const leaveWaitingList = (reservationId: number, userId: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          return {
-            ...reservation,
-            waitingList: reservation.waitingList?.filter(id => id !== userId),
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const isUserJoined = (reservationId: number, userId: string) => {
-    const reservation = reservations.find((res) => res.id === reservationId);
-    return !!reservation?.lineup?.some((player) => player.userId === userId);
-  };
-
-  const updateReservationStatus = (id: number, status: "upcoming" | "completed" | "cancelled") => {
-    updateReservation(id, { status });
-  };
-
-  const getUserStats = (userId: string): UserStats => {
-    let wins = 0;
-    let losses = 0;
-    let draws = 0;
-    let goals = 0;
-    let assists = 0;
-    let matchesPlayed = 0;
-    let gamesPlayed = 0;
-    let goalsScored = 0;
-    let cleansheets = 0;
-    let mvps = 0;
-
-    reservations.forEach(reservation => {
-      if (reservation.status === 'completed' && reservation.lineup?.some(player => player.userId === userId)) {
-        matchesPlayed++;
-        gamesPlayed++;
-        // Add logic to calculate wins/losses/draws based on game results
-        // This is a simplified version - you might want to enhance this
-      }
-    });
-
-    const winPercentage = matchesPlayed > 0 ? (wins / matchesPlayed) * 100 : 0;
-
-    return {
-      wins,
-      losses,
-      draws,
-      goals,
-      assists,
-      matchesPlayed,
-      winPercentage,
-      gamesPlayed,
-      goalsScored,
-      cleansheets,
-      mvps
-    };
-  };
-
-  const deleteHighlight = (reservationId: number, highlightId: string) => {
-    setReservations((prevReservations) =>
-      prevReservations.map((reservation) => {
-        if (reservation.id === reservationId) {
-          return {
-            ...reservation,
-            highlights: reservation.highlights?.filter(h => h.id !== highlightId) || []
-          };
-        }
-        return reservation;
-      })
-    );
-  };
-
-  const addPitch = (pitch: Pitch) => {
-    setPitches([...pitches, pitch]);
-  };
-
-  const updatePitch = (id: string, updates: Partial<Pitch>) => {
-    setPitches((prevPitches) =>
-      prevPitches.map((pitch) => (pitch._id === id ? { ...pitch, ...updates } : pitch))
-    );
-  };
-
-  const deletePitch = (id: number) => {
-    setPitches((prevPitches) =>
-      prevPitches.filter((pitch) => Number(pitch._id) !== id)
-    );
   };
 
   const navigateToReservation = (pitchName: string) => {
