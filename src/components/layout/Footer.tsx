@@ -73,15 +73,21 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
-                <span className="text-gray-600 dark:text-gray-400">
+                <a 
+                  href="mailto:bookitandkickit@gmail.com?subject=Contact%20from%20BOKIT%20Website&body=Hello%20BOKIT%20Team,%0A%0AI%20would%20like%20to%20get%20in%20touch%20regarding:%0A%0A"
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors"
+                >
                   bookitandkickit@gmail.com
-                </span>
+                </a>
               </div>
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
-                <span className="text-gray-600 dark:text-gray-400">
+                <a 
+                  href="tel:+962795016133"
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors"
+                >
                   00962795016133
-                </span>
+                </a>
               </div>
               <div className="flex items-start">
                 <MapPin className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />

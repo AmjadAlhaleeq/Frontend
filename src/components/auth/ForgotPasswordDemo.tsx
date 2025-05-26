@@ -1,187 +1,375 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import ForgotPasswordDialog from './ForgotPasswordDialog';
-import { Mail, Lock, CheckCircle, Shield, Key, Star, Zap } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, Mail, KeyRound, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { forgotPassword, verifyOtp, resetPassword } from '@/services/authApi';
+
+type Step = 'email' | 'otp' | 'reset' | 'success';
 
 const ForgotPasswordDemo: React.FC = () => {
-  const [showDialog, setShowDialog] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState<Step>('email');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    otp: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
-  const features = [
-    {
-      icon: <Mail className="h-5 w-5" />,
-      title: "Email Validation",
-      description: "Smart email format validation before sending OTP"
-    },
-    {
-      icon: <Shield className="h-5 w-5" />,
-      title: "6-Digit OTP",
-      description: "Secure verification with user-friendly input interface"
-    },
-    {
-      icon: <Lock className="h-5 w-5" />,
-      title: "Password Security",
-      description: "Strong password requirements and confirmation matching"
-    },
-    {
-      icon: <CheckCircle className="h-5 w-5" />,
-      title: "Success Feedback",
-      description: "Clear confirmation and guidance for next steps"
-    },
-    {
-      icon: <Key className="h-5 w-5" />,
-      title: "API Integration",
-      description: "Fully connected to backend endpoints"
-    },
-    {
-      icon: <Zap className="h-5 w-5" />,
-      title: "Real-time Validation",
-      description: "Instant feedback and error handling"
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive"
+      });
+      return;
     }
-  ];
 
-  const steps = [
-    {
-      step: 1,
-      title: "Enter Email",
-      description: "User enters their email address to receive verification code"
-    },
-    {
-      step: 2,
-      title: "Verify OTP",
-      description: "6-digit code sent to email must be entered correctly"
-    },
-    {
-      step: 3,
-      title: "New Password",
-      description: "Create and confirm a new secure password"
-    },
-    {
-      step: 4,
-      title: "Success",
-      description: "Password updated successfully, ready to login"
+    setIsLoading(true);
+    try {
+      const response = await forgotPassword({ email: formData.email });
+      
+      if (response.status === 'success') {
+        toast({
+          title: "OTP Sent",
+          description: "Please check your email for the verification code.",
+        });
+        setCurrentStep('otp');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send OTP. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.otp) {
+      toast({
+        title: "OTP Required",
+        description: "Please enter the verification code.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await verifyOtp({ 
+        email: formData.email, 
+        otp: formData.otp 
+      });
+      
+      if (response.status === 'success') {
+        toast({
+          title: "OTP Verified",
+          description: "Please enter your new password.",
+        });
+        setCurrentStep('reset');
+      }
+    } catch (error) {
+      toast({
+        title: "Invalid OTP",
+        description: error instanceof Error ? error.message : "Please check the code and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.newPassword || !formData.confirmPassword) {
+      toast({
+        title: "Password Required",
+        description: "Please fill in both password fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await resetPassword({
+        email: formData.email,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword
+      });
+      
+      if (response.status === 'success') {
+        toast({
+          title: "Password Reset Successful",
+          description: "Your password has been updated successfully.",
+        });
+        setCurrentStep('success');
+      }
+    } catch (error) {
+      toast({
+        title: "Reset Failed",
+        description: error instanceof Error ? error.message : "Failed to reset password. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBackToLogin = () => {
+    navigate('/');
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    try {
+      await forgotPassword({ email: formData.email });
+      toast({
+        title: "OTP Resent",
+        description: "A new verification code has been sent to your email.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend OTP. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 'email':
+        return (
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center">
+                <Mail className="mr-2 h-4 w-4 text-gray-500" />
+                Email Address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email address"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                required
+                disabled={isLoading}
+                className="w-full"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Sending...' : 'Send Reset Code'}
+            </Button>
+          </form>
+        );
+
+      case 'otp':
+        return (
+          <form onSubmit={handleOtpSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="otp" className="flex items-center">
+                <Shield className="mr-2 h-4 w-4 text-gray-500" />
+                Verification Code
+              </Label>
+              <Input
+                id="otp"
+                type="text"
+                placeholder="Enter 6-digit code"
+                value={formData.otp}
+                onChange={(e) => handleInputChange('otp', e.target.value)}
+                required
+                disabled={isLoading}
+                maxLength={6}
+                className="w-full text-center tracking-widest"
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">
+                Didn't receive the code?
+              </p>
+              <Button
+                type="button"
+                variant="link"
+                onClick={handleResendOtp}
+                disabled={isLoading}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Resend Code
+              </Button>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Verifying...' : 'Verify Code'}
+            </Button>
+          </form>
+        );
+
+      case 'reset':
+        return (
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword" className="flex items-center">
+                <KeyRound className="mr-2 h-4 w-4 text-gray-500" />
+                New Password
+              </Label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="Enter new password"
+                value={formData.newPassword}
+                onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                required
+                disabled={isLoading}
+                minLength={6}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="flex items-center">
+                <KeyRound className="mr-2 h-4 w-4 text-gray-500" />
+                Confirm Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm new password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                required
+                disabled={isLoading}
+                minLength={6}
+                className="w-full"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Updating...' : 'Update Password'}
+            </Button>
+          </form>
+        );
+
+      case 'success':
+        return (
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <Shield className="h-8 w-8 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-800">Password Reset Complete!</h3>
+              <p className="text-gray-600 mt-2">
+                Your password has been successfully updated. You can now login with your new password.
+              </p>
+            </div>
+            <Button onClick={handleBackToLogin} className="w-full">
+              Back to Login
+            </Button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 'email':
+        return 'Reset Your Password';
+      case 'otp':
+        return 'Enter Verification Code';
+      case 'reset':
+        return 'Create New Password';
+      case 'success':
+        return 'Success!';
+      default:
+        return 'Reset Password';
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (currentStep) {
+      case 'email':
+        return 'Enter your email address and we\'ll send you a verification code to reset your password.';
+      case 'otp':
+        return `We've sent a 6-digit verification code to ${formData.email}`;
+      case 'reset':
+        return 'Please enter your new password. Make sure it\'s at least 6 characters long.';
+      case 'success':
+        return '';
+      default:
+        return '';
+    }
+  };
 
   return (
-    <>
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">
-            Forgot Password System
-            <Star className="inline-block ml-2 h-8 w-8 text-yellow-500" />
-          </h1>
-          <p className="text-xl text-gray-600">
-            Complete password recovery solution with modern UX
-          </p>
-          <Badge variant="default" className="text-lg px-4 py-2">
-            ✨ Production Ready
-          </Badge>
-        </div>
-
-        {/* Demo Button */}
-        <div className="text-center">
-          <Button 
-            onClick={() => setShowDialog(true)}
-            size="lg"
-            className="text-lg px-8 py-6 h-auto"
-          >
-            <Lock className="mr-2 h-5 w-5" />
-            Try Forgot Password Demo
-          </Button>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full text-blue-600">
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Process Flow */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Password Recovery Process</CardTitle>
-            <CardDescription className="text-center">
-              Simple 4-step process for secure password reset
-            </CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="max-w-md w-full">
+        <Card className="shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">{getStepTitle()}</CardTitle>
+            {getStepDescription() && (
+              <CardDescription className="text-gray-600">
+                {getStepDescription()}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {steps.map((item, index) => (
-                <div key={index} className="text-center space-y-3">
-                  <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold mx-auto">
-                    {item.step}
-                  </div>
-                  <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                </div>
-              ))}
-            </div>
+            {renderStepContent()}
+            
+            {currentStep !== 'success' && (
+              <div className="mt-6 text-center">
+                <Button
+                  variant="link"
+                  onClick={handleBackToLogin}
+                  className="text-gray-600 hover:text-gray-800 flex items-center justify-center mx-auto"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Login
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Technical Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Technical Implementation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2">Frontend Features</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• React TypeScript components</li>
-                  <li>• Shadcn/ui design system</li>
-                  <li>• Real-time form validation</li>
-                  <li>• Toast notifications</li>
-                  <li>• Loading states & animations</li>
-                  <li>• Responsive design</li>
-                  <li>• Accessibility compliant</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Backend Integration</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• POST /forget-password (send OTP)</li>
-                  <li>• POST /verify-otp (validate code)</li>
-                  <li>• POST /reset-password (update)</li>
-                  <li>• Proper error handling</li>
-                  <li>• Security validation</li>
-                  <li>• Rate limiting support</li>
-                  <li>• Email service integration</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="text-center">
-          <p className="text-gray-600 italic">
-            "This is a complete, production-ready forgot password implementation with modern UX patterns!"
-          </p>
-        </div>
       </div>
-
-      <ForgotPasswordDialog
-        isOpen={showDialog}
-        onClose={() => setShowDialog(false)}
-      />
-    </>
+    </div>
   );
 };
 

@@ -182,6 +182,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
     };
   }, []);
 
+  // Handle forgot password navigation
+  const handleForgotPassword = () => {
+    console.log('Navigating to forgot password page');
+    onClose(); // Close the auth dialog
+    navigate('/forgot-password'); // Navigate to the forgot password page
+  };
+
   /**
    * Handles the login form submission.
    * Validates input fields and attempts login against backend API.
@@ -548,13 +555,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
         <Button
           type="button"
           variant="link"
-          onClick={() =>
-            toast({
-              title: "Forgot Password",
-              description: "Password recovery coming soon!",
-            })
-          }
+          onClick={handleForgotPassword}
           className="p-0 h-auto text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+          disabled={isProcessing}
         >
           <KeyRound className="mr-1 h-4 w-4" /> Forgot Password?
         </Button>
