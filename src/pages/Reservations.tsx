@@ -12,17 +12,26 @@ import ReservationsHeader from "@/components/reservations/ReservationsHeader";
 import ReservationsEmptyState from "@/components/reservations/ReservationsEmptyState";
 import ReservationsList from "@/components/reservations/ReservationsList";
 import PlayerProfileDialog from "@/components/ui/PlayerProfileDialog";
+import GameActionConfirmationDialog from "@/components/reservations/GameActionConfirmationDialog";
+import PlayerMessagesDialog from "@/components/reservations/PlayerMessagesDialog";
 
 import { useReservationsData } from "@/hooks/useReservationsData";
 import { useReservationActions } from "@/hooks/useReservationActions";
 
+/**
+ * Main Reservations page component
+ * Handles game browsing, joining, leaving, and player interactions
+ * Includes proper UX confirmations and messaging system
+ */
 const Reservations = () => {
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>('');
   const [addDialogKey, setAddDialogKey] = useState(0);
   
+  // Dialog states
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
   
@@ -47,6 +56,37 @@ const Reservations = () => {
     isOpen: false,
     playerName: "",
     playerId: ""
+  });
+
+  // Game action confirmation dialog
+  const [actionDialog, setActionDialog] = useState<{
+    isOpen: boolean;
+    action: 'join' | 'leave';
+    reservationId: number;
+    gameName: string;
+    gameDate: string;
+    gameTime: string;
+    gameLocation: string;
+    price?: number;
+  }>({
+    isOpen: false,
+    action: 'join',
+    reservationId: 0,
+    gameName: '',
+    gameDate: '',
+    gameTime: '',
+    gameLocation: ''
+  });
+
+  // Messages dialog
+  const [messagesDialog, setMessagesDialog] = useState<{
+    isOpen: boolean;
+    reservationId: number;
+    gameName: string;
+  }>({
+    isOpen: false,
+    reservationId: 0,
+    gameName: ''
   });
   
   const {
@@ -77,6 +117,7 @@ const Reservations = () => {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setCurrentUserId(userData.id);
+      setCurrentUserName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Player');
     }
   }, []);
 
@@ -110,6 +151,93 @@ const Reservations = () => {
     const dateString = format(date, 'yyyy-MM-dd');
     return reservations.some(res => res.date === dateString);
   };
+
+  /**
+   * Opens confirmation dialog for joining a game
+   */
+  const handleJoinGameWithConfirmation = useCallback((reservationId: number) => {
+    if (!currentUserId) {
+      toast({ 
+        title: "Login Required", 
+        description: "Please log in to join a game.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+
+    setActionDialog({
+      isOpen: true,
+      action: 'join',
+      reservationId,
+      gameName: reservation.title || reservation.pitchName,
+      gameDate: reservation.date,
+      gameTime: reservation.startTime || reservation.time?.split(' - ')[0] || '',
+      gameLocation: reservation.city || reservation.location || '',
+      price: reservation.price
+    });
+  }, [currentUserId, reservations, toast]);
+
+  /**
+   * Opens confirmation dialog for leaving a game
+   */
+  const handleLeaveGameWithConfirmation = useCallback((reservationId: number) => {
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+
+    setActionDialog({
+      isOpen: true,
+      action: 'leave',
+      reservationId,
+      gameName: reservation.title || reservation.pitchName,
+      gameDate: reservation.date,
+      gameTime: reservation.startTime || reservation.time?.split(' - ')[0] || '',
+      gameLocation: reservation.city || reservation.location || ''
+    });
+  }, [reservations]);
+
+  /**
+   * Confirms the game action (join/leave)
+   */
+  const confirmGameAction = useCallback(async () => {
+    const { action, reservationId } = actionDialog;
+    
+    try {
+      if (action === 'join') {
+        await handleJoinGame(reservationId);
+      } else {
+        await handleCancelReservation(reservationId);
+      }
+      
+      setActionDialog({
+        isOpen: false,
+        action: 'join',
+        reservationId: 0,
+        gameName: '',
+        gameDate: '',
+        gameTime: '',
+        gameLocation: ''
+      });
+    } catch (error) {
+      console.error(`Error ${action}ing game:`, error);
+    }
+  }, [actionDialog, handleJoinGame, handleCancelReservation]);
+
+  /**
+   * Opens messages dialog for a game
+   */
+  const handleOpenMessages = useCallback((reservationId: number) => {
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+
+    setMessagesDialog({
+      isOpen: true,
+      reservationId,
+      gameName: reservation.title || reservation.pitchName
+    });
+  }, [reservations]);
 
   const handleSuspendPlayer = useCallback((playerId: string, days: number, reason: string) => {
     if (userRole !== 'admin') return;
@@ -223,18 +351,8 @@ const Reservations = () => {
               pitchImages={pitchImages}
               calculateActualMaxPlayers={calculateActualMaxPlayers}
               isUserJoined={isUserJoinedFunction}
-              onJoin={(id, playerName) => {
-                if (!currentUserId) {
-                  toast({ 
-                    title: "Login Required", 
-                    description: "Please log in to join a game.", 
-                    variant: "destructive"
-                  });
-                  return;
-                }
-                handleJoinGame(id);
-              }}
-              onCancel={(id, userId) => handleCancelReservation(id)}
+              onJoin={handleJoinGameWithConfirmation}
+              onCancel={handleLeaveGameWithConfirmation}
               onJoinWaitingList={(id, userId) => handleJoinWaitingList(id, userId)}
               onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id, userId)}
               onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
@@ -244,6 +362,7 @@ const Reservations = () => {
               }}
               onAddSummary={userRole === 'admin' ? handleAddSummary : undefined}
               onClearDateFilter={() => setCurrentDate(undefined)}
+              onOpenMessages={userRole === 'player' ? handleOpenMessages : undefined}
             />
           )}
         </div>
@@ -286,6 +405,37 @@ const Reservations = () => {
           onSuspendPlayer={handleOpenSuspensionDialog}
         />
       )}
+
+      {/* Game Action Confirmation Dialog */}
+      <GameActionConfirmationDialog
+        isOpen={actionDialog.isOpen}
+        onClose={() => setActionDialog({
+          isOpen: false,
+          action: 'join',
+          reservationId: 0,
+          gameName: '',
+          gameDate: '',
+          gameTime: '',
+          gameLocation: ''
+        })}
+        onConfirm={confirmGameAction}
+        action={actionDialog.action}
+        gameName={actionDialog.gameName}
+        gameDate={actionDialog.gameDate}
+        gameTime={actionDialog.gameTime}
+        gameLocation={actionDialog.gameLocation}
+        price={actionDialog.price}
+      />
+
+      {/* Messages Dialog */}
+      <PlayerMessagesDialog
+        isOpen={messagesDialog.isOpen}
+        onClose={() => setMessagesDialog({ isOpen: false, reservationId: 0, gameName: '' })}
+        reservationId={messagesDialog.reservationId}
+        gameName={messagesDialog.gameName}
+        currentUserId={currentUserId || ''}
+        currentUserName={currentUserName}
+      />
 
       {/* Player Profile Dialog */}
       <PlayerProfileDialog

@@ -22,8 +22,13 @@ interface ReservationsListProps {
   onViewDetails: (reservation: Reservation) => void;
   onAddSummary?: (reservation: Reservation) => void;
   onClearDateFilter: () => void;
+  onOpenMessages?: (reservationId: number) => void;
 }
 
+/**
+ * Component that renders the list of reservations
+ * Handles filtering, display, and user interactions
+ */
 const ReservationsList: React.FC<ReservationsListProps> = ({
   upcomingReservations,
   currentDate,
@@ -39,7 +44,8 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   onDeleteReservation,
   onViewDetails,
   onAddSummary,
-  onClearDateFilter
+  onClearDateFilter,
+  onOpenMessages
 }) => {
   const upcomingGamesHeader = React.useMemo(() => {
     if (currentDate) {
@@ -84,6 +90,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
             onDeleteReservation={onDeleteReservation}
             onViewDetails={onViewDetails}
             onAddSummary={onAddSummary}
+            onOpenMessages={onOpenMessages}
             isUserLoggedIn={!!currentUserId}
             pitchImage={pitchImages[reservation.pitchId]}
           />

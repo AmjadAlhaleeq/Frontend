@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EnhancedDatePickerProps {
   date: Date | undefined;
@@ -10,6 +11,10 @@ interface EnhancedDatePickerProps {
   hasReservations: (date: Date) => boolean;
 }
 
+/**
+ * Enhanced date picker component with reservation indicators
+ * Works properly in dialogs and forms
+ */
 const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
   date,
   onDateChange,
@@ -40,7 +45,7 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
           mode="single"
           selected={date}
           onSelect={onDateChange}
-          className="rounded-md border-0"
+          className={cn("rounded-md border-0 pointer-events-auto")}
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
         />
