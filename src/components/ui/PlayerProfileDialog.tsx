@@ -125,18 +125,24 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
     interceptions: profileData?.stats?.interceptions ?? playerStats?.interceptions ?? 0,
   };
 
-  // Colorful badge border by level 5+ = gold, 3+ = blue, else neutral
+  // Badge level color system - Bronze/Silver/Gold
   const getBadgeLevelColor = (level: number) => {
-    if (level >= 5) return "border-yellow-500 bg-yellow-200/80 text-yellow-900 shadow-[0_2px_8px_#fde04760]";
-    if (level >= 3) return "border-blue-400 bg-blue-100 text-blue-900";
-    return "border-gray-200 bg-gray-50 text-gray-700";
+    if (level >= 3) return "border-yellow-500 bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-900 shadow-[0_4px_12px_rgba(234,179,8,0.3)]";
+    if (level >= 2) return "border-gray-400 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-900 shadow-[0_4px_12px_rgba(156,163,175,0.3)]";
+    return "border-amber-600 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 shadow-[0_4px_12px_rgba(217,119,6,0.3)]";
   };
-  // Icon for badge level
-  const getBadgeIcon = (level: number) => {
-    if (level >= 5) return <Check className="inline ml-1 text-yellow-500" />;
-    if (level >= 3) return <Star className="inline ml-1 text-blue-400" />;
-    return null;
+
+  // Badge level names
+  const getBadgeLevelName = (level: number) => {
+    if (level >= 3) return "Gold";
+    if (level >= 2) return "Silver";
+    return "Bronze";
   };
+
+  // Check if player is suspended
+  const isSuspended = profileData?.suspended && new Date(profileData.suspendedUntil) > new Date();
+  const suspensionDaysLeft = isSuspended ? 
+    Math.ceil((new Date(profileData.suspendedUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   // --- UI ---
   return (
@@ -180,7 +186,17 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     )}
                   </>
                 )}
+                
+                {/* Suspension Status */}
+                {isSuspended && (
+                  <div className="mt-2 px-3 py-1 bg-red-100 border border-red-300 rounded-full">
+                    <p className="text-xs font-medium text-red-700">
+                      Suspended ({suspensionDaysLeft} days left)
+                    </p>
+                  </div>
+                )}
               </div>
+              
               {/* Stats */}
               <div>
                 <h4 className="font-medium text-center mb-3 text-gray-800">Player Statistics</h4>
@@ -197,27 +213,37 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                   ))}
                 </div>
               </div>
-              {/* Badges */}
+              
+              {/* Badges - Only show collected badges */}
               <TooltipProvider>
                 {profileData?.badges && profileData.badges.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-center mt-6 mb-2 text-gray-700">Player Badges</h4>
+                    <h4 className="font-medium text-center mt-6 mb-4 text-gray-700">Collected Badges</h4>
                     <div className="flex flex-wrap gap-3 justify-center">
                       {profileData.badges.map(badge => (
                         <Tooltip key={badge._id}>
                           <TooltipTrigger asChild>
                             <UiBadge
-                              className={`border-2 py-2 px-3 rounded-2xl shadow font-medium flex items-center gap-1 transition-transform hover:scale-110 cursor-pointer duration-150 ${getBadgeLevelColor(badge.level)}`}
+                              className={`border-2 py-3 px-4 rounded-2xl shadow-lg font-medium flex items-center gap-2 transition-all hover:scale-110 cursor-pointer duration-200 ${getBadgeLevelColor(badge.level)}`}
                             >
-                              <span className="text-base">{badge.name}</span>
-                              <span className="ml-1 text-xs font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-gray-200">
-                                Lv{badge.level}
-                              </span>
-                              {getBadgeIcon(badge.level)}
+                              <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold">{badge.name}</span>
+                                <span className="text-xs font-semibold opacity-75">
+                                  {getBadgeLevelName(badge.level)} Lv{badge.level}
+                                </span>
+                              </div>
                             </UiBadge>
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-xs text-center py-2 px-4 text-xs font-medium shadow bg-yellow-50 border-yellow-200">
-                            {badge.description || "No description"}
+                          <TooltipContent className="max-w-xs text-center py-3 px-4 text-sm font-medium shadow-lg bg-white border-2 border-gray-200 rounded-lg">
+                            <div className="space-y-1">
+                              <p className="font-bold">{badge.name}</p>
+                              <p className="text-gray-600">{badge.description || "No description"}</p>
+                              {badge.requiredValue && (
+                                <p className="text-xs text-blue-600 font-medium">
+                                  Required: {badge.requiredValue} to achieve this badge
+                                </p>
+                              )}
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       ))}
@@ -225,10 +251,16 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                   </div>
                 )}
               </TooltipProvider>
+              
               {/* Status Badge */}
               <div className="flex justify-center mt-4">
-                <UiBadge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-semibold px-5 py-1 text-base">
-                  Active Player
+                <UiBadge 
+                  variant="outline" 
+                  className={`font-semibold px-5 py-1 text-base ${
+                    isSuspended ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
+                  }`}
+                >
+                  {isSuspended ? 'Suspended Player' : 'Active Player'}
                 </UiBadge>
               </div>
             </>

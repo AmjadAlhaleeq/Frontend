@@ -130,31 +130,28 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           {reservation.status === 'completed' && onAddSummary && (
             <Button 
               size="sm" 
-              variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddSummary(reservation);
               }}
-              className="flex-1"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
               disabled={deleting}
             >
               <FileText className="h-4 w-4 mr-1" />
               Add Summary
             </Button>
           )}
-          {onDeleteReservation && (
-            <div className="flex-1">
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  onClick={handleDelete}
-                  className="flex-1 w-full py-5" // button fills row with padding
-                  disabled={deleting}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete Game
-                </Button>
-            </div>
+          {reservation.status === 'upcoming' && onDeleteReservation && (
+            <Button 
+              size="sm" 
+              variant="destructive"
+              onClick={handleDelete}
+              className="flex-1 w-full"
+              disabled={deleting}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete Game
+            </Button>
           )}
         </div>
       );

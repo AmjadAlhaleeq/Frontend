@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
-import AddSummaryDialog from "@/components/reservations/AddSummaryDialog";
+import GameSummaryDialog from "@/components/reservations/GameSummaryDialog";
 import PlayerSuspensionDialog from "@/components/reservations/PlayerSuspensionDialog";
 import ReservationsHeader from "@/components/reservations/ReservationsHeader";
 import ReservationsEmptyState from "@/components/reservations/ReservationsEmptyState";
@@ -150,10 +150,18 @@ const Reservations = () => {
     setIsSummaryDialogOpen(true);
   }, []);
 
-  const handleSaveSummaryWrapper = useCallback(async (summary: string, playerStats: any[]) => {
+  const handleSaveSummaryWrapper = useCallback(async (summary: string, playerStats: any[], mvpPlayerId: string) => {
     if (!selectedGameForSummary) return;
     
-    await handleSaveSummary(selectedGameForSummary.id, summary, playerStats);
+    // Create enhanced summary with MVP info
+    const enhancedSummary = {
+      notes: summary,
+      mvpPlayerId,
+      completedAt: new Date().toISOString(),
+      playerStats
+    };
+    
+    await handleSaveSummary(selectedGameForSummary.id, JSON.stringify(enhancedSummary), playerStats);
     
     setIsSummaryDialogOpen(false);
     setSelectedGameForSummary(null);
@@ -282,17 +290,16 @@ const Reservations = () => {
         />
       )}
 
-      {/* Add Summary Dialog */}
+      {/* Game Summary Dialog */}
       {selectedGameForSummary && (
-        <AddSummaryDialog
+        <GameSummaryDialog
           isOpen={isSummaryDialogOpen}
           onClose={() => {
             setIsSummaryDialogOpen(false);
             setSelectedGameForSummary(null);
           }}
           reservation={selectedGameForSummary}
-          onSave={handleSaveSummaryWrapper}
-          onSuspendPlayer={handleOpenSuspensionDialog}
+          onSaveSummary={handleSaveSummaryWrapper}
         />
       )}
 

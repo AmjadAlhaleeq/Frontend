@@ -53,12 +53,28 @@ export const kickPlayer = async (reservationId: string, playerId: string) => {
   return result;
 };
 
-// Add game summary
-export const addGameSummary = async (reservationId: string, summaryData: { summary: string; playerStats: any[] }) => {
+// Add game summary with enhanced player stats and MVP
+export const addGameSummary = async (reservationId: string, summaryData: { 
+  summary: string; 
+  playerStats: any[];
+  mvpPlayerId?: string;
+}) => {
   const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/summary`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(summaryData),
+    body: JSON.stringify({
+      summary: summaryData.summary,
+      playerStats: summaryData.playerStats.map(stat => ({
+        userId: stat.userId,
+        goals: stat.goals || 0,
+        assists: stat.assists || 0,
+        interceptions: stat.interceptions || 0,
+        cleanSheet: stat.cleanSheet || false,
+        won: stat.won || false,
+        attended: stat.attended !== false, // default to true
+        mvp: stat.userId === summaryData.mvpPlayerId
+      }))
+    }),
   });
 
   if (!response.ok) {

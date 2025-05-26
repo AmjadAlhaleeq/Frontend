@@ -4,16 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/context/ReservationContext";
 import {
   Calendar,
-  BadgePlus,
+  Target,
   Zap,
   ShieldCheck,
   Trophy,
   Star,
-  // No more achievements/awards
+  Users
 } from "lucide-react";
 
 interface PlayerStatsProps {
-  stats: UserStats & { interceptions?: number }; // allow new field
+  stats: UserStats & { interceptions?: number };
   className?: string;
 }
 
@@ -29,12 +29,11 @@ const StatItem = ({
   <div className="flex flex-col items-center flex-1 justify-center">
     <Icon className="h-7 w-7 text-teal-500 mb-1" />
     <div className="text-lg font-bold">{value ?? 0}</div>
-    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="text-xs text-muted-foreground text-center">{label}</div>
   </div>
 );
 
 const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
-  // Inline all stats in the same row (responsive)
   return (
     <Card className={className}>
       <CardHeader>
@@ -43,12 +42,12 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
       <CardContent>
         <div className="flex flex-row flex-wrap gap-2 justify-between">
           <StatItem icon={Calendar} label="Games Played" value={stats.gamesPlayed} />
-          <StatItem icon={BadgePlus} label="Goals Scored" value={stats.goalsScored} />
-          <StatItem icon={Zap} label="Assists" value={stats.assists} />
+          <StatItem icon={Target} label="Goals Scored" value={stats.goalsScored} />
+          <StatItem icon={Users} label="Assists" value={stats.assists} />
+          <StatItem icon={Zap} label="Interceptions" value={stats.interceptions ?? 0} />
           <StatItem icon={ShieldCheck} label="Clean Sheets" value={stats.cleansheets} />
           <StatItem icon={Trophy} label="MVP Awards" value={stats.mvps} />
           <StatItem icon={Star} label="Wins" value={stats.wins} />
-          <StatItem icon={Star} label="Interceptions" value={stats.interceptions ?? 0} />
         </div>
       </CardContent>
     </Card>
