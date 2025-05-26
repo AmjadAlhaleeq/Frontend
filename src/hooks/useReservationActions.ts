@@ -26,7 +26,8 @@ export const useReservationActions = (
     cancelReservation,
     joinWaitingList,
     leaveWaitingList,
-    deleteReservation
+    deleteReservation,
+    removePlayerFromReservation
   } = useReservation();
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
@@ -199,22 +200,22 @@ export const useReservationActions = (
       return;
     }
     
-    if (reservation.waitingList && reservation.waitingList.length >= 3) {
-      toast({
-        title: "Waiting List Full",
-        description: "The waiting list is limited to 3 players",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // --- FIX: Only allow waitlist if all slots are full ---
+    // Check if all slots are full - ONLY allow waitlist if reservation is full
     const currentPlayers = reservation.lineup?.length || 0;
     const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
     if (currentPlayers < maxPlayers) {
       toast({
         title: "Game Not Full",
-        description: `You can only join the waiting list after all ${maxPlayers} slots are full.`,
+        description: `You can only join the waiting list when all ${maxPlayers} slots are filled.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (reservation.waitingList && reservation.waitingList.length >= 3) {
+      toast({
+        title: "Waiting List Full",
+        description: "The waiting list is limited to 3 players",
         variant: "destructive"
       });
       return;
@@ -316,6 +317,10 @@ export const useReservationActions = (
       if (!reservation.backendId) throw new Error('Reservation backendId missing');
 
       await kickPlayerApi(reservation.backendId, playerId, reason, suspensionDays);
+      
+      // Remove player from local state immediately
+      removePlayerFromReservation(reservationId, playerId);
+      
       await loadReservations();
 
       toast({
@@ -330,7 +335,7 @@ export const useReservationActions = (
         variant: "destructive",
       });
     }
-  }, [userRole, reservations, toast, loadReservations]);
+  }, [userRole, reservations, toast, loadReservations, removePlayerFromReservation]);
 
   const handleSuspendPlayer = useCallback(async (playerId: string, suspensionDays: number, reason: string) => {
     if (userRole !== 'admin') return;

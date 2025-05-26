@@ -1,5 +1,4 @@
-
-const API_BASE_URL = 'http://127.0.0.1:3000';
+import { apiRequest, API_BASE_URL } from '../services/apiConfig';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -43,14 +42,10 @@ export interface User {
 // Get user's profile
 export const getMyProfile = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const response = await apiRequest('/users/me', {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
 
     const result = await response.json();
     
@@ -59,6 +54,27 @@ export const getMyProfile = async () => {
     }
     
     throw new Error(result.message || 'Failed to fetch profile');
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+// Get any user's profile by ID
+export const getUserProfile = async (userId: string) => {
+  try {
+    const response = await apiRequest(`/users/${userId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.data?.user) {
+      return result;
+    }
+    
+    throw new Error(result.message || 'Failed to fetch user profile');
   } catch (error) {
     console.error('Error fetching user profile:', error);
     throw error;
@@ -111,6 +127,32 @@ export const updateMyProfile = async (profileData: Partial<User>, profilePicture
     throw new Error(result.message || 'Failed to update profile');
   } catch (error) {
     console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+// Delete user account
+export const deleteMyAccount = async () => {
+  try {
+    const response = await apiRequest('/users/me', {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      // Clear local storage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userRole');
+      
+      return result;
+    }
+    
+    throw new Error(result.message || 'Failed to delete account');
+  } catch (error) {
+    console.error('Error deleting account:', error);
     throw error;
   }
 };

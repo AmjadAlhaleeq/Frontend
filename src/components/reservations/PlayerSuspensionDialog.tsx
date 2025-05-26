@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -15,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, Loader } from "lucide-react";
-import { suspendUser } from "@/services/adminReservationApi";
 
 interface PlayerSuspensionDialogProps {
   isOpen: boolean;
@@ -60,12 +58,11 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      await suspendUser(playerId, reason, days);
-      onConfirm(playerId, days, reason);
+      await onConfirm(playerId, days, reason);
       
       toast({
-        title: "Player Suspended",
-        description: `${playerName} has been suspended for ${days} day${days > 1 ? 's' : ''}.`,
+        title: "Player Kicked & Suspended",
+        description: `${playerName} has been kicked from the game and suspended for ${days} day${days > 1 ? 's' : ''}.`,
       });
       
       setReason("");
@@ -73,8 +70,8 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
       onClose();
     } catch (error) {
       toast({
-        title: "Failed to Suspend Player",
-        description: error instanceof Error ? error.message : "Failed to suspend the player",
+        title: "Failed to Kick Player",
+        description: error instanceof Error ? error.message : "Failed to kick and suspend the player",
         variant: "destructive",
       });
     } finally {
@@ -88,10 +85,10 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center text-red-600">
             <AlertTriangle className="h-5 w-5 mr-2" />
-            Suspend Player
+            Kick & Suspend Player
           </DialogTitle>
           <DialogDescription>
-            Suspend {playerName} from joining games for a specified period.
+            Remove {playerName} from this game and suspend them from joining future games.
           </DialogDescription>
         </DialogHeader>
 
@@ -148,7 +145,7 @@ const PlayerSuspensionDialog: React.FC<PlayerSuspensionDialogProps> = ({
             className="bg-red-600 hover:bg-red-700 text-white"
           >
             {isSubmitting && <Loader className="h-4 w-4 mr-2 animate-spin" />}
-            Suspend Player
+            Kick & Suspend Player
           </Button>
         </DialogFooter>
       </DialogContent>

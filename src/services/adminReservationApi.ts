@@ -1,5 +1,4 @@
-
-const API_BASE_URL = 'http://127.0.0.1:3000';
+import { apiRequest, API_BASE_URL } from './apiConfig';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -12,49 +11,49 @@ const getAuthHeaders = () => {
 
 // Delete a reservation
 export const deleteReservationApi = async (reservationId: string) => {
-  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
+  try {
+    const response = await apiRequest(`/reservations/${reservationId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to delete reservation');
+    const result = await response.json();
+    
+    if (result.status !== 'success') {
+      throw new Error(result.message || 'Failed to delete reservation');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Delete reservation error:', error);
+    throw error;
   }
-
-  const result = await response.json();
-  
-  if (result.status !== 'success') {
-    throw new Error(result.message || 'Failed to delete reservation');
-  }
-  
-  return result;
 };
 
-// Kick a player from reservation
+// Enhanced kick player function that properly removes player from reservation
 export const kickPlayer = async (reservationId: string, playerId: string, reason: string, suspensionDays: number) => {
-  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/kick`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ 
-      userId: playerId,
-      reason,
-      suspensionDays
-    }),
-  });
+  try {
+    const response = await apiRequest(`/reservations/${reservationId}/kick`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ 
+        userId: playerId,
+        reason,
+        suspensionDays
+      }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to kick player');
+    const result = await response.json();
+    
+    if (result.status !== 'success') {
+      throw new Error(result.message || 'Failed to kick player');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Kick player error:', error);
+    throw error;
   }
-
-  const result = await response.json();
-  
-  if (result.status !== 'success') {
-    throw new Error(result.message || 'Failed to kick player');
-  }
-  
-  return result;
 };
 
 // Add game summary with backend format

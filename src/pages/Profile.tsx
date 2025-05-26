@@ -2,12 +2,23 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, BadgePlus, Edit, Trophy, User, Loader, AlertTriangle } from "lucide-react";
+import { Award, Edit, Trophy, User, Loader, AlertTriangle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import PlayerStats from "@/components/profile/PlayerStats";
 import ProfileEditor from "@/components/profile/ProfileEditor";
-import { getMyProfile, updateMyProfile, transformUserToFrontend, type User as BackendUser } from "@/lib/userApi";
+import { getMyProfile, updateMyProfile, transformUserToFrontend, deleteMyAccount, type User as BackendUser } from "@/lib/userApi";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /**
  * Player Profile Page Component
@@ -27,6 +38,7 @@ const Profile = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -129,6 +141,26 @@ const Profile = () => {
     navigate("/my-bookings");
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteMyAccount();
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: "Failed to Delete Account",
+        description: error instanceof Error ? error.message : "Failed to delete account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const userStats = currentUser?.stats || {
     gamesPlayed: 0,
     goalsScored: 0,
@@ -143,28 +175,6 @@ const Profile = () => {
     winPercentage: 0
   };
   
-  // Generate achievements based on backend badges and stats
-  const achievements = [
-    { 
-      title: "Goal Scorer",
-      icon: <BadgePlus className="h-6 w-6 text-amber-500" />,
-      earned: userStats.goalsScored >= 5,
-      description: "Score 5 or more goals"
-    },
-    { 
-      title: "MVP Star",
-      icon: <Trophy className="h-6 w-6 text-amber-500" />,
-      earned: userStats.mvps >= 3,
-      description: "Receive 3 or more MVP awards"
-    },
-    { 
-      title: "Team Player",
-      icon: <Award className="h-6 w-6 text-amber-500" />,
-      earned: userStats.gamesPlayed >= 10,
-      description: "Play in 10 or more games"
-    },
-  ];
-
   // Check if user is suspended
   const isSuspended = backendUser?.suspendedUntil && new Date(backendUser.suspendedUntil) > new Date();
   
@@ -289,7 +299,7 @@ const Profile = () => {
                     )}
                   </div>
                   
-                  <div className="pt-4">
+                  <div className="pt-4 space-y-2">
                     <Button 
                       onClick={handleViewBookings} 
                       variant="outline" 
@@ -297,6 +307,47 @@ const Profile = () => {
                     >
                       My Bookings
                     </Button>
+                    
+                    {/* Delete Account Button - Only for players */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          className="w-full"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <>
+                              <Loader className="h-4 w-4 mr-2 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Account
+                            </>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-red-600">Delete Account</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete your account? This action cannot be undone. 
+                            All your data, including game history and statistics, will be permanently removed.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleDeleteAccount}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete Account
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               )}
@@ -309,59 +360,17 @@ const Profile = () => {
           </div>
         </div>
         
-        {/* Right Column: Achievements and Badges */}
+        {/* Right Column: Badges Only */}
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
+            <TabsList className="grid grid-cols-1 mb-6">
               <TabsTrigger value="info">
-                <Trophy className="h-4 w-4 mr-2" />
-                <span>Achievements</span>
-              </TabsTrigger>
-              <TabsTrigger value="badges">
                 <Award className="h-4 w-4 mr-2" />
                 <span>Badges</span>
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="info">
-              <h3 className="text-xl font-semibold mb-4">Achievements</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {achievements.map((achievement) => (
-                  achievement.earned && (
-                    <Card 
-                      key={achievement.title}
-                      className="border border-amber-300 bg-amber-50 dark:bg-amber-950/20"
-                    >
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <div className="mx-auto rounded-full p-3 w-14 h-14 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 mb-3">
-                            {achievement.icon}
-                          </div>
-                          <h4 className="font-semibold">{achievement.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
-                          <div className="mt-3 text-xs font-medium text-amber-600 dark:text-amber-400">
-                            EARNED!
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                ))}
-              </div>
-              
-              {!achievements.some(a => a.earned) && (
-                <div className="text-center py-10 bg-muted/40 rounded-lg">
-                  <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Achievements Yet</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Play more games to unlock achievements!
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="badges">
               <h3 className="text-xl font-semibold mb-4">Player Badges</h3>
               
               {backendUser?.badges && backendUser.badges.length > 0 ? (
