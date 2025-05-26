@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Reservation } from "@/context/ReservationContext";
+import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
 
 interface ReservationCardProps {
   reservation: Reservation;
@@ -51,6 +52,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   pitchImage,
 }) => {
   const [deleting, setDeleting] = React.useState(false);
+  const [deleteDialog, setDeleteDialog] = React.useState(false);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when clicking on buttons
@@ -61,14 +63,19 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     onViewDetails(reservation);
   };
 
+  // Admin Delete Button now shows dialog
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onDeleteReservation) return;
-    if (!window.confirm("Are you sure you want to delete this reservation?")) return;
+    setDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
     setDeleting(true);
     try {
-      await onDeleteReservation(reservation.id);
+      await onDeleteReservation?.(reservation.id);
     } finally {
+      setDeleteDialog(false);
       setDeleting(false);
     }
   };
@@ -76,9 +83,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const isJoined = isUserLoggedIn && isUserJoined(reservation.id, userId);
   const isInWaitingList = isUserLoggedIn && reservation.waitingList?.includes(userId);
   const currentPlayers = reservation.lineup?.length || 0;
+  // Use actualMaxPlayers from prop, not hardcoded
   const actualMaxPlayers = reservation.maxPlayers + 2;
   const gameIsFull = currentPlayers >= actualMaxPlayers;
   const waitingListCount = reservation.waitingList?.length || 0;
+
+  // Only allow joining waiting list if all slots are full
+  const canJoinWaitingList = gameIsFull && waitingListCount < 3;
 
   let formattedDate = "Invalid Date";
   try {
@@ -133,20 +144,16 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           )}
           {onDeleteReservation && (
             <div className="flex-1">
-              {deleting ? (
-                <LoadingSkeleton className="h-9 w-full" />
-              ) : (
                 <Button 
                   size="sm" 
                   variant="destructive"
                   onClick={handleDelete}
-                  className="flex-1"
+                  className="flex-1 w-full py-5" // button fills row with padding
                   disabled={deleting}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
+                  Delete Game
                 </Button>
-              )}
             </div>
           )}
         </div>
@@ -207,22 +214,33 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </div>
         );
       }
-      return (
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            onJoinWaitingList(reservation.id, userId);
-          }}
-          className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
-        >
-          <UserPlus className="h-4 w-4 mr-1" />
-          Join Waiting List
-        </Button>
-      );
+      // Only admins/players who are allowed can join the waiting list
+      if (canJoinWaitingList) {
+        return (
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onJoinWaitingList(reservation.id, userId);
+            }}
+            className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Join Waiting List
+          </Button>
+        );
+      } else {
+        // Do not show join waiting list button if slots not full
+        return (
+          <div className="flex items-center gap-2 w-full">
+            <Badge variant="destructive">Full</Badge>
+          </div>
+        );
+      }
     }
 
+    // ... keep default join game button ...
     return (
       <Button 
         size="sm" 
@@ -330,6 +348,16 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </div>
         </div>
       </CardContent>
+      {/* Admin Delete Confirmation Dialog */}
+      {onDeleteReservation && (
+        <DeleteConfirmationDialog
+          open={deleteDialog}
+          onOpenChange={setDeleteDialog}
+          onConfirm={confirmDelete}
+          itemName={reservation.title || reservation.pitchName}
+          itemType="reservation"
+        />
+      )}
     </Card>
   );
 };

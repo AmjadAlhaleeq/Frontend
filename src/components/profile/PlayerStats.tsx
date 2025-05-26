@@ -3,16 +3,12 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/context/ReservationContext";
 import {
-  Award,
-  Footprints,
-  Goal,
-  ShieldCheck,
-  Trophy,
-  User,
-  Zap,
-  BadgePlus,  
+  BadgePlus,
   Calendar,
-  Star
+  Star,
+  Trophy,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 interface PlayerStatsProps {
@@ -20,54 +16,29 @@ interface PlayerStatsProps {
   className?: string;
 }
 
+// Component for stat item with icon, value, and label
+const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: number }) => (
+  <div className="flex flex-col items-center flex-1 justify-center">
+    <Icon className="h-7 w-7 text-teal-500 mb-1" />
+    <div className="text-lg font-bold">{value ?? 0}</div>
+    <div className="text-xs text-muted-foreground">{label}</div>
+  </div>
+);
+
 const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Player Statistics</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="flex items-center space-x-4">
-          <Calendar className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Games Played</p>
-            <p className="text-lg font-bold">{stats.gamesPlayed}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <BadgePlus className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Goals Scored</p>
-            <p className="text-lg font-bold">{stats.goalsScored}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Zap className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Assists</p>
-            <p className="text-lg font-bold">{stats.assists}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <ShieldCheck className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Clean Sheets</p>
-            <p className="text-lg font-bold">{stats.cleansheets}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Trophy className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">MVP Awards</p>
-            <p className="text-lg font-bold">{stats.mvps}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Star className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium leading-none">Wins</p>
-            <p className="text-lg font-bold">{stats.wins}</p>
-          </div>
+      <CardContent>
+        <div className="flex flex-row flex-wrap gap-2 justify-between">
+          <StatItem icon={Calendar} label="Games Played" value={stats.gamesPlayed} />
+          <StatItem icon={BadgePlus} label="Goals Scored" value={stats.goalsScored} />
+          <StatItem icon={Zap} label="Assists" value={stats.assists} />
+          <StatItem icon={ShieldCheck} label="Clean Sheets" value={stats.cleansheets} />
+          <StatItem icon={Trophy} label="MVP Awards" value={stats.mvps} />
+          <StatItem icon={Star} label="Wins" value={stats.wins} />
         </div>
       </CardContent>
     </Card>
@@ -75,3 +46,4 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, className }) => {
 };
 
 export default PlayerStats;
+

@@ -49,16 +49,22 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     r => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
   );
 
-  // Determine sections based on role
-  const sections = [
+  // For users, only show "Upcoming Games" section, for admins show both sections
+  const sections = userRole === 'admin' ? [
     {
-      title: userRole === 'admin' ? 'Upcoming Games' : 'My Upcoming Games',
+      title: 'Upcoming Games',
       data: filteredUpcoming,
     },
     {
-      title: userRole === 'admin' ? 'Completed Games' : 'My Completed Games',
+      title: 'Completed Games',
       data: completedReservations,
     }
+  ] : [
+    {
+      title: 'My Upcoming Games',
+      data: filteredUpcoming,
+    }
+    // Do not show completed games section for users
   ];
 
   return (

@@ -21,6 +21,11 @@ const MyBookings = () => {
     );
   }, [reservations, userId]);
 
+  const handleReservationClick = (reservationId: number) => {
+    // Route to /reservations, could use query param if needed or scroll to card
+    window.location.href = `/reservations#reservation-${reservationId}`;
+  };
+
   if (!userId) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -55,7 +60,11 @@ const MyBookings = () => {
         ) : (
           <div className="grid gap-4">
             {userReservations.map((reservation) => (
-              <Card key={reservation.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={reservation.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleReservationClick(reservation.id)}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -127,3 +136,4 @@ const MyBookings = () => {
 };
 
 export default MyBookings;
+
