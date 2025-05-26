@@ -58,7 +58,20 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   };
 
   // Compose stats for backend or fallback playerStats
-  const stats = profileData?.stats || playerStats || {};
+  const statsSource = profileData?.stats || playerStats || {};
+  const {
+    matches = 0,
+    gamesPlayed = 0,
+    goals = 0,
+    goalsScored = 0,
+    assists = 0,
+    wins = 0,
+    mvp = 0,
+    mvps = 0,
+    cleanSheets = 0,
+    cleansheets = 0,
+    interceptions = 0,
+  } = statsSource;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -101,13 +114,13 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
               <div className="space-y-3">
                 <h4 className="font-medium text-center">Statistics</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  <StatBlock icon={Trophy} label="Games Played" value={stats?.matches ?? stats?.gamesPlayed ?? 0} />
-                  <StatBlock icon={BadgePlus} label="Goals Scored" value={stats?.goals ?? 0} />
-                  <StatBlock icon={Zap} label="Assists" value={stats?.assists ?? 0} />
-                  <StatBlock icon={ShieldCheck} label="Clean Sheets" value={stats?.cleanSheets ?? stats?.cleansheets ?? 0} />
-                  <StatBlock icon={Award} label="MVP Awards" value={stats?.mvp ?? stats?.mvps ?? 0} />
-                  <StatBlock icon={Star} label="Wins" value={stats?.wins ?? 0} />
-                  <StatBlock icon={Star} label="Interceptions" value={stats?.interceptions ?? 0} />
+                  <StatBlock icon={Trophy} label="Games Played" value={matches || gamesPlayed} />
+                  <StatBlock icon={BadgePlus} label="Goals Scored" value={goals || goalsScored} />
+                  <StatBlock icon={Zap} label="Assists" value={assists} />
+                  <StatBlock icon={ShieldCheck} label="Clean Sheets" value={cleanSheets || cleansheets} />
+                  <StatBlock icon={Award} label="MVP Awards" value={mvp || mvps} />
+                  <StatBlock icon={Star} label="Wins" value={wins} />
+                  <StatBlock icon={Star} label="Interceptions" value={interceptions} />
                 </div>
               </div>
 
