@@ -18,7 +18,9 @@ export const useReservationActions = (
   const {
     joinGame,
     cancelReservation,
-    deleteReservation
+    deleteReservation,
+    joinWaitingList,
+    leaveWaitingList
   } = useReservation();
 
   const calculateActualMaxPlayers = (maxPlayers: number) => {
@@ -165,10 +167,134 @@ export const useReservationActions = (
     }
   }, [currentUserId, userRole, reservations, deleteReservation, toast, loadReservations]);
 
+  const handleJoinWaitingList = useCallback(async (reservationId: number, userId: string) => {
+    if (!currentUserId) {
+      toast({ 
+        title: "Login Required", 
+        description: "Please log in to join the waiting list.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // TODO: Implement backend API call for joining waiting list
+      joinWaitingList(reservationId, currentUserId);
+      
+      toast({
+        title: "Joined Waiting List",
+        description: "You have been added to the waiting list.",
+      });
+      
+      await loadReservations();
+    } catch (error) {
+      console.error("Error joining waiting list:", error);
+      toast({
+        title: "Failed to Join Waiting List",
+        description: error instanceof Error ? error.message : "Failed to join the waiting list",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, joinWaitingList, toast, loadReservations]);
+
+  const handleLeaveWaitingList = useCallback(async (reservationId: number, userId: string) => {
+    if (!currentUserId) {
+      toast({ 
+        title: "Login Required", 
+        description: "Please log in to leave the waiting list.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // TODO: Implement backend API call for leaving waiting list
+      leaveWaitingList(reservationId, currentUserId);
+      
+      toast({
+        title: "Left Waiting List",
+        description: "You have been removed from the waiting list.",
+      });
+      
+      await loadReservations();
+    } catch (error) {
+      console.error("Error leaving waiting list:", error);
+      toast({
+        title: "Failed to Leave Waiting List",
+        description: error instanceof Error ? error.message : "Failed to leave the waiting list",
+        variant: "destructive",
+      });
+    }
+  }, [currentUserId, leaveWaitingList, toast, loadReservations]);
+
+  const handleKickPlayer = useCallback(async (playerId: string, reservationId: number, reason?: string) => {
+    if (userRole !== 'admin') {
+      toast({ 
+        title: "Permission Denied", 
+        description: "Only admins can kick players.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // TODO: Implement backend API call for kicking player
+      cancelReservation(reservationId, playerId);
+      
+      toast({
+        title: "Player Removed",
+        description: "The player has been removed from the game.",
+      });
+      
+      await loadReservations();
+    } catch (error) {
+      console.error("Error kicking player:", error);
+      toast({
+        title: "Failed to Remove Player",
+        description: error instanceof Error ? error.message : "Failed to remove the player",
+        variant: "destructive",
+      });
+    }
+  }, [userRole, cancelReservation, toast, loadReservations]);
+
+  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[]) => {
+    if (userRole !== 'admin') {
+      toast({ 
+        title: "Permission Denied", 
+        description: "Only admins can add summaries.", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // TODO: Implement backend API call for saving summary
+      console.log('Saving summary for reservation:', reservationId, summary, playerStats);
+      
+      toast({
+        title: "Summary Saved",
+        description: "Game summary has been saved successfully.",
+      });
+      
+      await loadReservations();
+    } catch (error) {
+      console.error("Error saving summary:", error);
+      toast({
+        title: "Failed to Save Summary",
+        description: error instanceof Error ? error.message : "Failed to save the summary",
+        variant: "destructive",
+      });
+    }
+  }, [userRole, toast, loadReservations]);
+
   return {
     handleJoinGame,
     handleCancelReservation,
     handleDeleteReservation,
+    handleJoinWaitingList,
+    handleLeaveWaitingList,
+    handleKickPlayer,
+    handleSaveSummary,
     calculateActualMaxPlayers
   };
 };
