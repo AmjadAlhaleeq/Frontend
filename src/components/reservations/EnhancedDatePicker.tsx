@@ -3,7 +3,6 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { addDays, isSameDay } from "date-fns";
 
 interface EnhancedDatePickerProps {
   date: Date | undefined;
@@ -16,16 +15,8 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
   onDateChange,
   hasReservations,
 }) => {
-  const today = new Date();
-  const minBookingDate = addDays(today, 5); // 5 days from today
-
-  const isDateDisabled = (checkDate: Date) => {
-    return checkDate < minBookingDate;
-  };
-
   const modifiers = {
     hasReservations: (day: Date) => hasReservations(day),
-    disabled: isDateDisabled,
   };
 
   const modifiersStyles = {
@@ -33,11 +24,6 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
       backgroundColor: '#059669',
       color: 'white',
       fontWeight: 'bold',
-    },
-    disabled: {
-      color: '#d1d5db',
-      backgroundColor: '#f3f4f6',
-      cursor: 'not-allowed',
     },
   };
 
@@ -57,17 +43,11 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
           className="rounded-md border-0"
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
-          disabled={isDateDisabled}
-          fromDate={minBookingDate}
         />
         <div className="p-4 border-t">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className="w-3 h-3 rounded bg-emerald-600"></div>
             <span>Has games</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded bg-gray-300"></div>
-            <span>Booking not allowed (min 5 days advance)</span>
           </div>
         </div>
       </CardContent>

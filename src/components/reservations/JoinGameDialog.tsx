@@ -8,36 +8,40 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, Clock, MapPin } from "lucide-react";
+import { Users, MapPin, Calendar, Clock } from "lucide-react";
 
-interface LeaveGameDialogProps {
+interface JoinGameDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   gameName: string;
   gameDate: string;
   gameTime: string;
-  isPenalty?: boolean;
-  timeToGame?: string;
+  location: string;
+  price: number;
+  currentPlayers: number;
+  maxPlayers: number;
 }
 
-const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
+const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
   gameName,
   gameDate,
   gameTime,
-  isPenalty = false,
-  timeToGame
+  location,
+  price,
+  currentPlayers,
+  maxPlayers
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Leave Game</DialogTitle>
+          <DialogTitle>Join Game</DialogTitle>
           <DialogDescription>
-            Are you sure you want to leave this game?
+            Confirm your participation in this game
           </DialogDescription>
         </DialogHeader>
         
@@ -54,38 +58,33 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
                 <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>{gameTime}</span>
               </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{location}</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{currentPlayers + 1}/{maxPlayers} players (after joining)</span>
+              </div>
             </div>
           </div>
           
-          {isPenalty && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">Penalty Warning</p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    Leaving less than 2 hours before the game may result in penalties.
-                  </p>
-                </div>
-              </div>
+          <div className="text-center">
+            <div className="text-lg font-semibold text-teal-600">
+              {price} JD per player
             </div>
-          )}
-          
-          <p className="text-sm text-muted-foreground">
-            Your spot will become available for other players.
-          </p>
+            <p className="text-sm text-muted-foreground">
+              Payment will be collected at the venue
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={onClose}>
-            Stay in Game
+            Cancel
           </Button>
-          <Button 
-            onClick={onConfirm} 
-            variant="destructive"
-            className={isPenalty ? "bg-amber-600 hover:bg-amber-700" : ""}
-          >
-            Leave Game
+          <Button onClick={onConfirm} className="bg-teal-500 hover:bg-teal-600">
+            Join Game
           </Button>
         </div>
       </DialogContent>
@@ -93,4 +92,4 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   );
 };
 
-export default LeaveGameDialog;
+export default JoinGameDialog;
