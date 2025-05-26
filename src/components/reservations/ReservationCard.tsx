@@ -14,7 +14,6 @@ import {
   UserPlus,
   UserMinus,
   AlertCircle,
-  MessageSquare,
 } from "lucide-react";
 import { Reservation } from "@/context/ReservationContext";
 
@@ -31,15 +30,10 @@ interface ReservationCardProps {
   onDeleteReservation?: (id: number) => void;
   onViewDetails: (reservation: Reservation) => void;
   onAddSummary?: (reservation: Reservation) => void;
-  onOpenMessages?: (reservationId: number) => void;
   isUserLoggedIn: boolean;
   pitchImage?: string;
 }
 
-/**
- * Card component for displaying individual reservation details
- * Includes all user actions and proper confirmation flows
- */
 const ReservationCard: React.FC<ReservationCardProps> = ({
   reservation,
   userId,
@@ -53,7 +47,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   onDeleteReservation,
   onViewDetails,
   onAddSummary,
-  onOpenMessages,
   isUserLoggedIn,
   pitchImage,
 }) => {
@@ -144,24 +137,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // Player actions
     if (isJoined) {
       return (
-        <div className="flex gap-2 w-full">
+        <div className="flex gap-2 items-center w-full">
           <Badge className="bg-green-100 text-green-800 border-green-200">
             Joined
           </Badge>
-          {onOpenMessages && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenMessages(reservation.id);
-              }}
-              className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
-            >
-              <MessageSquare className="h-4 w-4 mr-1" />
-              Chat
-            </Button>
-          )}
           <Button 
             size="sm" 
             variant="outline"
@@ -169,7 +148,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               e.stopPropagation();
               onCancel(reservation.id, userId);
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
           >
             <UserMinus className="h-4 w-4 mr-1" />
             Leave

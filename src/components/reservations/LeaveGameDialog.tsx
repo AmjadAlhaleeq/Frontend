@@ -1,14 +1,17 @@
 
-import React from 'react';
+import React from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, Clock, MapPin } from "lucide-react";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { UserMinus, AlertTriangle, Calendar, Clock } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface LeaveGameDialogProps {
   isOpen: boolean;
@@ -17,10 +20,16 @@ interface LeaveGameDialogProps {
   gameName: string;
   gameDate: string;
   gameTime: string;
-  isPenalty?: boolean;
+  isPenalty: boolean;
   timeToGame?: string;
+  cannotLeave?: boolean;
 }
 
+/**
+ * LeaveGameDialog component
+ * Shows a confirmation dialog when a user wants to leave a game
+ * Includes warning about penalties if leaving within 6 hours of game time
+ */
 const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   isOpen,
   onClose,
@@ -28,68 +37,83 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   gameName,
   gameDate,
   gameTime,
-  isPenalty = false,
-  timeToGame
+  isPenalty,
+  timeToGame,
+  cannotLeave = false
 }) => {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>Leave Game</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to leave this game?
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h3 className="font-medium mb-3">{gameName}</h3>
-            
-            <div className="space-y-2 text-sm">
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className={isPenalty || cannotLeave ? "text-red-600" : ""}>
+            {cannotLeave ? (
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{gameDate}</span>
+                <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
+                Cannot Leave Game
               </div>
+            ) : isPenalty ? (
               <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{gameTime}</span>
+                <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
+                Warning: Penalty May Apply
               </div>
-            </div>
-          </div>
-          
-          {isPenalty && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">Penalty Warning</p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    Leaving less than 2 hours before the game may result in penalties.
-                  </p>
+            ) : (
+              "Leave this game?"
+            )}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <p className="mb-2">You are about to leave:</p>
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md mb-3">
+              <p className="font-medium text-teal-700 dark:text-teal-400">{gameName}</p>
+              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                <div className="flex items-center">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  {gameDate}
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  {gameTime}
                 </div>
               </div>
             </div>
+            
+            {cannotLeave ? (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 p-3 rounded-md mb-3">
+                <p className="text-red-600 dark:text-red-400 font-medium">Cannot Leave Game</p>
+                <p className="text-sm text-red-600/80 dark:text-red-400/80">
+                  You cannot leave a game less than 6 hours before it starts ({timeToGame} remaining).
+                  Please contact the admin if you have an emergency.
+                </p>
+              </div>
+            ) : isPenalty ? (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 p-3 rounded-md mb-3">
+                <p className="text-red-600 dark:text-red-400 font-medium">Penalty Warning</p>
+                <p className="text-sm text-red-600/80 dark:text-red-400/80">
+                  You're leaving with less than 6 hours before the game starts ({timeToGame} remaining).
+                  This may result in penalties such as temporary suspension from future games.
+                </p>
+              </div>
+            ) : (
+              <p>Are you sure you want to leave this game?</p>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {!cannotLeave && (
+            <AlertDialogAction 
+              onClick={onConfirm} 
+              className={isPenalty ? 
+                "bg-red-600 hover:bg-red-700 text-white" : 
+                "bg-amber-600 hover:bg-amber-700 text-white"
+              }
+            >
+              <UserMinus className="h-4 w-4 mr-1.5" />
+              {isPenalty ? "Leave Anyway" : "Leave Game"}
+            </AlertDialogAction>
           )}
-          
-          <p className="text-sm text-muted-foreground">
-            Your spot will become available for other players.
-          </p>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Stay in Game
-          </Button>
-          <Button 
-            onClick={onConfirm} 
-            variant="destructive"
-            className={isPenalty ? "bg-amber-600 hover:bg-amber-700" : ""}
-          >
-            Leave Game
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 

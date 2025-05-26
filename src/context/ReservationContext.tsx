@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -110,7 +109,7 @@ interface ReservationContextProps {
   deleteHighlight: (reservationId: number, highlightId: string) => void;
 }
 
-const defaultContextValue: ReservationContextProps = {
+const ReservationContext = createContext<ReservationContextProps>({
   reservations: [],
   pitches: [],
   addReservation: () => {},
@@ -144,9 +143,7 @@ const defaultContextValue: ReservationContextProps = {
     mvps: 0
   }),
   deleteHighlight: () => {},
-};
-
-const ReservationContext = createContext<ReservationContextProps>(defaultContextValue);
+});
 
 interface ReservationProviderProps {
   children: ReactNode;
@@ -168,36 +165,24 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      localStorage.setItem("reservations", JSON.stringify(reservations));
-    } catch (error) {
-      console.error("Error saving reservations to localStorage:", error);
-    }
+    localStorage.setItem("reservations", JSON.stringify(reservations));
   }, [reservations]);
 
   const addReservation = (reservation: Omit<Reservation, "id">) => {
-    try {
-      const newReservation: Reservation = {
-        ...reservation,
-        id: Date.now(),
-        playersJoined: 0,
-      };
-      setReservations(prev => [...prev, newReservation]);
-    } catch (error) {
-      console.error("Error adding reservation:", error);
-    }
+    const newReservation: Reservation = {
+      ...reservation,
+      id: Date.now(),
+      playersJoined: 0,
+    };
+    setReservations([...reservations, newReservation]);
   };
 
   const updateReservation = (id: number, updates: Partial<Reservation>) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) =>
-          reservation.id === id ? { ...reservation, ...updates } : reservation
-        )
-      );
-    } catch (error) {
-      console.error("Error updating reservation:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) =>
+        reservation.id === id ? { ...reservation, ...updates } : reservation
+      )
+    );
   };
 
   const editReservation = (id: number, updates: Partial<Reservation>) => {
@@ -205,42 +190,34 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   };
 
   const deleteReservation = (id: number) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.filter((reservation) => reservation.id !== id)
-      );
-    } catch (error) {
-      console.error("Error deleting reservation:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.filter((reservation) => reservation.id !== id)
+    );
   };
 
   const joinReservation = (reservationId: number, userId: string, playerName: string) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) => {
-          if (reservation.id === reservationId) {
-            const newPlayer: Player = { 
-              userId: userId, 
-              name: playerName,
-              playerName: playerName,
-              status: "joined",
-              joinedAt: new Date().toISOString()
-            };
-            if (!reservation.lineup) {
-              reservation.lineup = [];
-            }
-            return {
-              ...reservation,
-              lineup: [...reservation.lineup, newPlayer],
-              playersJoined: (reservation.lineup.length + 1)
-            };
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          const newPlayer: Player = { 
+            userId: userId, 
+            name: playerName,
+            playerName: playerName,
+            status: "joined",
+            joinedAt: new Date().toISOString()
+          };
+          if (!reservation.lineup) {
+            reservation.lineup = [];
           }
-          return reservation;
-        })
-      );
-    } catch (error) {
-      console.error("Error joining reservation:", error);
-    }
+          return {
+            ...reservation,
+            lineup: [...reservation.lineup, newPlayer],
+            playersJoined: (reservation.lineup.length + 1)
+          };
+        }
+        return reservation;
+      })
+    );
   };
 
   const joinGame = (reservationId: number, playerName?: string, userId?: string) => {
@@ -249,69 +226,52 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   };
 
   const cancelReservation = (reservationId: number, userId: string) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) => {
-          if (reservation.id === reservationId) {
-            const updatedLineup = reservation.lineup?.filter((player) => player.userId !== userId) || [];
-            return {
-              ...reservation,
-              lineup: updatedLineup,
-              playersJoined: updatedLineup.length
-            };
-          }
-          return reservation;
-        })
-      );
-    } catch (error) {
-      console.error("Error cancelling reservation:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          const updatedLineup = reservation.lineup?.filter((player) => player.userId !== userId) || [];
+          return {
+            ...reservation,
+            lineup: updatedLineup,
+            playersJoined: updatedLineup.length
+          };
+        }
+        return reservation;
+      })
+    );
   };
 
   const joinWaitingList = (reservationId: number, userId: string) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) => {
-          if (reservation.id === reservationId) {
-            return {
-              ...reservation,
-              waitingList: [...(reservation.waitingList || []), userId],
-            };
-          }
-          return reservation;
-        })
-      );
-    } catch (error) {
-      console.error("Error joining waiting list:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          return {
+            ...reservation,
+            waitingList: [...(reservation.waitingList || []), userId],
+          };
+        }
+        return reservation;
+      })
+    );
   };
 
   const leaveWaitingList = (reservationId: number, userId: string) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) => {
-          if (reservation.id === reservationId) {
-            return {
-              ...reservation,
-              waitingList: reservation.waitingList?.filter(id => id !== userId),
-            };
-          }
-          return reservation;
-        })
-      );
-    } catch (error) {
-      console.error("Error leaving waiting list:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          return {
+            ...reservation,
+            waitingList: reservation.waitingList?.filter(id => id !== userId),
+          };
+        }
+        return reservation;
+      })
+    );
   };
 
   const isUserJoined = (reservationId: number, userId: string) => {
-    try {
-      const reservation = reservations.find((res) => res.id === reservationId);
-      return !!reservation?.lineup?.some((player) => player.userId === userId);
-    } catch (error) {
-      console.error("Error checking if user joined:", error);
-      return false;
-    }
+    const reservation = reservations.find((res) => res.id === reservationId);
+    return !!reservation?.lineup?.some((player) => player.userId === userId);
   };
 
   const updateReservationStatus = (id: number, status: "upcoming" | "completed" | "cancelled") => {
@@ -319,100 +279,75 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   };
 
   const getUserStats = (userId: string): UserStats => {
-    try {
-      let wins = 0;
-      let losses = 0;
-      let draws = 0;
-      let goals = 0;
-      let assists = 0;
-      let matchesPlayed = 0;
-      let gamesPlayed = 0;
-      let goalsScored = 0;
-      let cleansheets = 0;
-      let mvps = 0;
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
+    let goals = 0;
+    let assists = 0;
+    let matchesPlayed = 0;
+    let gamesPlayed = 0;
+    let goalsScored = 0;
+    let cleansheets = 0;
+    let mvps = 0;
 
-      reservations.forEach(reservation => {
-        if (reservation.status === 'completed' && reservation.lineup?.some(player => player.userId === userId)) {
-          matchesPlayed++;
-          gamesPlayed++;
-          // Add logic to calculate wins/losses/draws based on game results
-          // This is a simplified version - you might want to enhance this
-        }
-      });
+    reservations.forEach(reservation => {
+      if (reservation.status === 'completed' && reservation.lineup?.some(player => player.userId === userId)) {
+        matchesPlayed++;
+        gamesPlayed++;
+        // Add logic to calculate wins/losses/draws based on game results
+        // This is a simplified version - you might want to enhance this
+      }
+    });
 
-      const winPercentage = matchesPlayed > 0 ? (wins / matchesPlayed) * 100 : 0;
+    const winPercentage = matchesPlayed > 0 ? (wins / matchesPlayed) * 100 : 0;
 
-      return {
-        wins,
-        losses,
-        draws,
-        goals,
-        assists,
-        matchesPlayed,
-        winPercentage,
-        gamesPlayed,
-        goalsScored,
-        cleansheets,
-        mvps
-      };
-    } catch (error) {
-      console.error("Error getting user stats:", error);
-      return defaultContextValue.getUserStats("");
-    }
+    return {
+      wins,
+      losses,
+      draws,
+      goals,
+      assists,
+      matchesPlayed,
+      winPercentage,
+      gamesPlayed,
+      goalsScored,
+      cleansheets,
+      mvps
+    };
   };
 
   const deleteHighlight = (reservationId: number, highlightId: string) => {
-    try {
-      setReservations((prevReservations) =>
-        prevReservations.map((reservation) => {
-          if (reservation.id === reservationId) {
-            return {
-              ...reservation,
-              highlights: reservation.highlights?.filter(h => h.id !== highlightId) || []
-            };
-          }
-          return reservation;
-        })
-      );
-    } catch (error) {
-      console.error("Error deleting highlight:", error);
-    }
+    setReservations((prevReservations) =>
+      prevReservations.map((reservation) => {
+        if (reservation.id === reservationId) {
+          return {
+            ...reservation,
+            highlights: reservation.highlights?.filter(h => h.id !== highlightId) || []
+          };
+        }
+        return reservation;
+      })
+    );
   };
 
   const addPitch = (pitch: Pitch) => {
-    try {
-      setPitches(prev => [...prev, pitch]);
-    } catch (error) {
-      console.error("Error adding pitch:", error);
-    }
+    setPitches([...pitches, pitch]);
   };
 
   const updatePitch = (id: string, updates: Partial<Pitch>) => {
-    try {
-      setPitches((prevPitches) =>
-        prevPitches.map((pitch) => (pitch._id === id ? { ...pitch, ...updates } : pitch))
-      );
-    } catch (error) {
-      console.error("Error updating pitch:", error);
-    }
+    setPitches((prevPitches) =>
+      prevPitches.map((pitch) => (pitch._id === id ? { ...pitch, ...updates } : pitch))
+    );
   };
 
   const deletePitch = (id: number) => {
-    try {
-      setPitches((prevPitches) =>
-        prevPitches.filter((pitch) => Number(pitch._id) !== id)
-      );
-    } catch (error) {
-      console.error("Error deleting pitch:", error);
-    }
+    setPitches((prevPitches) =>
+      prevPitches.filter((pitch) => Number(pitch._id) !== id)
+    );
   };
 
   const navigateToReservation = (pitchName: string) => {
-    try {
-      navigate(`/reservations?pitch=${pitchName}`);
-    } catch (error) {
-      console.error("Error navigating to reservation:", error);
-    }
+    navigate(`/reservations?pitch=${pitchName}`);
   };
 
   return (
@@ -446,14 +381,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   );
 };
 
-export const useReservation = () => {
-  const context = useContext(ReservationContext);
-  if (!context) {
-    console.error("useReservation must be used within a ReservationProvider");
-    return defaultContextValue;
-  }
-  return context;
-};
+export const useReservation = () => useContext(ReservationContext);
 
 export default ReservationContext;
 export type { Player };

@@ -1,86 +1,112 @@
 
-import { useState, useEffect } from 'react';
-import { useReservation } from '@/context/ReservationContext';
-import { getAllReservations, transformReservation, BackendReservation } from '@/services/reservationApi';
+import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { getAllReservations } from '@/services/publicReservationApi';
+import { fetchPitches } from '@/services/publicReservationApi';
+import { useReservation, Reservation } from '@/context/ReservationContext';
 
-/**
- * Custom hook for managing reservations data
- * Handles loading, transforming, and caching reservation data from backend
- */
 export const useReservationsData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [pitchImages, setPitchImages] = useState<Record<string, string>>({});
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { toast } = useToast();
   const { setReservations } = useReservation();
 
-  /**
-   * Loads all reservations from backend and transforms them for frontend use
-   * Ensures proper data isolation between different reservations
-   */
-  const loadReservations = async () => {
+  const loadReservations = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setLoadError(null);
-      
-      console.log('Starting to load reservations...');
-      
-      // Fetch fresh data from backend
+      console.log('Loading reservations...');
       const backendReservations = await getAllReservations();
-      console.log('Loaded reservations from backend:', backendReservations.length);
+      console.log('Raw backend response:', backendReservations);
       
-      // Transform backend reservations to frontend format with unique IDs
-      const frontendReservations = backendReservations.map((res, index) => {
-        const transformed = transformReservation(res);
-        // Ensure unique frontend ID to prevent data mixing
-        transformed.id = Date.now() + index;
-        return transformed;
+      if (!Array.isArray(backendReservations)) {
+        console.error('Backend reservations is not an array:', backendReservations);
+        toast({
+          title: "Error",
+          description: "Invalid data format received from server",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const transformedReservations = backendReservations.map((res, index) => {
+        // Handle pitch object - it's populated with full pitch data
+        const pitchId = res.pitch?._id || 'unknown';
+        const pitchName = res.pitch?.name || `Pitch ${pitchId.substring(0, 8)}`;
+        
+        return {
+          id: index + 1,
+          backendId: res._id,
+          pitchId: pitchId,
+          pitchName: pitchName,
+          location: res.pitch?.location || 'Football Complex',
+          city: res.pitch?.city || 'City',
+          date: res.date.split('T')[0],
+          startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          endTime: new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          duration: 60,
+          title: res.title,
+          maxPlayers: res.maxPlayers,
+          lineup: res.currentPlayers.map((player: any) => ({
+            userId: player._id,
+            name: `${player.firstName} ${player.lastName}`,
+            playerName: `${player.firstName} ${player.lastName}`,
+            status: 'joined' as const,
+            joinedAt: new Date().toISOString(),
+            avatar: player.profilePicture || ''
+          })),
+          waitingList: res.waitList || [],
+          status: (res.status || 'upcoming') as 'upcoming' | 'completed' | 'cancelled',
+          createdBy: 'admin',
+          price: res.price,
+          time: `${new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+          playersJoined: res.currentPlayers.length,
+          summary: res.summary || null,
+          backgroundImage: res.pitch?.backgroundImage
+        };
       });
       
-      // Extract pitch images mapping
-      const images: Record<string, string> = {};
-      backendReservations.forEach(res => {
-        if (res.pitch?._id && res.pitch?.backgroundImage) {
-          images[res.pitch._id] = res.pitch.backgroundImage;
-        }
-      });
-      
-      // Update state with fresh data
-      setReservations(frontendReservations);
-      setPitchImages(images);
-      
-      console.log('Successfully loaded and transformed reservations:', frontendReservations.length);
+      console.log('Transformed reservations:', transformedReservations);
+      setReservations(transformedReservations);
     } catch (error) {
-      console.error('Error loading reservations:', error);
-      setLoadError(error instanceof Error ? error.message : 'Failed to load reservations');
-      // Set empty data on error to prevent crashes
-      setReservations([]);
-      setPitchImages({});
-    } finally {
-      setIsLoading(false);
+      console.error("Error loading reservations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load reservations from server",
+        variant: "destructive",
+      });
     }
-  };
+  }, [setReservations, toast]);
 
-  // Load reservations on mount only
   useEffect(() => {
-    let isMounted = true;
-    
     const initializeData = async () => {
-      if (isMounted) {
+      try {
         await loadReservations();
+
+        try {
+          const pitches = await fetchPitches();
+          const imageMap: Record<string, string> = {};
+          pitches.forEach((pitch: any) => {
+            if (pitch._id && pitch.backgroundImage) {
+              imageMap[pitch._id] = pitch.backgroundImage;
+            }
+          });
+          setPitchImages(imageMap);
+        } catch (error) {
+          console.error("Error fetching pitches:", error);
+        }
+        
+      } catch (error) {
+        console.error("Error initializing data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
+
     initializeData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Empty dependency array to run only once
+  }, [loadReservations]);
 
   return {
     isLoading,
     pitchImages,
-    loadReservations,
-    loadError
+    loadReservations
   };
 };
