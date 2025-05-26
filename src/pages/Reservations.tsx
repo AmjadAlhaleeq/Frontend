@@ -150,18 +150,10 @@ const Reservations = () => {
     setIsSummaryDialogOpen(true);
   }, []);
 
-  const handleSaveSummaryWrapper = useCallback(async (summary: string, playerStats: any[], mvpPlayerId: string) => {
+  const handleSaveSummaryWrapper = useCallback(async (summary: string, playerStats: any[], mvpPlayerId: string, absentees: any[]) => {
     if (!selectedGameForSummary) return;
     
-    // Create enhanced summary with MVP info
-    const enhancedSummary = {
-      notes: summary,
-      mvpPlayerId,
-      completedAt: new Date().toISOString(),
-      playerStats
-    };
-    
-    await handleSaveSummary(selectedGameForSummary.id, JSON.stringify(enhancedSummary), playerStats);
+    await handleSaveSummary(selectedGameForSummary.id, mvpPlayerId, playerStats, absentees);
     
     setIsSummaryDialogOpen(false);
     setSelectedGameForSummary(null);

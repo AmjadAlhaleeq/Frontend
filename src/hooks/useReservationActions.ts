@@ -332,16 +332,37 @@ export const useReservationActions = (
     }
   }, [userRole, reservations, toast, loadReservations]);
 
-  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[]) => {
+  const handleSaveSummary = useCallback(async (reservationId: number, summary: string, playerStats: any[], absentees: any[]) => {
     try {
       const reservation = reservations.find(r => r.id === reservationId);
       if (!reservation) throw new Error('Reservation not found');
       
-      await addGameSummary(reservation.backendId, { summary, playerStats });
+      // Get MVP from the playerStats (this should be passed separately in the updated function)
+      const mvpPlayer = playerStats.find(p => p.userId === summary); // This will be fixed in the component
+      
+      const requestBody = {
+        mvp: mvpPlayer?.userId,
+        players: playerStats.map(player => ({
+          userId: player.userId,
+          played: player.attended,
+          won: player.won,
+          goals: player.goals || 0,
+          assists: player.assists || 0,
+          interceptions: player.interceptions || 0,
+          cleanSheet: player.cleanSheet || false
+        })),
+        absentees: absentees.map(absentee => ({
+          userId: absentee.userId,
+          reason: absentee.reason,
+          suspensionDays: absentee.suspensionDays
+        }))
+      };
+      
+      await addGameSummary(reservation.backendId, requestBody);
       
       toast({
         title: "Summary Saved",
-        description: "Game summary and player stats have been saved successfully.",
+        description: "Game summary saved, stats updated, and reservation completed.",
       });
       
       await loadReservations();
