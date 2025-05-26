@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -114,5 +115,3 @@ export const useReservationsData = () => {
     loadReservations
   };
 };
-
-export { useReservationsData };

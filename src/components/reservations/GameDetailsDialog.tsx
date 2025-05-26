@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { MapPin, Calendar, Clock, Users, X, ExternalLink, UserMinus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Reservation } from "@/context/ReservationContext";
+import { Reservation } from "@/types/reservation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
