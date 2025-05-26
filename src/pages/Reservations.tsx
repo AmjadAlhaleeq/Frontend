@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -236,8 +235,8 @@ const Reservations = () => {
                 handleJoinGame(id);
               }}
               onCancel={(id, userId) => handleCancelReservation(id)}
-              onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
-              onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
+              onJoinWaitingList={(id, userId) => handleJoinWaitingList(id, userId)}
+              onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id, userId)}
               onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
               onViewDetails={(reservation) => {
                 setSelectedGameForDetails(reservation);
@@ -267,7 +266,7 @@ const Reservations = () => {
           }}
           currentUserId={currentUserId || ""}
           actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
-          onKickPlayer={userRole === 'admin' ? handleKickPlayer : undefined}
+          onKickPlayer={userRole === 'admin' ? (reservationId: number, playerId: string) => handleKickPlayer(playerId, reservationId) : undefined}
           onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
           onPlayerClick={handlePlayerClick}
