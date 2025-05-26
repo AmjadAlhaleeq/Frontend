@@ -9,11 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { forgotPassword, verifyOtp, resetPassword } from "@/services/authApi";
-import { Mail, Lock, CheckCircle } from "lucide-react";
+import { Mail, Lock, CheckCircle, ArrowLeft, Send, Shield, Key } from "lucide-react";
 
 interface ForgotPasswordDialogProps {
   isOpen: boolean;
@@ -58,18 +57,30 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await forgotPassword({ email });
+      console.log('Sending OTP to:', email);
+      await forgotPassword({ email: email.trim() });
       setStep('otp');
       toast({
-        title: "OTP Sent",
-        description: "Please check your email for the verification code.",
+        title: "OTP Sent Successfully! 📧",
+        description: "Please check your email for the 6-digit verification code.",
       });
     } catch (error) {
+      console.error('Error sending OTP:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send OTP",
+        title: "Failed to Send OTP",
+        description: error instanceof Error ? error.message : "Please try again or contact support.",
         variant: "destructive"
       });
     } finally {
@@ -80,8 +91,8 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       toast({
-        title: "Invalid OTP",
-        description: "Please enter the complete 6-digit code.",
+        title: "Incomplete Code",
+        description: "Please enter the complete 6-digit verification code.",
         variant: "destructive"
       });
       return;
@@ -89,16 +100,18 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
 
     setIsLoading(true);
     try {
-      await verifyOtp({ email, otp });
+      console.log('Verifying OTP for:', email, 'with code:', otp);
+      await verifyOtp({ email: email.trim(), otp });
       setStep('password');
       toast({
-        title: "OTP Verified",
-        description: "Please enter your new password.",
+        title: "Code Verified! ✅",
+        description: "Now create your new password.",
       });
     } catch (error) {
+      console.error('Error verifying OTP:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to verify OTP",
+        title: "Invalid Verification Code",
+        description: error instanceof Error ? error.message : "Please check the code and try again.",
         variant: "destructive"
       });
     } finally {
@@ -119,16 +132,16 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     if (newPassword !== confirmPassword) {
       toast({
         title: "Passwords Don't Match",
-        description: "Please make sure both passwords are the same.",
+        description: "Please make sure both passwords are identical.",
         variant: "destructive"
       });
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast({
         title: "Password Too Short",
-        description: "Password must be at least 6 characters long.",
+        description: "Password must be at least 8 characters long.",
         variant: "destructive"
       });
       return;
@@ -136,16 +149,22 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
 
     setIsLoading(true);
     try {
-      await resetPassword({ email, newPassword, confirmPassword });
+      console.log('Resetting password for:', email);
+      await resetPassword({ 
+        email: email.trim(), 
+        newPassword: newPassword.trim(), 
+        confirmPassword: confirmPassword.trim() 
+      });
       setStep('success');
       toast({
-        title: "Password Reset",
-        description: "Your password has been reset successfully.",
+        title: "Password Reset Successful! 🎉",
+        description: "Your password has been updated successfully.",
       });
     } catch (error) {
+      console.error('Error resetting password:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reset password",
+        title: "Password Reset Failed",
+        description: error instanceof Error ? error.message : "Please try again or contact support.",
         variant: "destructive"
       });
     } finally {
@@ -154,14 +173,19 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
   };
 
   const renderEmailStep = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Mail className="h-5 w-5 text-blue-500" />
-        <span className="font-medium">Enter your email address</span>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-blue-100 rounded-full">
+          <Mail className="h-5 w-5 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Reset Your Password</h3>
+          <p className="text-sm text-gray-600">Enter your email to receive a verification code</p>
+        </div>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
         <Input
           id="email"
           type="email"
@@ -169,111 +193,164 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
+          className="h-11"
         />
       </div>
       
-      <div className="flex gap-2 pt-4">
-        <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+      <div className="flex gap-3 pt-2">
+        <Button variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1">
           Cancel
         </Button>
         <Button onClick={handleSendOtp} disabled={isLoading} className="flex-1">
-          {isLoading ? 'Sending...' : 'Send OTP'}
+          {isLoading ? (
+            <>
+              <Send className="w-4 h-4 mr-2 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4 mr-2" />
+              Send Code
+            </>
+          )}
         </Button>
       </div>
     </div>
   );
 
   const renderOtpStep = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Mail className="h-5 w-5 text-blue-500" />
-        <span className="font-medium">Enter verification code</span>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-green-100 rounded-full">
+          <Shield className="h-5 w-5 text-green-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Enter Verification Code</h3>
+          <p className="text-sm text-gray-600">We sent a 6-digit code to your email</p>
+        </div>
       </div>
       
-      <div className="text-sm text-gray-600 mb-4">
-        We've sent a 6-digit code to <strong>{email}</strong>
+      <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+        📧 Check your email: <strong className="text-gray-900">{email}</strong>
+        <br />
+        <span className="text-xs text-gray-500 mt-1 block">Don't see it? Check your spam folder</span>
       </div>
       
       <div className="flex justify-center">
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-            <InputOTPSlot index={3} />
-            <InputOTPSlot index={4} />
-            <InputOTPSlot index={5} />
+            <InputOTPSlot index={0} className="w-12 h-12 text-lg" />
+            <InputOTPSlot index={1} className="w-12 h-12 text-lg" />
+            <InputOTPSlot index={2} className="w-12 h-12 text-lg" />
+            <InputOTPSlot index={3} className="w-12 h-12 text-lg" />
+            <InputOTPSlot index={4} className="w-12 h-12 text-lg" />
+            <InputOTPSlot index={5} className="w-12 h-12 text-lg" />
           </InputOTPGroup>
         </InputOTP>
       </div>
       
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={() => setStep('email')} disabled={isLoading}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <Button onClick={handleVerifyOtp} disabled={isLoading || otp.length !== 6} className="flex-1">
-          {isLoading ? 'Verifying...' : 'Verify OTP'}
+          {isLoading ? 'Verifying...' : 'Verify Code'}
         </Button>
       </div>
     </div>
   );
 
   const renderPasswordStep = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Lock className="h-5 w-5 text-blue-500" />
-        <span className="font-medium">Set new password</span>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-purple-100 rounded-full">
+          <Lock className="h-5 w-5 text-purple-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Create New Password</h3>
+          <p className="text-sm text-gray-600">Choose a strong password for your account</p>
+        </div>
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="newPassword">New Password</Label>
-        <Input
-          id="newPassword"
-          type="password"
-          placeholder="Enter new password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          disabled={isLoading}
-        />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="newPassword" className="text-sm font-medium">New Password</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            placeholder="Enter new password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            disabled={isLoading}
+            className="h-11"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={isLoading}
+            className="h-11"
+          />
+        </div>
+        
+        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+          <strong>Password requirements:</strong>
+          <ul className="mt-1 space-y-1">
+            <li>• At least 8 characters long</li>
+            <li>• Contains letters and numbers</li>
+            <li>• Strong and unique</li>
+          </ul>
+        </div>
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          placeholder="Confirm new password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-      
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={() => setStep('otp')} disabled={isLoading}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <Button onClick={handleResetPassword} disabled={isLoading} className="flex-1">
-          {isLoading ? 'Resetting...' : 'Reset Password'}
+          {isLoading ? (
+            <>
+              <Key className="w-4 h-4 mr-2 animate-pulse" />
+              Updating...
+            </>
+          ) : (
+            <>
+              <Key className="w-4 h-4 mr-2" />
+              Update Password
+            </>
+          )}
         </Button>
       </div>
     </div>
   );
 
   const renderSuccessStep = () => (
-    <div className="space-y-4 text-center">
+    <div className="space-y-6 text-center">
       <div className="flex justify-center">
-        <CheckCircle className="h-16 w-16 text-green-500" />
+        <div className="p-4 bg-green-100 rounded-full">
+          <CheckCircle className="h-16 w-16 text-green-600" />
+        </div>
       </div>
       
       <div>
-        <h3 className="text-lg font-semibold text-green-600">Password Reset Successful!</h3>
-        <p className="text-gray-600 mt-2">
-          Your password has been reset successfully. You can now login with your new password.
+        <h3 className="text-xl font-bold text-green-600 mb-2">Password Reset Complete! 🎉</h3>
+        <p className="text-gray-600 mb-4">
+          Your password has been successfully updated. You can now login with your new password.
         </p>
+        <div className="text-sm text-gray-500 bg-green-50 p-3 rounded-lg">
+          Remember to keep your password safe and don't share it with anyone.
+        </div>
       </div>
       
-      <Button onClick={handleClose} className="w-full">
+      <Button onClick={handleClose} className="w-full h-11 font-medium">
         Continue to Login
       </Button>
     </div>
@@ -294,12 +371,40 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     }
   };
 
+  const getStepIndicator = () => {
+    const steps = ['email', 'otp', 'password', 'success'];
+    const currentIndex = steps.indexOf(step);
+    
+    return (
+      <div className="flex items-center justify-center mb-6">
+        {steps.map((_, index) => (
+          <React.Fragment key={index}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              index <= currentIndex 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-400'
+            }`}>
+              {index + 1}
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`w-12 h-0.5 ${
+                index < currentIndex ? 'bg-blue-600' : 'bg-gray-200'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{getStepTitle()}</DialogTitle>
+          <DialogTitle className="text-center">{getStepTitle()}</DialogTitle>
         </DialogHeader>
+        
+        {getStepIndicator()}
         
         {step === 'email' && renderEmailStep()}
         {step === 'otp' && renderOtpStep()}

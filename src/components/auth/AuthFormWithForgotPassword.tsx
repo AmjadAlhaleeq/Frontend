@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +107,16 @@ const AuthFormWithForgotPassword: React.FC<AuthFormProps> = ({ onClose }) => {
     }
   };
 
+  const handleForgotPassword = () => {
+    console.log('Opening forgot password dialog');
+    setShowForgotPassword(true);
+  };
+
+  const handleCloseForgotPassword = () => {
+    console.log('Closing forgot password dialog');
+    setShowForgotPassword(false);
+  };
+
   return (
     <>
       <Card className="w-full max-w-md mx-auto">
@@ -152,10 +161,11 @@ const AuthFormWithForgotPassword: React.FC<AuthFormProps> = ({ onClose }) => {
                 <Button
                   type="button"
                   variant="link"
-                  className="p-0 h-auto text-sm"
-                  onClick={() => setShowForgotPassword(true)}
+                  className="p-0 h-auto text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={handleForgotPassword}
+                  disabled={isLoading}
                 >
-                  Forgot your password?
+                  Forgot Password?
                 </Button>
               </div>
               
@@ -277,7 +287,7 @@ const AuthFormWithForgotPassword: React.FC<AuthFormProps> = ({ onClose }) => {
 
       <ForgotPasswordDialog
         isOpen={showForgotPassword}
-        onClose={() => setShowForgotPassword(false)}
+        onClose={handleCloseForgotPassword}
       />
     </>
   );
