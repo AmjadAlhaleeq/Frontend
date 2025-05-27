@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Reservation, Pitch, UserStats, Player } from "@/types/reservation";
@@ -61,12 +60,16 @@ const ReservationContext = createContext<ReservationContextProps>({
     draws: 0, 
     goals: 0, 
     assists: 0, 
+    matches: 0,
     matchesPlayed: 0, 
     winPercentage: 0,
     gamesPlayed: 0,
     goalsScored: 0,
     cleansheets: 0,
-    mvps: 0
+    cleanSheets: 0,
+    mvps: 0,
+    mvp: 0,
+    interceptions: 0
   }),
   deleteHighlight: () => {},
   removePlayerFromReservation: () => {},

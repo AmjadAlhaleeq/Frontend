@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +54,7 @@ const Reservations = () => {
     reservations,
     isUserJoined,
     updateReservationStatus,
+    getUserStats,
   } = useReservation();
 
   const { isLoading, pitchImages, loadReservations } = useReservationsData();
@@ -313,6 +313,7 @@ const Reservations = () => {
         onClose={() => setPlayerProfile({ isOpen: false, playerId: "", playerName: "" })}
         playerId={playerProfile.playerId}
         playerName={playerProfile.playerName}
+        playerStats={getUserStats(playerProfile.playerId)}
       />
 
       {/* Player Suspension Dialog */}

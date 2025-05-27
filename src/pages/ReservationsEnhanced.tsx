@@ -612,6 +612,15 @@ const ReservationsEnhanced = () => {
         onClose={() => closeDialog("playerProfile")}
         playerId={playerProfile.playerId}
         playerName={playerProfile.playerName}
+        playerStats={{
+          matches: 0,
+          goals: 0,
+          assists: 0,
+          wins: 0,
+          interceptions: 0,
+          cleansheets: 0,
+          mvp: 0,
+        }}
       />
 
       <PlayerSuspensionDialog
