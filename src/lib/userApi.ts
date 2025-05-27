@@ -1,3 +1,4 @@
+
 import { apiRequest, API_BASE_URL } from '../services/apiConfig';
 
 // Helper function to get auth headers
@@ -131,7 +132,7 @@ export const updateMyProfile = async (profileData: Partial<User>, profilePicture
   }
 };
 
-// Delete user account
+// FIXED: Delete user account and handle logout
 export const deleteMyAccount = async () => {
   try {
     const response = await apiRequest('/users/me', {
@@ -146,6 +147,10 @@ export const deleteMyAccount = async () => {
       localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');
       localStorage.removeItem('userRole');
+      localStorage.removeItem('isLoggedIn');
+      
+      // Dispatch logout event to notify navbar and other components
+      window.dispatchEvent(new Event("userLoggedOut"));
       
       return result;
     }

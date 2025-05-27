@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -88,7 +89,7 @@ export const useReservationActions = (
     const currentPlayers = reservation.lineup?.length || 0;
     const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
 
-    // If game is full, automatically add to waiting list
+    // FIXED: Only auto-join waiting list if game is actually full
     if (currentPlayers >= maxPlayers) {
       console.log('Game is full, attempting to join waiting list');
       await handleJoinWaitingList(reservationId);
@@ -200,35 +201,28 @@ export const useReservationActions = (
       return;
     }
     
-    // Check if all slots are full - ONLY allow waitlist if reservation is full
+    // FIXED: Check if all slots are full - ONLY allow waitlist if reservation is actually full
     const currentPlayers = reservation.lineup?.length || 0;
     const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
     if (currentPlayers < maxPlayers) {
       toast({
         title: "Game Not Full",
-        description: `You can only join the waiting list when all ${maxPlayers} slots are filled.`,
+        description: `You can only join the waiting list when all ${maxPlayers} slots are filled. Currently ${currentPlayers}/${maxPlayers} players joined.`,
         variant: "destructive"
       });
       return;
     }
     
-    if (reservation.waitingList && reservation.waitingList.length >= 3) {
-      toast({
-        title: "Waiting List Full",
-        description: "The waiting list is limited to 3 players",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+    // FIXED: No limit on waiting list players - infinite waiting list
     try {
       console.log('Adding to waiting list for reservation:', reservation.backendId);
       await addToWaitlist(reservation.backendId);
       joinWaitingList(reservationId, currentUserId);
       
+      const waitingPosition = (reservation.waitingList?.length || 0) + 1;
       toast({
         title: "Added to Waiting List",
-        description: "You'll be notified if a spot becomes available.",
+        description: `You're #${waitingPosition} on the waiting list. You'll be notified if a spot becomes available.`,
       });
       
       await loadReservations();
@@ -388,6 +382,7 @@ export const useReservationActions = (
       
       await loadReservations();
     } catch (error) {
+      console.error("Error saving summary:", error);
       toast({
         title: "Failed to Save Summary",
         description: error instanceof Error ? error.message : "Failed to save the game summary",

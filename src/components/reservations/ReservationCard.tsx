@@ -89,8 +89,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const gameIsFull = currentPlayers >= actualMaxPlayers;
   const waitingListCount = reservation.waitingList?.length || 0;
 
-  // Only allow joining waiting list if all slots are full
-  const canJoinWaitingList = gameIsFull && waitingListCount < 3;
+  // FIXED: Only show waiting list option when game is actually full
+  const canJoinWaitingList = gameIsFull && !isJoined && !isInWaitingList;
 
   let formattedDate = "Invalid Date";
   try {
@@ -203,54 +203,47 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    if (gameIsFull) {
-      if (waitingListCount >= 3) {
-        return (
-          <div className="flex items-center gap-2 w-full">
-            <Badge variant="destructive">Full</Badge>
-            <span className="text-sm text-muted-foreground">Waiting list full</span>
-          </div>
-        );
-      }
-      // Only admins/players who are allowed can join the waiting list
-      if (canJoinWaitingList) {
-        return (
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              onJoinWaitingList(reservation.id, userId);
-            }}
-            className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
-          >
-            <UserPlus className="h-4 w-4 mr-1" />
-            Join Waiting List
-          </Button>
-        );
-      } else {
-        // Do not show join waiting list button if slots not full
-        return (
-          <div className="flex items-center gap-2 w-full">
-            <Badge variant="destructive">Full</Badge>
-          </div>
-        );
-      }
+    // FIXED: Only show waiting list button when game is actually full
+    if (gameIsFull && canJoinWaitingList) {
+      return (
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            onJoinWaitingList(reservation.id, userId);
+          }}
+          className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
+        >
+          <UserPlus className="h-4 w-4 mr-1" />
+          Join Waiting List
+        </Button>
+      );
     }
 
-    // ... keep default join game button ...
+    // Show regular join button if game is not full
+    if (!gameIsFull) {
+      return (
+        <Button 
+          size="sm" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onJoin(reservation.id);
+          }}
+          className="bg-teal-500 hover:bg-teal-600 text-white w-full"
+        >
+          <UserPlus className="h-4 w-4 mr-1" />
+          Join Game
+        </Button>
+      );
+    }
+
+    // Game is full but user can't join waiting list (shouldn't happen with infinite waiting list)
     return (
-      <Button 
-        size="sm" 
-        onClick={(e) => {
-          e.stopPropagation();
-          onJoin(reservation.id);
-        }}
-        className="bg-teal-500 hover:bg-teal-600 text-white w-full"
-      >
-        <UserPlus className="h-4 w-4 mr-1" />
-        Join Game
-      </Button>
+      <div className="flex items-center gap-2 w-full">
+        <Badge variant="destructive">Full</Badge>
+        <span className="text-sm text-muted-foreground">No spots available</span>
+      </div>
     );
   };
 
@@ -322,12 +315,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               <Users className="h-4 w-4 mr-2 text-muted-foreground" />
               <span className="text-sm">
                 {currentPlayers}/{actualMaxPlayers} players
-                {userRole === 'admin' && waitingListCount > 0 && (
-                  <span className="text-amber-600 ml-1">
-                    (+{waitingListCount} waiting)
-                  </span>
-                )}
-                {userRole === 'player' && waitingListCount > 0 && (
+                {waitingListCount > 0 && (
                   <span className="text-amber-600 ml-1">
                     (+{waitingListCount} waiting)
                   </span>

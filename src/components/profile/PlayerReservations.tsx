@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useReservation } from '@/context/ReservationContext';
 import { Reservation } from '@/types/reservation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import WaitlistConfirmationDialog from '../reservations/WaitlistConfirmationDialog';
 import { sendGameJoinedConfirmation } from '@/utils/emailNotifications';
 import { cancelReservation as cancelReservationApi } from '@/services/playerReservationApi';
+import { getMyBookings } from '@/lib/userApi';
 
 interface PlayerReservationsProps {
   userId: string;
@@ -23,17 +23,76 @@ interface PlayerReservationsProps {
  * Shows a player's upcoming game reservations with options to leave games or join waiting lists
  */
 const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
-  const { reservations, cancelReservation, joinWaitingList, leaveWaitingList } = useReservation();
+  const { reservations, cancelReservation, joinWaitingList, leaveWaitingList, setReservations } = useReservation();
   const { toast } = useToast();
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showJoinWaitlistDialog, setShowJoinWaitlistDialog] = useState(false);
   const [showLeaveWaitlistDialog, setShowLeaveWaitlistDialog] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userBookings, setUserBookings] = useState<Reservation[]>([]);
   
-  // Get user's reservations
-  const userReservations = reservations.filter(res => 
+  // FIXED: Fetch user's bookings from API
+  useEffect(() => {
+    const fetchUserBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await getMyBookings();
+        
+        if (response.status === 'success' && response.data?.reservations) {
+          // Transform backend data to frontend format
+          const transformedReservations = response.data.reservations.map((res: any) => ({
+            id: res._id,
+            backendId: res._id,
+            pitchName: res.pitch?.name || 'Unknown Pitch',
+            title: res.pitch?.name || 'Unknown Pitch',
+            date: res.startDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+            time: res.startTime || '00:00',
+            startTime: res.startTime,
+            endTime: res.endTime,
+            location: res.pitch?.location || 'Unknown Location',
+            city: res.pitch?.city || 'Unknown City',
+            maxPlayers: res.maxPlayers || 10,
+            playersJoined: res.currentPlayers?.length || 0,
+            lineup: res.currentPlayers?.map((player: any) => ({
+              userId: player._id,
+              name: `${player.firstName} ${player.lastName}`,
+              playerName: `${player.firstName} ${player.lastName}`,
+              status: 'joined',
+              joinedAt: new Date().toISOString()
+            })) || [],
+            waitingList: res.waitingList || [],
+            status: res.status || 'upcoming',
+            price: res.pricePerPlayer,
+            imageUrl: res.pitch?.images?.[0] || null
+          }));
+          
+          setUserBookings(transformedReservations);
+        }
+      } catch (error) {
+        console.error('Error fetching user bookings:', error);
+        toast({
+          title: "Failed to Load Bookings",
+          description: "Could not load your bookings. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId) {
+      fetchUserBookings();
+    }
+  }, [userId, toast]);
+
+  // Get user's reservations from local state as fallback
+  const localUserReservations = reservations.filter(res => 
     res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined')
   );
+
+  // Use API bookings if available, otherwise use local reservations
+  const userReservations = userBookings.length > 0 ? userBookings : localUserReservations;
 
   // Keep only upcoming
   const today = new Date();
@@ -172,6 +231,37 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
       await cancelReservation(selectedReservation.id, userId);
       setShowLeaveDialog(false);
       
+      // Refresh bookings
+      const response = await getMyBookings();
+      if (response.status === 'success' && response.data?.reservations) {
+        const transformedReservations = response.data.reservations.map((res: any) => ({
+          id: res._id,
+          backendId: res._id,
+          pitchName: res.pitch?.name || 'Unknown Pitch',
+          title: res.pitch?.name || 'Unknown Pitch',
+          date: res.startDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+          time: res.startTime || '00:00',
+          startTime: res.startTime,
+          endTime: res.endTime,
+          location: res.pitch?.location || 'Unknown Location',
+          city: res.pitch?.city || 'Unknown City',
+          maxPlayers: res.maxPlayers || 10,
+          playersJoined: res.currentPlayers?.length || 0,
+          lineup: res.currentPlayers?.map((player: any) => ({
+            userId: player._id,
+            name: `${player.firstName} ${player.lastName}`,
+            playerName: `${player.firstName} ${player.lastName}`,
+            status: 'joined',
+            joinedAt: new Date().toISOString()
+          })) || [],
+          waitingList: res.waitingList || [],
+          status: res.status || 'upcoming',
+          price: res.pricePerPlayer,
+          imageUrl: res.pitch?.images?.[0] || null
+        }));
+        setUserBookings(transformedReservations);
+      }
+      
       toast({
         title: "Game cancelled",
         description: "You've left the game successfully",
@@ -283,6 +373,24 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
       </p>
     </div>
   );
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-xl text-teal-700 dark:text-teal-400">My Upcoming Games</CardTitle>
+          <CardDescription>Loading your bookings...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
