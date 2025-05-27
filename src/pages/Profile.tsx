@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ProfileEditor from "@/components/profile/ProfileEditor";
+import PlayerStats from "@/components/profile/PlayerStats";
+import { useUserStats } from "@/hooks/useUserStats";
 import {
   getMyProfile,
   updateMyProfile,
@@ -54,8 +57,12 @@ const Profile = () => {
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reservations, setReservations] = useState([]);
 
-  // Fetch user data on component mount
+  // Use the real stats hook
+  const { getUserStats } = useUserStats(reservations);
+
+  // Fetch user data and reservations on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
       const authToken = localStorage.getItem("authToken");
@@ -83,6 +90,10 @@ const Profile = () => {
 
           // Update localStorage with fresh data
           localStorage.setItem("currentUser", JSON.stringify(frontendUser));
+
+          // Also fetch reservations for real stats
+          const reservationsData = JSON.parse(localStorage.getItem("reservations") || "[]");
+          setReservations(reservationsData);
         } else {
           throw new Error("Invalid response format");
         }
@@ -101,44 +112,48 @@ const Profile = () => {
     fetchUserProfile();
   }, [toast, navigate]);
 
-  // Helper function to get badge color based on level
+  // Helper function to get badge colors based on level with circular design
   const getBadgeColors = (level: number) => {
     switch (level) {
       case 1:
         return {
           bg: "from-amber-50 to-orange-50",
-          border: "border-amber-200 hover:border-amber-300",
-          icon: "bg-amber-100 group-hover:bg-amber-200",
-          iconColor: "text-amber-600",
+          border: "border-amber-300",
+          icon: "bg-gradient-to-br from-amber-400 to-amber-600",
+          iconColor: "text-white",
           text: "text-amber-800",
-          badgeBg: "bg-amber-100"
+          badge: "🥉",
+          name: "Bronze"
         };
       case 2:
         return {
-          bg: "from-gray-50 to-slate-50",
-          border: "border-gray-300 hover:border-gray-400",
-          icon: "bg-gray-200 group-hover:bg-gray-300",
-          iconColor: "text-gray-600",
+          bg: "from-gray-50 to-slate-100",
+          border: "border-gray-300",
+          icon: "bg-gradient-to-br from-gray-400 to-gray-600",
+          iconColor: "text-white",
           text: "text-gray-800",
-          badgeBg: "bg-gray-200"
+          badge: "🥈",
+          name: "Silver"
         };
       case 3:
         return {
           bg: "from-yellow-50 to-amber-50",
-          border: "border-yellow-300 hover:border-yellow-400",
-          icon: "bg-yellow-200 group-hover:bg-yellow-300",
-          iconColor: "text-yellow-700",
+          border: "border-yellow-300",
+          icon: "bg-gradient-to-br from-yellow-400 to-yellow-600",
+          iconColor: "text-white",
           text: "text-yellow-800",
-          badgeBg: "bg-yellow-200"
+          badge: "🥇",
+          name: "Gold"
         };
       default:
         return {
           bg: "from-amber-50 to-orange-50",
-          border: "border-amber-200 hover:border-amber-300",
-          icon: "bg-amber-100 group-hover:bg-amber-200",
-          iconColor: "text-amber-600",
+          border: "border-amber-300",
+          icon: "bg-gradient-to-br from-amber-400 to-amber-600",
+          iconColor: "text-white",
           text: "text-amber-800",
-          badgeBg: "bg-amber-100"
+          badge: "🥉",
+          name: "Bronze"
         };
     }
   };
@@ -231,7 +246,8 @@ const Profile = () => {
     }
   };
 
-  const userStats = currentUser?.stats || {
+  // Get real user stats
+  const realUserStats = currentUser ? getUserStats(currentUser.id) : {
     gamesPlayed: 0,
     goalsScored: 0,
     assists: 0,
@@ -241,8 +257,11 @@ const Profile = () => {
     losses: 0,
     draws: 0,
     goals: 0,
-    matchesPlayed: 0,
+    matches: 0,
     winPercentage: 0,
+    cleanSheets: 0,
+    mvp: 0,
+    interceptions: 0,
   };
 
   // Check if user is suspended
@@ -341,7 +360,7 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    {userStats.matchesPlayed || 0} matches played
+                    {realUserStats.matches || 0} matches played
                   </div>
                 </div>
               </div>
@@ -377,80 +396,10 @@ const Profile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Stats & Performance */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Performance Stats */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-2xl">
-                  <div className="p-3 bg-blue-100 rounded-xl">
-                    <TrendingUp className="h-6 w-6 text-blue-600" />
-                  </div>
-                  Performance Statistics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 hover:shadow-lg transition-all duration-200">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Target className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="text-3xl font-bold text-green-700 mb-1">
-                      {userStats.goals || 0}
-                    </div>
-                    <div className="text-sm text-green-600 font-medium">Goals</div>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 hover:shadow-lg transition-all duration-200">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Zap className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="text-3xl font-bold text-blue-700 mb-1">
-                      {userStats.assists || 0}
-                    </div>
-                    <div className="text-sm text-blue-600 font-medium">Assists</div>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 hover:shadow-lg transition-all duration-200">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Medal className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="text-3xl font-bold text-purple-700 mb-1">
-                      {userStats.mvp || 0}
-                    </div>
-                    <div className="text-sm text-purple-600 font-medium">MVP</div>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200 hover:shadow-lg transition-all duration-200">
-                    <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Trophy className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="text-3xl font-bold text-yellow-700 mb-1">
-                      {userStats.winPercentage || 0}%
-                    </div>
-                    <div className="text-sm text-yellow-600 font-medium">Win Rate</div>
-                  </div>
-                </div>
+            {/* Performance Stats using real data */}
+            <PlayerStats stats={realUserStats} isLoading={isLoading} />
 
-                <div className="mt-8 grid grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-gray-700 mb-1">
-                      {userStats.wins || 0}
-                    </div>
-                    <div className="text-sm text-gray-600 font-medium">Wins</div>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-gray-700 mb-1">
-                      {userStats.cleanSheets || 0}
-                    </div>
-                    <div className="text-sm text-gray-600 font-medium">Clean Sheets</div>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-gray-700 mb-1">
-                      {userStats.interceptions || 0}
-                    </div>
-                    <div className="text-sm text-gray-600 font-medium">Interceptions</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Badges & Achievements */}
+            {/* Badges & Achievements with circular toggle design */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-2xl">
@@ -462,31 +411,29 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 {backendUser?.badges && backendUser.badges.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {backendUser.badges.map((badge) => {
                       const colors = getBadgeColors(badge.level);
                       return (
                         <div
                           key={badge._id}
-                          className={`group p-4 bg-gradient-to-r ${colors.bg} rounded-xl border ${colors.border} hover:scale-105 transition-all duration-200 cursor-pointer`}
+                          className={`group p-6 bg-gradient-to-br ${colors.bg} rounded-2xl border ${colors.border} hover:scale-105 transition-all duration-200 cursor-pointer`}
                         >
                           <div className="flex items-center gap-4">
-                            <div className={`flex-shrink-0 w-12 h-12 ${colors.icon} rounded-full flex items-center justify-center transition-colors`}>
-                              <Award className={`h-6 w-6 ${colors.iconColor}`} />
+                            <div className={`flex-shrink-0 w-16 h-16 ${colors.icon} rounded-full flex items-center justify-center transition-colors shadow-lg`}>
+                              <Award className={`h-8 w-8 ${colors.iconColor}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 truncate">
+                              <h4 className="font-semibold text-gray-900 truncate mb-1">
                                 {badge.name}
                               </h4>
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-gray-600 mb-3">
                                 {badge.description}
                               </p>
-                              <div className="mt-2">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colors.badgeBg} ${colors.text}`}>
-                                  {badge.level === 1 && "🥉 Bronze"}
-                                  {badge.level === 2 && "🥈 Silver"}
-                                  {badge.level === 3 && "🥇 Gold"}
-                                  {badge.level > 3 && `Level ${badge.level}`}
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{colors.badge}</span>
+                                <span className={`text-sm font-medium ${colors.text}`}>
+                                  {colors.name}
                                 </span>
                               </div>
                             </div>

@@ -20,39 +20,6 @@ interface PlayerStatsProps {
   isLoading?: boolean;
 }
 
-const StatItem = ({
-  icon: Icon,
-  label,
-  value,
-  isLoading = false,
-  color = "text-blue-500",
-  subtitle,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-  isLoading?: boolean;
-  color?: string;
-  subtitle?: string;
-}) => (
-  <div className="flex flex-col items-center p-4 bg-gradient-to-br from-white to-gray-50 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
-    <Icon className={`h-8 w-8 ${color} mb-3`} />
-    <div className="text-2xl font-bold text-gray-900 mb-1">
-      {isLoading ? (
-        <div className="animate-pulse bg-gray-200 h-7 w-12 rounded"></div>
-      ) : (
-        value ?? 0
-      )}
-    </div>
-    <div className="text-sm font-medium text-gray-700 text-center mb-1">
-      {label}
-    </div>
-    {subtitle && (
-      <div className="text-xs text-gray-500 text-center">{subtitle}</div>
-    )}
-  </div>
-);
-
 const PlayerStats: React.FC<PlayerStatsProps> = ({
   stats,
   className = "",
