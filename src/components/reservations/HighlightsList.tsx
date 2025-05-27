@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +23,7 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
   const { deleteHighlight } = useReservation();
 
   // Function to get the color for a highlight type
-  const getHighlightColor = (type: "goal" | "assist" | "save" | "tackle") => {
+  const getHighlightColor = (type: "goal" | "assist" | "save" | "tackle" | "mvp" | "cleanSheet") => {
     switch (type) {
       case "goal":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
@@ -34,6 +33,10 @@ const HighlightsList: React.FC<HighlightsListProps> = ({
         return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
       case "tackle":
         return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
+      case "mvp":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+      case "cleanSheet":
+        return "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
     }
