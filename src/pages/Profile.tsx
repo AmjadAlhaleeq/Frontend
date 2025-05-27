@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Award,
   Edit,
@@ -11,10 +11,18 @@ import {
   AlertTriangle,
   Trash2,
   Loader2,
+  Target,
+  TrendingUp,
+  Medal,
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Users,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import PlayerStats from "@/components/profile/PlayerStats";
 import ProfileEditor from "@/components/profile/ProfileEditor";
 import {
   getMyProfile,
@@ -36,28 +44,18 @@ import {
 } from "@/components/ui/alert-dialog";
 
 /**
- * Player Profile Page Component
- * Displays user information, statistics, and achievements
- *
- * Includes:
- * - Basic user information
- * - Player statistics
- * - Badges and achievements
- * - Profile editing functionality
+ * Modern Player Profile Page Component
+ * Unified design displaying user information, statistics, and achievements
  */
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<"performance" | "badges">(
-    "performance"
-  );
   // Fetch user data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -213,254 +211,211 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader className="animate-spin h-8 w-8 text-teal-500 mr-3" />
-        <span className="text-lg text-muted-foreground">
-          Loading profile...
-        </span>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <Loader className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Loading your profile...</p>
+        </div>
       </div>
     );
   }
 
   if (!currentUser) {
     return (
-      <div className="text-center py-12">
-        <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-bold mb-2">No Profile Found</h2>
-        <p className="text-muted-foreground mb-6">
-          Please log in to view your profile
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
+          <User className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold mb-2">No Profile Found</h2>
+          <p className="text-gray-600 mb-6">
+            Please log in to view your profile
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Edit Profile</h1>
+          <p className="text-gray-600">Update your information and preferences</p>
+        </div>
+        <ProfileEditor
+          currentUserDetails={currentUser}
+          onSave={handleProfileUpdate}
+          onCancel={() => setIsEditing(false)}
+        />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Player Profile</h1>
-
-      {/* Suspension Warning */}
-      {isSuspended && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-            <AlertTriangle className="h-5 w-5" />
-            <span className="font-medium">Account Suspended</span>
-          </div>
-          <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-            Your account is suspended until{" "}
-            {new Date(backendUser!.suspendedUntil!).toLocaleDateString()}
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Left Column: User Info */}
-        <div className="xl:col-span-1">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Profile Information</CardTitle>
-                {!isEditing && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit profile</span>
-                  </Button>
-                )}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header with Hero Section */}
+        <div className="relative bg-gradient-to-r from-blue-600 to-teal-600 rounded-3xl p-8 mb-8 text-white overflow-hidden">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 overflow-hidden">
+                  {currentUser.avatarUrl ? (
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={`${currentUser.firstName} ${currentUser.lastName}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-4xl font-bold text-white">
+                      {currentUser.firstName?.[0]}
+                      {currentUser.lastName?.[0]}
+                    </span>
+                  )}
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-yellow-400 rounded-full p-2">
+                  <Trophy className="h-6 w-6 text-yellow-800" />
+                </div>
               </div>
-            </CardHeader>
 
-            <CardContent>
-              {isEditing ? (
-                <ProfileEditor
-                  currentUserDetails={currentUser}
-                  onSave={handleProfileUpdate}
-                  onCancel={() => setIsEditing(false)}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {/* Avatar */}
-                  <div className="flex justify-center mb-4">
-                    <div className="relative">
-                      <div
-                        className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center"
-                        style={{ backgroundColor: "#f0fdfa" }}
-                      >
-                        {currentUser.avatarUrl ? (
-                          <img
-                            src={currentUser.avatarUrl}
-                            alt={`${currentUser.firstName} ${currentUser.lastName}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span
-                            className="text-3xl font-bold"
-                            style={{ color: "#0f766e" }}
-                          >
-                            {currentUser.firstName?.[0]}
-                            {currentUser.lastName?.[0]}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              {/* User Info */}
+              <div className="flex-1 text-center md:text-left">
+                <h1 className="text-4xl font-bold mb-2">
+                  {currentUser.firstName} {currentUser.lastName}
+                </h1>
+                <p className="text-blue-100 text-lg mb-4">
+                  {currentUser.position || "Football Player"}
+                </p>
+                <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    {currentUser.city || "Unknown"}
                   </div>
-
-                  {/* Basic Info */}
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-semibold">
-                      {currentUser.firstName} {currentUser.lastName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {currentUser.email}
-                    </p>
-                    <div
-                      className="mt-2 inline-block text-xs font-medium px-2.5 py-0.5 rounded-full"
-                      style={{ backgroundColor: "#f0fdfa", color: "#0f766e" }}
-                    >
-                      Player
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {currentUser.age ? `${currentUser.age} years old` : "Age not set"}
                   </div>
-
-                  {/* Additional Info */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Age:</span>
-                      <span className="font-medium">
-                        {currentUser.age || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Phone:</span>
-                      <span className="font-medium">
-                        {currentUser.phoneNumber || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">City:</span>
-                      <span className="font-medium">
-                        {currentUser.city || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Position:</span>
-                      <span className="font-medium">
-                        {currentUser.position || "Not specified"}
-                      </span>
-                    </div>
-                    {currentUser.bio && (
-                      <div className="pt-2">
-                        <span className="text-muted-foreground text-xs">
-                          Bio:
-                        </span>
-                        <p className="text-sm mt-1">{currentUser.bio}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="pt-4 space-y-2">
-                    <Button
-                      onClick={handleViewBookings}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      My Bookings
-                    </Button>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          className="w-full"
-                          disabled={isDeleting}
-                        >
-                          {isDeleting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Deleting...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Account
-                            </>
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-red-600">
-                            Delete Account
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete your account? This
-                            action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeleteAccount}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Delete Account
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {userStats.matchesPlayed || 0} matches played
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        {/* Right Columns: Stats and Badges */}
-        <div className="xl:col-span-3">
-          <div className="mb-4 flex space-x-4">
-            <Button
-              variant={activeSection === "performance" ? "default" : "outline"}
-              onClick={() => setActiveSection("performance")}
-            >
-              Your Performance
-            </Button>
-            <Button
-              variant={activeSection === "badges" ? "default" : "outline"}
-              onClick={() => setActiveSection("badges")}
-            >
-              Your Badges
-            </Button>
-          </div>
+              </div>
 
-          {activeSection === "performance" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PlayerStats stats={userStats} />
+              {/* Edit Button */}
+              <Button
+                onClick={() => setIsEditing(true)}
+                className="bg-white/20 hover:bg-white/30 border border-white/30 backdrop-blur-sm"
+                size="lg"
+              >
+                <Edit className="h-5 w-5 mr-2" />
+                Edit Profile
+              </Button>
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-lg">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <Award className="h-5 w-5 text-amber-600" />
+          </div>
+
+          {/* Suspension Warning */}
+          {isSuspended && (
+            <div className="mt-6 p-4 bg-red-500/20 border border-red-300/30 rounded-lg backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-red-100">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-medium">Account Suspended</span>
+              </div>
+              <p className="text-sm text-red-200 mt-1">
+                Your account is suspended until{" "}
+                {new Date(backendUser!.suspendedUntil!).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Stats & Performance */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Performance Stats */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">
-                      Player Badges
-                    </h3>
-                    <p className="text-sm text-gray-600">Your achievements</p>
+                  Performance Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                    <Target className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-green-700">
+                      {userStats.goals || 0}
+                    </div>
+                    <div className="text-sm text-green-600">Goals</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                    <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-blue-700">
+                      {userStats.assists || 0}
+                    </div>
+                    <div className="text-sm text-blue-600">Assists</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
+                    <Medal className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-purple-700">
+                      {userStats.mvp || 0}
+                    </div>
+                    <div className="text-sm text-purple-600">MVP</div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
+                    <Trophy className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-yellow-700">
+                      {userStats.winPercentage || 0}%
+                    </div>
+                    <div className="text-sm text-yellow-600">Win Rate</div>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-6">
+                <div className="mt-6 grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold text-gray-700">
+                      {userStats.wins || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Wins</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold text-gray-700">
+                      {userStats.cleanSheets || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Clean Sheets</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold text-gray-700">
+                      {userStats.interceptions || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Interceptions</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Badges & Achievements */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Award className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  Achievements & Badges
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 {backendUser?.badges && backendUser.badges.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {backendUser.badges.map((badge) => (
                       <div
                         key={badge._id}
-                        className="group p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-100 hover:border-amber-200 hover:scale-105 transition-all duration-200 cursor-pointer"
+                        className="group p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 hover:border-amber-300 hover:scale-105 transition-all duration-200 cursor-pointer"
                       >
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center group-hover:bg-amber-200 transition-colors">
@@ -486,22 +441,133 @@ const Profile = () => {
                 ) : (
                   <div className="text-center py-12">
                     <div className="relative inline-block">
-                      <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mb-4">
-                        <Award className="h-8 w-8 text-amber-600" />
+                      <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mb-4">
+                        <Award className="h-10 w-10 text-amber-600" />
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
                       No Badges Yet
                     </h3>
-                    <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                    <p className="text-gray-600 max-w-sm mx-auto">
                       Earn badges by achieving great performances in matches!
                       Your first badge is waiting.
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Contact & Actions */}
+          <div className="space-y-6">
+            {/* Contact Information */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <User className="h-5 w-5 text-gray-600" />
+                  </div>
+                  Contact Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Mail className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <div className="text-sm text-gray-500">Email</div>
+                    <div className="font-medium">{currentUser.email}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Phone className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <div className="text-sm text-gray-500">Phone</div>
+                    <div className="font-medium">
+                      {currentUser.phoneNumber || "Not provided"}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <MapPin className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <div className="text-sm text-gray-500">Location</div>
+                    <div className="font-medium">
+                      {currentUser.city || "Not specified"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bio Section */}
+            {currentUser.bio && (
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg">About</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 leading-relaxed">{currentUser.bio}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Action Buttons */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="pt-6 space-y-3">
+                <Button
+                  onClick={handleViewBookings}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  size="lg"
+                >
+                  <Calendar className="h-5 w-5 mr-2" />
+                  My Bookings
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      size="lg"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-5 w-5 mr-2" />
+                          Delete Account
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-red-600">
+                        Delete Account
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete your account? This
+                        action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete Account
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

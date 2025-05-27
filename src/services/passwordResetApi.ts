@@ -26,7 +26,7 @@ export interface ApiResponse<T = any> {
 export const requestPasswordReset = async (email: string): Promise<ApiResponse> => {
   try {
     console.log('Sending password reset request for:', email);
-    const response = await apiRequest('/auth/forgot-password', {
+    const response = await apiRequest('/auth/forget-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
@@ -51,8 +51,8 @@ export const requestPasswordReset = async (email: string): Promise<ApiResponse> 
 // Send OTP to email (alternative endpoint for compatibility)
 export const forgotPassword = async (data: ForgotPasswordRequest): Promise<ApiResponse> => {
   try {
-    console.log('Sending forgot password request to:', `${API_BASE_URL}/auth/forgot-password`);
-    const response = await apiRequest('/auth/forgot-password', {
+    console.log('Sending forgot password request to:', `${API_BASE_URL}/auth/forget-password`);
+    const response = await apiRequest('/auth/forget-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });
