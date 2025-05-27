@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -258,23 +257,25 @@ const Profile = () => {
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Avatar */}
+              {/* Circular Avatar */}
               <div className="relative">
                 <div className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 overflow-hidden">
                   {currentUser.avatarUrl ? (
                     <img
                       src={currentUser.avatarUrl}
                       alt={`${currentUser.firstName} ${currentUser.lastName}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <span className="text-4xl font-bold text-white">
-                      {currentUser.firstName?.[0]}
-                      {currentUser.lastName?.[0]}
-                    </span>
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center">
+                      <span className="text-4xl font-bold text-white">
+                        {currentUser.firstName?.[0]}
+                        {currentUser.lastName?.[0]}
+                      </span>
+                    </div>
                   )}
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-yellow-400 rounded-full p-2">
+                <div className="absolute -bottom-2 -right-2 bg-yellow-400 rounded-full p-3 border-4 border-white">
                   <Trophy className="h-6 w-6 text-yellow-800" />
                 </div>
               </div>
@@ -338,7 +339,7 @@ const Profile = () => {
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-2xl">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-3 bg-blue-100 rounded-xl">
                     <TrendingUp className="h-6 w-6 text-blue-600" />
                   </div>
                   Performance Statistics
@@ -346,54 +347,62 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                    <Target className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-green-700">
+                  <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 hover:shadow-lg transition-all duration-200">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Target className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="text-3xl font-bold text-green-700 mb-1">
                       {userStats.goals || 0}
                     </div>
-                    <div className="text-sm text-green-600">Goals</div>
+                    <div className="text-sm text-green-600 font-medium">Goals</div>
                   </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-blue-700">
+                  <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 hover:shadow-lg transition-all duration-200">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Zap className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="text-3xl font-bold text-blue-700 mb-1">
                       {userStats.assists || 0}
                     </div>
-                    <div className="text-sm text-blue-600">Assists</div>
+                    <div className="text-sm text-blue-600 font-medium">Assists</div>
                   </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                    <Medal className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-purple-700">
+                  <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 hover:shadow-lg transition-all duration-200">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Medal className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="text-3xl font-bold text-purple-700 mb-1">
                       {userStats.mvp || 0}
                     </div>
-                    <div className="text-sm text-purple-600">MVP</div>
+                    <div className="text-sm text-purple-600 font-medium">MVP</div>
                   </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
-                    <Trophy className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-yellow-700">
+                  <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200 hover:shadow-lg transition-all duration-200">
+                    <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Trophy className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="text-3xl font-bold text-yellow-700 mb-1">
                       {userStats.winPercentage || 0}%
                     </div>
-                    <div className="text-sm text-yellow-600">Win Rate</div>
+                    <div className="text-sm text-yellow-600 font-medium">Win Rate</div>
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-semibold text-gray-700">
+                <div className="mt-8 grid grid-cols-3 gap-6">
+                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-700 mb-1">
                       {userStats.wins || 0}
                     </div>
-                    <div className="text-sm text-gray-600">Wins</div>
+                    <div className="text-sm text-gray-600 font-medium">Wins</div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-semibold text-gray-700">
+                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-700 mb-1">
                       {userStats.cleanSheets || 0}
                     </div>
-                    <div className="text-sm text-gray-600">Clean Sheets</div>
+                    <div className="text-sm text-gray-600 font-medium">Clean Sheets</div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-semibold text-gray-700">
+                  <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-700 mb-1">
                       {userStats.interceptions || 0}
                     </div>
-                    <div className="text-sm text-gray-600">Interceptions</div>
+                    <div className="text-sm text-gray-600 font-medium">Interceptions</div>
                   </div>
                 </div>
               </CardContent>

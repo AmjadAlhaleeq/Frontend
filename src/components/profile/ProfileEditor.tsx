@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -132,16 +131,20 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col items-center mb-6">
-            <Avatar className="h-24 w-24 mb-4 border-2 border-gray-200">
-              <AvatarImage 
-                src={profile.avatarUrl} 
-                alt={`${profile.firstName} ${profile.lastName}`}
-              />
-              <AvatarFallback>
-                {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "U"}
-                {profile.lastName ? profile.lastName.charAt(0).toUpperCase() : ""}
-              </AvatarFallback>
-            </Avatar>
+            {/* Circular Avatar */}
+            <div className="relative mb-4">
+              <Avatar className="h-32 w-32 border-4 border-gray-200 shadow-lg">
+                <AvatarImage 
+                  src={profile.avatarUrl} 
+                  alt={`${profile.firstName} ${profile.lastName}`}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 text-white text-4xl font-bold">
+                  {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "U"}
+                  {profile.lastName ? profile.lastName.charAt(0).toUpperCase() : ""}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             
             <input 
               type="file"
@@ -156,7 +159,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
               variant="outline" 
               size="sm" 
               onClick={triggerFileInput}
-              className="text-sm"
+              className="text-sm bg-teal-50 border-teal-200 hover:bg-teal-100"
             >
               <Upload className="h-4 w-4 mr-2" />
               Upload Photo
