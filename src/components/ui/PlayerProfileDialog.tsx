@@ -26,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import { BackendUserProfile } from "@/hooks/usePlayerProfile";
+import { UserStats } from "@/types/reservation";
 
 interface PlayerProfileDialogProps {
   isOpen: boolean;
@@ -36,22 +37,14 @@ interface PlayerProfileDialogProps {
   profileData?: BackendUserProfile;
   loading?: boolean;
   error?: string | null;
-  playerStats: {
-    matches: number;
-    goals: number;
-    assists: number;
-    wins: number;
-    interceptions: number;
-    cleansheets: number;
-    mvp: number;
-  };
+  playerStats: UserStats;
 }
 
 const ICON_CLASSES = "h-7 w-7 mx-auto";
 
 const statConfig = [
   {
-    key: "gamesPlayed",
+    key: "matches",
     label: "Games Played",
     icon: Calendar,
     color: "text-gray-700",
@@ -69,13 +62,13 @@ const statConfig = [
     color: "text-blue-600",
   },
   {
-    key: "cleansheets",
+    key: "cleanSheets",
     label: "Clean Sheets",
     icon: Shield,
     color: "text-cyan-600",
   },
   {
-    key: "mvps",
+    key: "mvp",
     label: "MVP Awards",
     icon: Award,
     color: "text-purple-700",
@@ -122,16 +115,13 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
   // Map stats from API (prefer backend, fallback to prop)
   const stats = {
-    // Map 'matches' from backend to gamesPlayed
     matches: profileData?.stats?.matches ?? playerStats?.matches ?? 0,
     goals: profileData?.stats?.goals ?? playerStats?.goals ?? 0,
     assists: profileData?.stats?.assists ?? playerStats?.assists ?? 0,
-    cleansheets:
-      profileData?.stats?.cleanSheets ?? playerStats?.cleansheets ?? 0,
+    cleanSheets: profileData?.stats?.cleanSheets ?? playerStats?.cleanSheets ?? 0,
     mvp: profileData?.stats?.mvp ?? playerStats?.mvp ?? 0,
     wins: profileData?.stats?.wins ?? playerStats?.wins ?? 0,
-    interceptions:
-      profileData?.stats?.interceptions ?? playerStats?.interceptions ?? 0,
+    interceptions: profileData?.stats?.interceptions ?? playerStats?.interceptions ?? 0,
   };
 
   // Badge level color system - Bronze/Silver/Gold

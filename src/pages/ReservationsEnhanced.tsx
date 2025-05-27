@@ -618,8 +618,9 @@ const ReservationsEnhanced = () => {
           assists: 0,
           wins: 0,
           interceptions: 0,
-          cleansheets: 0,
+          cleanSheets: 0,
           mvp: 0,
+          winPercentage: 0,
         }}
       />
 
