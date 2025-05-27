@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -11,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
-import { forgotPassword, verifyOtp, resetPassword } from "@/services/authApi";
-import { Mail, Lock, CheckCircle, ArrowLeft, Send, Shield, Key } from "lucide-react";
+import { forgotPassword, verifyOtp, resetPassword } from "@/services/passwordResetApi";
+import { Mail, Lock, CheckCircle, ArrowLeft, Send, Shield, Key, AlertCircle } from "lucide-react";
 
 interface ForgotPasswordDialogProps {
   isOpen: boolean;
@@ -32,6 +31,7 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setStep('email');
@@ -40,6 +40,7 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     setNewPassword('');
     setConfirmPassword('');
     setIsLoading(false);
+    setError(null);
   };
 
   const handleClose = () => {
@@ -68,6 +69,8 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       console.log('Sending OTP to:', email);
       await forgotPassword({ email: email.trim() });
@@ -78,9 +81,11 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
       });
     } catch (error) {
       console.error('Error sending OTP:', error);
+      const errorMessage = error instanceof Error ? error.message : "Please try again or contact support.";
+      setError(errorMessage);
       toast({
         title: "Failed to Send OTP",
-        description: error instanceof Error ? error.message : "Please try again or contact support.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -99,6 +104,8 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       console.log('Verifying OTP for:', email, 'with code:', otp);
       await verifyOtp({ email: email.trim(), otp });
@@ -109,9 +116,11 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
       });
     } catch (error) {
       console.error('Error verifying OTP:', error);
+      const errorMessage = error instanceof Error ? error.message : "Please check the code and try again.";
+      setError(errorMessage);
       toast({
         title: "Invalid Verification Code",
-        description: error instanceof Error ? error.message : "Please check the code and try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -148,6 +157,8 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       console.log('Resetting password for:', email);
       await resetPassword({ 
@@ -162,9 +173,34 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
       });
     } catch (error) {
       console.error('Error resetting password:', error);
+      const errorMessage = error instanceof Error ? error.message : "Please try again or contact support.";
+      setError(errorMessage);
       toast({
         title: "Password Reset Failed",
-        description: error instanceof Error ? error.message : "Please try again or contact support.",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await forgotPassword({ email: email.trim() });
+      toast({
+        title: "Code Resent! 📧",
+        description: "A new verification code has been sent to your email.",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to resend code.";
+      setError(errorMessage);
+      toast({
+        title: "Failed to Resend Code",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -196,6 +232,13 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
           className="h-11"
         />
       </div>
+
+      {error && (
+        <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+          <AlertCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-200">{error}</span>
+        </div>
+      )}
       
       <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1">
@@ -247,6 +290,24 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
             <InputOTPSlot index={5} className="w-12 h-12 text-lg" />
           </InputOTPGroup>
         </InputOTP>
+      </div>
+
+      {error && (
+        <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+          <AlertCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-200">{error}</span>
+        </div>
+      )}
+
+      <div className="text-center">
+        <Button
+          variant="link"
+          onClick={handleResendOtp}
+          disabled={isLoading}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          Resend Code
+        </Button>
       </div>
       
       <div className="flex gap-3 pt-2">
@@ -309,6 +370,13 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
           </ul>
         </div>
       </div>
+
+      {error && (
+        <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+          <AlertCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-200">{error}</span>
+        </div>
+      )}
       
       <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={() => setStep('otp')} disabled={isLoading}>
