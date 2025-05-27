@@ -1,12 +1,11 @@
-
-import { apiRequest, API_BASE_URL } from '../services/apiConfig';
+import { apiRequest, API_BASE_URL } from "../services/apiConfig";
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem("authToken");
   return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   };
 };
 
@@ -30,12 +29,12 @@ export interface User {
     level: number;
   }>;
   stats?: {
-    gamesPlayed: number;
+    matches: number;
     wins: number;
     goals: number;
     assists: number;
     cleanSheets: number;
-    mvpScore: number;
+    mvp: number;
     interceptions: number;
   };
 }
@@ -43,20 +42,20 @@ export interface User {
 // Get user's profile
 export const getMyProfile = async () => {
   try {
-    const response = await apiRequest('/users/me', {
-      method: 'GET',
+    const response = await apiRequest("/users/me", {
+      method: "GET",
       headers: getAuthHeaders(),
     });
 
     const result = await response.json();
-    
-    if (result.status === 'success' && result.data?.user) {
+
+    if (result.status === "success" && result.data?.user) {
       return result;
     }
-    
-    throw new Error(result.message || 'Failed to fetch profile');
+
+    throw new Error(result.message || "Failed to fetch profile");
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error("Error fetching user profile:", error);
     throw error;
   }
 };
@@ -65,33 +64,36 @@ export const getMyProfile = async () => {
 export const getUserProfile = async (userId: string) => {
   try {
     const response = await apiRequest(`/users/${userId}`, {
-      method: 'GET',
+      method: "GET",
       headers: getAuthHeaders(),
     });
 
     const result = await response.json();
-    
-    if (result.status === 'success' && result.data?.user) {
+
+    if (result.status === "success" && result.data?.user) {
       return result;
     }
-    
-    throw new Error(result.message || 'Failed to fetch user profile');
+
+    throw new Error(result.message || "Failed to fetch user profile");
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error("Error fetching user profile:", error);
     throw error;
   }
 };
 
 // Update user's profile
-export const updateMyProfile = async (profileData: Partial<User>, profilePictureFile?: File) => {
+export const updateMyProfile = async (
+  profileData: Partial<User>,
+  profilePictureFile?: File
+) => {
   try {
     let response;
-    
+
     if (profilePictureFile) {
       // Use FormData for file upload
       const formData = new FormData();
-      formData.append('profilePicture', profilePictureFile);
-      
+      formData.append("profilePicture", profilePictureFile);
+
       // Add other profile data as individual form fields
       Object.entries(profileData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -100,16 +102,16 @@ export const updateMyProfile = async (profileData: Partial<User>, profilePicture
       });
 
       response = await fetch(`${API_BASE_URL}/users/me`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
         body: formData,
       });
     } else {
       // Regular JSON update
       response = await fetch(`${API_BASE_URL}/users/me`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(profileData),
       });
@@ -120,14 +122,14 @@ export const updateMyProfile = async (profileData: Partial<User>, profilePicture
     }
 
     const result = await response.json();
-    
-    if (result.status === 'success' && result.data?.user) {
+
+    if (result.status === "success" && result.data?.user) {
       return result;
     }
-    
-    throw new Error(result.message || 'Failed to update profile');
+
+    throw new Error(result.message || "Failed to update profile");
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    console.error("Error updating user profile:", error);
     throw error;
   }
 };
@@ -135,29 +137,29 @@ export const updateMyProfile = async (profileData: Partial<User>, profilePicture
 // FIXED: Delete user account and handle logout
 export const deleteMyAccount = async () => {
   try {
-    const response = await apiRequest('/users/me', {
-      method: 'DELETE',
+    const response = await apiRequest("/users/me", {
+      method: "DELETE",
       headers: getAuthHeaders(),
     });
 
     const result = await response.json();
-    
-    if (result.status === 'success') {
+
+    if (result.status === "success") {
       // Clear local storage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('isLoggedIn');
-      
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("isLoggedIn");
+
       // Dispatch logout event to notify navbar and other components
       window.dispatchEvent(new Event("userLoggedOut"));
-      
+
       return result;
     }
-    
-    throw new Error(result.message || 'Failed to delete account');
+
+    throw new Error(result.message || "Failed to delete account");
   } catch (error) {
-    console.error('Error deleting account:', error);
+    console.error("Error deleting account:", error);
     throw error;
   }
 };
@@ -176,20 +178,23 @@ export const transformUserToFrontend = (backendUser: User) => {
     bio: backendUser.bio,
     avatarUrl: backendUser.profilePicture,
     stats: {
-      gamesPlayed: backendUser.stats?.gamesPlayed || 0,
+      matches: backendUser.stats?.matches || 0,
       goalsScored: backendUser.stats?.goals || 0,
       assists: backendUser.stats?.assists || 0,
-      cleansheets: backendUser.stats?.cleanSheets || 0,
-      mvps: backendUser.stats?.mvpScore || 0,
+      cleanSheets: backendUser.stats?.cleanSheets || 0,
+      mvp: backendUser.stats?.mvp || 0,
       wins: backendUser.stats?.wins || 0,
-      losses: 0, // Calculate from total games if needed
-      draws: 0, // Calculate from total games if needed
+      losses: 0, // optional
+      draws: 0, // optional
       goals: backendUser.stats?.goals || 0,
-      matchesPlayed: backendUser.stats?.gamesPlayed || 0,
-      winPercentage: backendUser.stats?.gamesPlayed > 0 ? 
-        Math.round((backendUser.stats.wins / backendUser.stats.gamesPlayed) * 100) : 0,
-      interceptions: backendUser.stats?.interceptions || 0
-    }
+      winPercentage:
+        backendUser.stats?.matches > 0
+          ? Math.round(
+              (backendUser.stats.wins / backendUser.stats.matches) * 100
+            )
+          : 0,
+      interceptions: backendUser.stats?.interceptions || 0,
+    },
   };
 };
 
@@ -197,7 +202,7 @@ export const transformUserToFrontend = (backendUser: User) => {
 export const getMyBookings = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/reservations`, {
-      method: 'GET',
+      method: "GET",
       headers: getAuthHeaders(),
     });
 
@@ -206,25 +211,28 @@ export const getMyBookings = async () => {
     }
 
     const result = await response.json();
-    
-    if (result.status === 'success' && result.data?.reservations) {
+
+    if (result.status === "success" && result.data?.reservations) {
       // Filter reservations to show only those the user has joined
-      const userId = JSON.parse(localStorage.getItem('user') || '{}')._id;
-      const userReservations = result.data.reservations.filter((reservation: any) => 
-        reservation.currentPlayers.some((player: any) => player._id === userId)
+      const userId = JSON.parse(localStorage.getItem("user") || "{}")._id;
+      const userReservations = result.data.reservations.filter(
+        (reservation: any) =>
+          reservation.currentPlayers.some(
+            (player: any) => player._id === userId
+          )
       );
-      
+
       return {
-        status: 'success',
+        status: "success",
         data: {
-          reservations: userReservations
-        }
+          reservations: userReservations,
+        },
       };
     }
-    
-    throw new Error(result.message || 'Failed to fetch bookings');
+
+    throw new Error(result.message || "Failed to fetch bookings");
   } catch (error) {
-    console.error('Error fetching user bookings:', error);
+    console.error("Error fetching user bookings:", error);
     throw error;
   }
 };

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +8,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, UserPlus, AlertTriangle } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  UserPlus,
+  AlertTriangle,
+} from "lucide-react";
 import { Reservation } from "@/types/reservation";
 
 interface JoinWaitlistDialogProps {
@@ -25,7 +31,7 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
   onClose,
   onConfirm,
   reservation,
-  isLoading = false
+  isLoading = false,
 }) => {
   const waitlistPosition = (reservation.waitingList?.length || 0) + 1;
 
@@ -38,14 +44,17 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
             Join Waiting List
           </DialogTitle>
           <DialogDescription>
-            The game is full. Join the waiting list to be notified if a spot becomes available.
+            The game is full. Join the waiting list to be notified if a spot
+            becomes available.
           </DialogDescription>
         </DialogHeader>
 
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <AlertTriangle className="h-4 w-4 text-amber-600 mr-2" />
-            <span className="font-medium text-amber-800 dark:text-amber-200">Game is Full</span>
+            <span className="font-medium text-amber-800 dark:text-amber-200">
+              Game is Full
+            </span>
           </div>
           <p className="text-sm text-amber-700 dark:text-amber-300">
             You'll be position #{waitlistPosition} on the waiting list
@@ -56,7 +65,7 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
           <h3 className="font-semibold text-teal-700 dark:text-teal-400">
             {reservation.pitchName || reservation.title}
           </h3>
-          
+
           <div className="space-y-2 text-sm">
             <div className="flex items-center text-gray-600 dark:text-gray-400">
               <Calendar className="h-4 w-4 mr-2" />
@@ -72,7 +81,8 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
             </div>
             <div className="flex items-center text-gray-600 dark:text-gray-400">
               <Users className="h-4 w-4 mr-2" />
-              {reservation.playersJoined}/{reservation.maxPlayers + 2} players (FULL)
+              {reservation.playersJoined}/{reservation.maxPlayers} players
+              (FULL)
             </div>
           </div>
         </div>
@@ -81,8 +91,12 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={onConfirm} disabled={isLoading} className="bg-amber-600 hover:bg-amber-700">
-            {isLoading ? 'Joining...' : 'Join Waiting List'}
+          <Button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            {isLoading ? "Joining..." : "Join Waiting List"}
           </Button>
         </DialogFooter>
       </DialogContent>

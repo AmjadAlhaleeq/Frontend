@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,7 +16,7 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
   hasReservations,
 }) => {
   const today = new Date();
-  const minBookingDate = addDays(today, 5); // 5 days from today
+  const minBookingDate = addDays(today, 4); // 5 days from today
 
   const isDateDisabled = (checkDate: Date) => {
     return checkDate < minBookingDate;
@@ -30,14 +29,14 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
 
   const modifiersStyles = {
     hasReservations: {
-      backgroundColor: '#059669',
-      color: 'white',
-      fontWeight: 'bold',
+      backgroundColor: "#0f766e",
+      color: "white",
+      fontWeight: "bold",
     },
     disabled: {
-      color: '#d1d5db',
-      backgroundColor: '#f3f4f6',
-      cursor: 'not-allowed',
+      color: "#d1d5db",
+      backgroundColor: "#f3f4f6",
+      cursor: "not-allowed",
     },
   };
 

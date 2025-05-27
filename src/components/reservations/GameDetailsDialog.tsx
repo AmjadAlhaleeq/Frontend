@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import {
@@ -40,7 +39,11 @@ interface GameDetailsDialogProps {
   currentUserId: string;
   actualMaxPlayers: number;
   onKickPlayer?: (reservationId: number, playerId: string) => void;
-  onSuspendPlayer?: (playerId: string, suspensionDays: number, reason: string) => void;
+  onSuspendPlayer?: (
+    playerId: string,
+    suspensionDays: number,
+    reason: string
+  ) => void;
   pitchImage?: string;
   onPlayerClick?: (playerId: string, playerName?: string) => void;
 }
@@ -63,12 +66,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     isOpen: boolean;
     playerName: string;
     playerId: string;
-    action: 'kick' | 'suspend';
+    action: "kick" | "suspend";
   }>({
     isOpen: false,
     playerName: "",
     playerId: "",
-    action: 'kick'
+    action: "kick",
   });
 
   const currentPlayers = reservation.lineup?.length || 0;
@@ -99,7 +102,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       isOpen: true,
       playerName,
       playerId,
-      action: 'kick'
+      action: "kick",
     });
   };
 
@@ -108,17 +111,26 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       isOpen: true,
       playerName,
       playerId,
-      action: 'suspend'
+      action: "suspend",
     });
   };
 
-  const handleSuspensionConfirm = (playerId: string, suspensionDays: number, reason: string) => {
-    if (suspensionDialog.action === 'kick' && onKickPlayer) {
+  const handleSuspensionConfirm = (
+    playerId: string,
+    suspensionDays: number,
+    reason: string
+  ) => {
+    if (suspensionDialog.action === "kick" && onKickPlayer) {
       onKickPlayer(reservation.id, playerId);
-    } else if (suspensionDialog.action === 'suspend' && onSuspendPlayer) {
+    } else if (suspensionDialog.action === "suspend" && onSuspendPlayer) {
       onSuspendPlayer(playerId, suspensionDays, reason);
     }
-    setSuspensionDialog({ isOpen: false, playerName: "", playerId: "", action: 'kick' });
+    setSuspensionDialog({
+      isOpen: false,
+      playerName: "",
+      playerId: "",
+      action: "kick",
+    });
   };
 
   const handleAddPlayerFromWaitlist = (userId: string) => {
@@ -158,7 +170,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           </p>
         </div>
       </div>
-      
+
       {/* FIXED: Separate kick and suspend buttons for admin */}
       {isAdmin && player.userId !== currentUserId && (
         <div className="flex gap-2">
@@ -223,9 +235,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 )}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">
-                  {highlight.playerName}
-                </p>
+                <p className="font-medium text-sm">{highlight.playerName}</p>
                 <p className="text-xs text-muted-foreground">
                   {highlight.type.charAt(0).toUpperCase() +
                     highlight.type.slice(1)}
@@ -252,7 +262,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             <DialogTitle className="text-xl">
               {reservation.title || reservation.pitchName}
             </DialogTitle>
-            <DialogDescription>Game details and player lineup</DialogDescription>
+            <DialogDescription>
+              Game details and player lineup
+            </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="flex-1 pr-4">
@@ -265,7 +277,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = "https://source.unsplash.com/800x400/?football,pitch";
+                    target.src =
+                      "https://source.unsplash.com/800x400/?football,pitch";
                   }}
                 />
                 <div className="absolute top-4 right-4">
@@ -383,7 +396,14 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       {/* Suspension Dialog */}
       <PlayerSuspensionDialog
         isOpen={suspensionDialog.isOpen}
-        onClose={() => setSuspensionDialog({ isOpen: false, playerName: "", playerId: "", action: 'kick' })}
+        onClose={() =>
+          setSuspensionDialog({
+            isOpen: false,
+            playerName: "",
+            playerId: "",
+            action: "kick",
+          })
+        }
         playerName={suspensionDialog.playerName}
         playerId={suspensionDialog.playerId}
         onConfirm={handleSuspensionConfirm}

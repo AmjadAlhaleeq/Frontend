@@ -1,7 +1,11 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { getLeaderboardByType, LEADERBOARD_TYPES, LeaderboardPlayer, LeaderboardType } from '@/lib/leaderboardApi';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from "react";
+import {
+  getLeaderboardByType,
+  LEADERBOARD_TYPES,
+  LeaderboardPlayer,
+  LeaderboardType,
+} from "@/lib/leaderboardApi";
+import { useToast } from "@/hooks/use-toast";
 
 interface UseLeaderboardParams {
   sortBy?: LeaderboardType;
@@ -23,13 +27,15 @@ interface UseLeaderboardReturn {
   getPlayerById: (userId: string) => LeaderboardPlayer | undefined;
 }
 
-export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboardReturn => {
+export const useLeaderboard = (
+  params: UseLeaderboardParams = {}
+): UseLeaderboardReturn => {
   const {
     limit = 50,
-    sortBy = 'goals',
+    sortBy = "goals",
     autoRefresh = false,
     refreshInterval = 60000,
-    initialType = 'goals'
+    initialType = "goals",
   } = params;
 
   const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
@@ -39,44 +45,53 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
 
   const { toast } = useToast();
 
-  const fetchLeaderboard = useCallback(async (type: LeaderboardType = currentType) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchLeaderboard = useCallback(
+    async (type: LeaderboardType = currentType) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await getLeaderboardByType(type);
+        const response = await getLeaderboardByType(type);
 
-      if (response.success && response.data?.leaderboard) {
-        const { players: leaderboardPlayers } = response.data.leaderboard;
-        
-        // Apply limit if specified
-        const limitedPlayers = limit ? leaderboardPlayers.slice(0, limit) : leaderboardPlayers;
-        setPlayers(limitedPlayers);
-      } else {
-        throw new Error('Failed to fetch leaderboard');
+        if (response.success && response.data?.leaderboard) {
+          const { players: leaderboardPlayers } = response.data.leaderboard;
+
+          // Apply limit if specified
+          const limitedPlayers = limit
+            ? leaderboardPlayers.slice(0, limit)
+            : leaderboardPlayers;
+          setPlayers(limitedPlayers);
+        } else {
+          throw new Error("Failed to fetch leaderboard");
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error occurred";
+        setError(errorMessage);
+        setPlayers([]);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
-      setPlayers([]);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentType, limit, toast]);
+    },
+    [currentType, limit, toast]
+  );
 
   const refresh = useCallback(async () => {
     await fetchLeaderboard(currentType);
   }, [fetchLeaderboard, currentType]);
 
-  const updateSort = useCallback(async (newType: LeaderboardType) => {
-    setCurrentType(newType);
-    await fetchLeaderboard(newType);
-  }, [fetchLeaderboard]);
+  const updateSort = useCallback(
+    async (newType: LeaderboardType) => {
+      setCurrentType(newType);
+      await fetchLeaderboard(newType);
+    },
+    [fetchLeaderboard]
+  );
 
   // Initial load
   useEffect(() => {
@@ -96,8 +111,14 @@ export const useLeaderboard = (params: UseLeaderboardParams = {}): UseLeaderboar
 
   // Utility functions
   const getTotalPlayers = useCallback(() => players.length, [players]);
-  const getPlayerByRank = useCallback((rank: number) => players.find(p => p.rank === rank), [players]);
-  const getPlayerById = useCallback((userId: string) => players.find(p => p.userId === userId), [players]);
+  const getPlayerByRank = useCallback(
+    (rank: number) => players.find((p) => p.rank === rank),
+    [players]
+  );
+  const getPlayerById = useCallback(
+    (userId: string) => players.find((p) => p.userId === userId),
+    [players]
+  );
 
   return {
     players,

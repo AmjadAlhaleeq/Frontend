@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
 import { Reservation } from "@/types/reservation";
-import HighlightForm from "./HighlightForm";
+// import HighlightForm from "./HighlightForm";
 
 interface TransferReservationDialogProps {
   isOpen: boolean;
@@ -42,16 +41,16 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isGamePlayed) {
       // Update the reservation with game results
       updateReservation(reservation.id, {
-        summary: `Final Score: ${hometeamScore}-${awayteamScore}`
+        summary: `Final Score: ${hometeamScore}-${awayteamScore}`,
       });
-      
+
       // Mark as completed
       updateReservationStatus(reservation.id, "completed");
-      
+
       toast({
         title: "Game Completed",
         description: `The game has been marked as completed with a score of ${hometeamScore}-${awayteamScore}.`,
@@ -59,26 +58,29 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
     } else {
       // Mark as cancelled if game wasn't played
       updateReservationStatus(reservation.id, "cancelled");
-      
+
       toast({
         title: "Game Cancelled",
         description: "The game has been marked as cancelled.",
       });
     }
-    
+
     onClose();
   };
-  
+
   // Handle saving highlights
   const handleSaveHighlight = (highlight: any) => {
     // Create a new array of highlights
     const currentHighlights = reservation.highlights || [];
     const updatedHighlights = [...currentHighlights, highlight];
-    
+
     // Here we directly modify the reservation object to update the highlights
     // This is necessary since updateReservation doesn't accept highlights directly
-    const updatedReservation = { ...reservation, highlights: updatedHighlights };
-    
+    const updatedReservation = {
+      ...reservation,
+      highlights: updatedHighlights,
+    };
+
     // Use the updateReservation to save other fields, but we'll rely on the local state update for highlights
     updateReservation(reservation.id, {
       pitchName: updatedReservation.pitchName,
@@ -87,15 +89,15 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
       location: updatedReservation.location,
       maxPlayers: updatedReservation.maxPlayers,
     });
-    
+
     toast({
       title: "Highlight Added",
       description: `Added a new highlight for ${highlight.playerName}`,
     });
-    
+
     setShowHighlightForm(false);
   };
-  
+
   // Handle canceling highlight addition
   const handleCancelHighlight = () => {
     setShowHighlightForm(false);
@@ -110,20 +112,20 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
             Transfer this game to the past games list and add the final results.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="game-played"
                 checked={isGamePlayed}
-                onCheckedChange={(checked) => setIsGamePlayed(checked as boolean)}
+                onCheckedChange={(checked) =>
+                  setIsGamePlayed(checked as boolean)
+                }
               />
-              <Label htmlFor="game-played">
-                Game was played
-              </Label>
+              <Label htmlFor="game-played">Game was played</Label>
             </div>
-            
+
             {isGamePlayed && (
               <>
                 <div className="grid grid-cols-2 gap-4">
@@ -150,7 +152,7 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="mvp">MVP Player ID (optional)</Label>
                   <Input
@@ -160,9 +162,9 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
                     placeholder="Player ID of the MVP"
                   />
                 </div>
-                
+
                 {!showHighlightForm ? (
-                  <Button 
+                  <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowHighlightForm(true)}
@@ -172,27 +174,25 @@ const TransferReservationDialog: React.FC<TransferReservationDialogProps> = ({
                 ) : (
                   <div className="border rounded-lg p-4 mt-2">
                     <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-sm font-medium">Add Game Highlight</h4>
-                      <Button 
+                      <h4 className="text-sm font-medium">
+                        Add Game Highlight
+                      </h4>
+                      <Button
                         type="button"
-                        variant="ghost" 
+                        variant="ghost"
                         size="sm"
                         onClick={() => setShowHighlightForm(false)}
                       >
                         Done
                       </Button>
                     </div>
-                    <HighlightForm 
-                      reservationId={reservation.id}
-                      onSave={handleSaveHighlight}
-                      onCancel={handleCancelHighlight}
-                    />
+                    ""
                   </div>
                 )}
               </>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel

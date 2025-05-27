@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +24,7 @@ const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
   onClose,
   onConfirm,
   reservation,
-  isLoading = false
+  isLoading = false,
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -44,7 +43,7 @@ const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
           <h3 className="font-semibold text-teal-700 dark:text-teal-400">
             {reservation.pitchName || reservation.title}
           </h3>
-          
+
           <div className="space-y-2 text-sm">
             <div className="flex items-center text-gray-600 dark:text-gray-400">
               <Calendar className="h-4 w-4 mr-2" />
@@ -60,7 +59,7 @@ const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
             </div>
             <div className="flex items-center text-gray-600 dark:text-gray-400">
               <Users className="h-4 w-4 mr-2" />
-              {reservation.playersJoined}/{reservation.maxPlayers + 2} players
+              {reservation.playersJoined}/{reservation.maxPlayers} players
             </div>
           </div>
         </div>
@@ -69,8 +68,12 @@ const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={onConfirm} disabled={isLoading} className="bg-green-600 hover:bg-green-700">
-            {isLoading ? 'Joining...' : 'Join Game'}
+          <Button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isLoading ? "Joining..." : "Join Game"}
           </Button>
         </DialogFooter>
       </DialogContent>

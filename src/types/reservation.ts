@@ -1,4 +1,3 @@
-
 export interface Player {
   userId: string;
   name: string;
@@ -10,21 +9,18 @@ export interface Player {
 
 export interface UserStats {
   wins: number;
-  losses: number;
-  draws: number;
+  interceptions: number;
   goals: number;
   assists: number;
-  matchesPlayed: number;
+  matches: number;
   winPercentage: number;
-  gamesPlayed: number;
-  goalsScored: number;
-  cleansheets: number;
-  mvps: number;
+  cleanSheets: number;
+  mvp: number;
 }
 
 export interface Highlight {
   id: string;
-  type: 'goal' | 'assist' | 'save' | 'tackle' | 'mvp' | 'cleanSheet';
+  type: "goal" | "assist" | "save" | "tackle" | "mvp" | "cleanSheet";
   playerId: string;
   playerName: string;
   minute: number;
@@ -73,6 +69,13 @@ export interface Reservation {
   imageUrl?: string;
   playersJoined?: number;
   highlights?: Highlight[];
-  summary?: string | { homeScore: number; awayScore: number; completed: boolean; completedAt: string };
+  summary?:
+    | string
+    | {
+        homeScore: number;
+        awayScore: number;
+        completed: boolean;
+        completedAt: string;
+      };
   additionalImages?: string[];
 }

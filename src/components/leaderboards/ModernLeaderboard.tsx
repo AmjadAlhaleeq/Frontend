@@ -1,21 +1,20 @@
-
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Trophy, 
-  Medal, 
-  Award, 
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Trophy,
+  Medal,
+  Award,
   Target,
   Users,
   Crown,
   Gamepad2,
   Shield,
-  Zap
-} from 'lucide-react';
-import { LeaderboardPlayer, LeaderboardType } from '@/lib/leaderboardApi';
-import LeaderboardSkeleton from '@/components/ui/leaderboard-skeleton';
+  Zap,
+} from "lucide-react";
+import { LeaderboardPlayer, LeaderboardType } from "@/lib/leaderboardApi";
+import LeaderboardSkeleton from "@/components/ui/leaderboard-skeleton";
 
 interface ModernLeaderboardProps {
   players: LeaderboardPlayer[];
@@ -33,12 +32,12 @@ interface ModernLeaderboardProps {
   onPlayerClick?: (playerId: string) => void;
 }
 
-const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({ 
-  players = [], 
-  loading = false, 
-  currentType = 'goals',
+const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
+  players = [],
+  loading = false,
+  currentType = "goals",
   typeConfig = {},
-  onPlayerClick
+  onPlayerClick,
 }) => {
   // Get rank icon based on position
   const getRankIcon = (rank: number) => {
@@ -63,17 +62,17 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
   // Get stat icon based on type
   const getStatIcon = (type: LeaderboardType) => {
     switch (type) {
-      case 'goals':
+      case "goals":
         return <Target className="h-5 w-5" />;
-      case 'assists':
+      case "assists":
         return <Users className="h-5 w-5" />;
-      case 'wins':
+      case "wins":
         return <Trophy className="h-5 w-5" />;
-      case 'mvp':
+      case "mvp":
         return <Award className="h-5 w-5" />;
-      case 'interceptions':
+      case "interceptions":
         return <Zap className="h-5 w-5" />;
-      case 'cleanSheets':
+      case "cleanSheets":
         return <Shield className="h-5 w-5" />;
       default:
         return <Award className="h-5 w-5" />;
@@ -81,53 +80,74 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
   };
 
   // Format stat value and description based on type
-  const formatStatValue = (player: LeaderboardPlayer, type: LeaderboardType) => {
+  const formatStatValue = (
+    player: LeaderboardPlayer,
+    type: LeaderboardType
+  ) => {
     const { statValue, matches } = player;
-    
+
     switch (type) {
-      case 'goals':
+      case "goals":
         return {
           main: statValue,
-          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+          sub:
+            matches > 0
+              ? `${(statValue / matches).toFixed(1)} per game`
+              : "0.0 per game",
         };
-      case 'assists':
+      case "assists":
         return {
           main: statValue,
-          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+          sub:
+            matches > 0
+              ? `${(statValue / matches).toFixed(1)} per game`
+              : "0.0 per game",
         };
-      case 'wins':
+      case "wins":
         return {
           main: statValue,
-          sub: matches > 0 ? `${((statValue / matches) * 100).toFixed(1)}% win rate` : '0% win rate'
+          sub:
+            matches > 0
+              ? `${((statValue / matches) * 100).toFixed(1)}% win rate`
+              : "0% win rate",
         };
-      case 'mvp':
+      case "mvp":
         return {
           main: statValue,
-          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+          sub:
+            matches > 0
+              ? `${(statValue / matches).toFixed(1)} per game`
+              : "0.0 per game",
         };
-      case 'interceptions':
+      case "interceptions":
         return {
           main: statValue,
-          sub: matches > 0 ? `${(statValue / matches).toFixed(1)} per game` : '0.0 per game'
+          sub:
+            matches > 0
+              ? `${(statValue / matches).toFixed(1)} per game`
+              : "0.0 per game",
         };
-      case 'cleanSheets':
+      case "cleanSheets":
         return {
           main: statValue,
-          sub: matches > 0 ? `${((statValue / matches) * 100).toFixed(1)}% clean sheet rate` : '0% clean sheet rate'
+          sub:
+            matches > 0
+              ? `${((statValue / matches) * 100).toFixed(1)}% clean sheet rate`
+              : "0% clean sheet rate",
         };
       default:
         return {
           main: statValue,
-          sub: `${matches} matches`
+          sub: `${matches} matches`,
         };
     }
   };
 
   // Get player initials for avatar fallback
   const getPlayerInitials = (player: LeaderboardPlayer) => {
-    const first = player.firstName || '';
-    const last = player.lastName || '';
-    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || 'U';
+    const first = player.firstName || "";
+    const last = player.lastName || "";
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "U";
   };
 
   if (loading) {
@@ -145,7 +165,8 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
             No Data Available
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            No players found for the {currentType.replace('_', ' ')} leaderboard.
+            No players found for the {currentType.replace("_", " ")}{" "}
+            leaderboard.
           </p>
         </CardContent>
       </Card>
@@ -157,38 +178,38 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
       {players.map((player, index) => {
         const stats = formatStatValue(player, currentType);
         const isTopThree = player.rank <= 3;
-        
+
         // Define card styling based on rank
         const getCardStyling = (rank: number) => {
           switch (rank) {
             case 1:
-              return 'border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-500';
+              return "border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-500";
             case 2:
-              return 'border-2 border-gray-400 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/20 dark:border-gray-400';
+              return "border-2 border-gray-400 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/20 dark:border-gray-400";
             case 3:
-              return 'border-2 border-amber-600 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:border-amber-600';
+              return "border-2 border-amber-600 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:border-amber-600";
             default:
-              return '';
+              return "";
           }
         };
-        
+
         return (
           <Card
             key={player.userId}
-            className={`transition-all duration-200 hover:shadow-md cursor-pointer ${getCardStyling(player.rank)}`}
+            className={`transition-all duration-200 hover:shadow-md cursor-pointer ${getCardStyling(
+              player.rank
+            )}`}
             onClick={() => onPlayerClick?.(player.userId)}
           >
             <CardContent className="p-4">
               <div className="flex items-center space-x-4">
                 {/* Rank */}
-                <div className="flex-shrink-0">
-                  {getRankIcon(player.rank)}
-                </div>
+                <div className="flex-shrink-0">{getRankIcon(player.rank)}</div>
 
                 {/* Avatar */}
                 <Avatar className="h-12 w-12">
-                  <AvatarImage 
-                    src={player.profilePicture || player.avatar} 
+                  <AvatarImage
+                    src={player.profilePicture || player.avatar}
                     alt={player.name}
                   />
                   <AvatarFallback className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-semibold">
@@ -200,15 +221,17 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {player.name || 'Unknown Player'}
+                      {player.name || "Unknown Player"}
                     </h3>
                     {isTopThree && (
-                      <Badge 
-                        variant="secondary" 
+                      <Badge
+                        variant="secondary"
                         className={`text-xs ${
-                          player.rank === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
-                          player.rank === 2 ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' :
-                          'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                          player.rank === 1
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                            : player.rank === 2
+                            ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
                         }`}
                       >
                         #{player.rank}
@@ -233,7 +256,7 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
                     <span>{stats.main}</span>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {currentType.replace('_', ' ')}
+                    {currentType.replace("_", " ")}
                   </div>
                 </div>
               </div>

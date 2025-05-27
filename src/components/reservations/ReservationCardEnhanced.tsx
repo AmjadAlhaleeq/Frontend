@@ -1,14 +1,24 @@
-
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Users, UserPlus, UserMinus, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
-import { Reservation } from '@/types/reservation';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  UserPlus,
+  UserMinus,
+  Trash2,
+  Eye,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
+import { Reservation } from "@/types/reservation";
+import { cn } from "@/lib/utils";
 
 interface ReservationCardEnhancedProps {
   reservation: Reservation;
-  userRole: 'admin' | 'player' | null;
+  userRole: "admin" | "player" | null;
   currentUserId: string;
   isUserJoined: boolean;
   isUserInWaitlist: boolean;
@@ -39,10 +49,13 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   onDeleteReservation,
   onCompleteGame,
   onAddSummary,
-  pitchImage
+  pitchImage,
 }) => {
-  const isCompleted = reservation.status === 'completed';
-  const hasGameSummary = reservation.summary && typeof reservation.summary === 'object' && (reservation.summary as any)?.completed;
+  const isCompleted = reservation.status === "completed";
+  const hasGameSummary =
+    reservation.summary &&
+    typeof reservation.summary === "object" &&
+    (reservation.summary as any)?.completed;
 
   const getStatusBadge = () => {
     if (isCompleted) {
@@ -55,7 +68,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   };
 
   const renderPlayerActions = () => {
-    if (userRole === 'admin' || !currentUserId) return null;
+    if (userRole === "admin" || !currentUserId) return null;
 
     if (isUserJoined) {
       return (
@@ -112,7 +125,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   };
 
   const renderAdminActions = () => {
-    if (userRole !== 'admin') return null;
+    if (userRole !== "admin") return null;
 
     return (
       <div className="flex flex-wrap gap-2 mt-3">
@@ -137,7 +150,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
             </Button>
           </>
         )}
-        
+
         {isCompleted && !hasGameSummary && (
           <Button
             size="sm"
@@ -153,7 +166,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "bg-white dark:bg-gray-800 rounded-lg shadow-md border p-4 hover:shadow-lg transition-all duration-200",
         isCompleted && "border-blue-200 bg-blue-50 dark:bg-blue-900/20"
@@ -162,8 +175,8 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
       {/* Pitch Image */}
       {pitchImage && (
         <div className="h-32 w-full rounded-md overflow-hidden mb-4">
-          <img 
-            src={pitchImage} 
+          <img
+            src={pitchImage}
             alt={reservation.pitchName || reservation.title}
             className="w-full h-full object-cover"
           />
@@ -194,7 +207,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
         </div>
         <div className="flex items-center text-gray-600 dark:text-gray-400">
           <Users className="h-4 w-4 mr-2" />
-          {reservation.playersJoined}/{reservation.maxPlayers + 2} players
+          {reservation.playersJoined}/{reservation.maxPlayers} players
           {reservation.waitingList && reservation.waitingList.length > 0 && (
             <span className="ml-2 text-amber-600">
               (+{reservation.waitingList.length} waiting)
@@ -205,18 +218,12 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
 
       {/* Actions */}
       <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onViewDetails}
-        >
+        <Button variant="outline" size="sm" onClick={onViewDetails}>
           <Eye className="h-4 w-4 mr-1" />
           View Details
         </Button>
-        
-        <div className="flex gap-2">
-          {renderPlayerActions()}
-        </div>
+
+        <div className="flex gap-2">{renderPlayerActions()}</div>
       </div>
 
       {/* Admin Actions */}

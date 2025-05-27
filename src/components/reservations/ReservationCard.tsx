@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +56,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when clicking on buttons
-    if ((e.target as HTMLElement).closest('button')) {
+    if ((e.target as HTMLElement).closest("button")) {
       e.stopPropagation();
       return;
     }
@@ -82,10 +81,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   const isJoined = isUserLoggedIn && isUserJoined(reservation.id, userId);
-  const isInWaitingList = isUserLoggedIn && reservation.waitingList?.includes(userId);
+  const isInWaitingList =
+    isUserLoggedIn && reservation.waitingList?.includes(userId);
   const currentPlayers = reservation.lineup?.length || 0;
   // Use actualMaxPlayers from prop, not hardcoded
-  const actualMaxPlayers = reservation.maxPlayers + 2;
+  const actualMaxPlayers = reservation.maxPlayers;
   const gameIsFull = currentPlayers >= actualMaxPlayers;
   const waitingListCount = reservation.waitingList?.length || 0;
 
@@ -105,14 +105,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const getCardImage = () => {
     if (pitchImage) return pitchImage;
     if (reservation.backgroundImage) return reservation.backgroundImage;
-    return `https://source.unsplash.com/400x200/?football,pitch,${encodeURIComponent(reservation.pitchName || 'football').split(" ").join(",")}`;
+    return `https://source.unsplash.com/400x200/?football,pitch,${encodeURIComponent(
+      reservation.pitchName || "football"
+    )
+      .split(" ")
+      .join(",")}`;
   };
 
   const renderActionButtons = () => {
     if (!isUserLoggedIn) {
       return (
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onJoin(reservation.id);
@@ -125,12 +129,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    if (userRole === 'admin') {
+    if (userRole === "admin") {
       return (
         <div className="flex gap-2 w-full">
-          {reservation.status === 'completed' && onAddSummary && (
-            <Button 
-              size="sm" 
+          {reservation.status === "completed" && onAddSummary && (
+            <Button
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddSummary(reservation);
@@ -142,9 +146,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               Add Summary
             </Button>
           )}
-          {reservation.status === 'upcoming' && onDeleteReservation && (
-            <Button 
-              size="sm" 
+          {reservation.status === "upcoming" && onDeleteReservation && (
+            <Button
+              size="sm"
               variant="destructive"
               onClick={handleDelete}
               className="flex-1 w-full"
@@ -165,8 +169,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           <Badge className="bg-green-100 text-green-800 border-green-200">
             Joined
           </Badge>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
@@ -184,11 +188,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     if (isInWaitingList) {
       return (
         <div className="flex gap-2 items-center w-full">
-          <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">
-            Waiting List #{reservation.waitingList?.indexOf(userId)! + 1}
+          <Badge
+            variant="outline"
+            className="border-amber-500 text-amber-600 bg-amber-50"
+          >
+            Waiting List #
+            {reservation.waitingList &&
+            reservation.waitingList.indexOf(userId) !== -1
+              ? reservation.waitingList.indexOf(userId) + 1
+              : "?"}
           </Badge>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
@@ -206,8 +217,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // FIXED: Only show waiting list button when game is actually full
     if (gameIsFull && canJoinWaitingList) {
       return (
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           variant="outline"
           onClick={(e) => {
             e.stopPropagation();
@@ -224,8 +235,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     // Show regular join button if game is not full
     if (!gameIsFull) {
       return (
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onJoin(reservation.id);
@@ -242,13 +253,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     return (
       <div className="flex items-center gap-2 w-full">
         <Badge variant="destructive">Full</Badge>
-        <span className="text-sm text-muted-foreground">No spots available</span>
+        <span className="text-sm text-muted-foreground">
+          No spots available
+        </span>
       </div>
     );
   };
 
   return (
-    <Card 
+    <Card
       className="hover:shadow-lg transition-all duration-300 cursor-pointer border-l-4 border-l-teal-500"
       onClick={handleCardClick}
     >
@@ -263,14 +276,17 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           }}
         />
         <div className="absolute top-2 right-2">
-          <Badge 
+          <Badge
             className={`${
-              reservation.status === 'upcoming' ? 'bg-green-500' : 
-              reservation.status === 'completed' ? 'bg-blue-500' :
-              'bg-red-500'
+              reservation.status === "upcoming"
+                ? "bg-green-500"
+                : reservation.status === "completed"
+                ? "bg-blue-500"
+                : "bg-red-500"
             }`}
           >
-            {(reservation.status || 'upcoming').charAt(0).toUpperCase() + (reservation.status || 'upcoming').slice(1)}
+            {(reservation.status || "upcoming").charAt(0).toUpperCase() +
+              (reservation.status || "upcoming").slice(1)}
           </Badge>
         </div>
         {gameIsFull && (
@@ -303,7 +319,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
               <span>
-                {reservation.startTime && reservation.endTime 
+                {reservation.startTime && reservation.endTime
                   ? `${reservation.startTime} - ${reservation.endTime}`
                   : reservation.time || "Time TBD"}
               </span>
