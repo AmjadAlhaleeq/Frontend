@@ -24,7 +24,7 @@ export interface UserStats {
 
 export interface Highlight {
   id: string;
-  type: 'goal' | 'assist' | 'save' | 'tackle';
+  type: 'goal' | 'assist' | 'save' | 'tackle' | 'mvp' | 'cleanSheet';
   playerId: string;
   playerName: string;
   minute: number;
