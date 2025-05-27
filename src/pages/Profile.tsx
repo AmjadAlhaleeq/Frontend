@@ -101,6 +101,48 @@ const Profile = () => {
     fetchUserProfile();
   }, [toast, navigate]);
 
+  // Helper function to get badge color based on level
+  const getBadgeColors = (level: number) => {
+    switch (level) {
+      case 1:
+        return {
+          bg: "from-amber-50 to-orange-50",
+          border: "border-amber-200 hover:border-amber-300",
+          icon: "bg-amber-100 group-hover:bg-amber-200",
+          iconColor: "text-amber-600",
+          text: "text-amber-800",
+          badgeBg: "bg-amber-100"
+        };
+      case 2:
+        return {
+          bg: "from-gray-50 to-slate-50",
+          border: "border-gray-300 hover:border-gray-400",
+          icon: "bg-gray-200 group-hover:bg-gray-300",
+          iconColor: "text-gray-600",
+          text: "text-gray-800",
+          badgeBg: "bg-gray-200"
+        };
+      case 3:
+        return {
+          bg: "from-yellow-50 to-amber-50",
+          border: "border-yellow-300 hover:border-yellow-400",
+          icon: "bg-yellow-200 group-hover:bg-yellow-300",
+          iconColor: "text-yellow-700",
+          text: "text-yellow-800",
+          badgeBg: "bg-yellow-200"
+        };
+      default:
+        return {
+          bg: "from-amber-50 to-orange-50",
+          border: "border-amber-200 hover:border-amber-300",
+          icon: "bg-amber-100 group-hover:bg-amber-200",
+          iconColor: "text-amber-600",
+          text: "text-amber-800",
+          badgeBg: "bg-amber-100"
+        };
+    }
+  };
+
   // Handle profile update from editor
   const handleProfileUpdate = async (
     updatedData: any,
@@ -421,31 +463,37 @@ const Profile = () => {
               <CardContent>
                 {backendUser?.badges && backendUser.badges.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {backendUser.badges.map((badge) => (
-                      <div
-                        key={badge._id}
-                        className="group p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 hover:border-amber-300 hover:scale-105 transition-all duration-200 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                            <Award className="h-6 w-6 text-amber-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 truncate">
-                              {badge.name}
-                            </h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {badge.description}
-                            </p>
-                            <div className="mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                Level {badge.level}
-                              </span>
+                    {backendUser.badges.map((badge) => {
+                      const colors = getBadgeColors(badge.level);
+                      return (
+                        <div
+                          key={badge._id}
+                          className={`group p-4 bg-gradient-to-r ${colors.bg} rounded-xl border ${colors.border} hover:scale-105 transition-all duration-200 cursor-pointer`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`flex-shrink-0 w-12 h-12 ${colors.icon} rounded-full flex items-center justify-center transition-colors`}>
+                              <Award className={`h-6 w-6 ${colors.iconColor}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate">
+                                {badge.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {badge.description}
+                              </p>
+                              <div className="mt-2">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colors.badgeBg} ${colors.text}`}>
+                                  {badge.level === 1 && "🥉 Bronze"}
+                                  {badge.level === 2 && "🥈 Silver"}
+                                  {badge.level === 3 && "🥇 Gold"}
+                                  {badge.level > 3 && `Level ${badge.level}`}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12">

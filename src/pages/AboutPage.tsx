@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -145,19 +146,22 @@ const AboutPage = () => {
         </p>
         <div className="grid md:grid-cols-3 gap-8">
           <TeamMemberCard
-            name="Alex Johnson"
-            role="Founder & CEO"
-            image="https://randomuser.me/api/portraits/men/32.jpg"
+            name="Mohammed Alassi"
+            role="Backend Developer"
+            image="/lovable-uploads/2e0ce39d-1fbe-42e1-b487-c8b0cf101a8c.png"
+            description="Responsible for all backend development, including setting up the server, creating APIs, handling database operations, and ensuring secure and efficient data flow."
           />
           <TeamMemberCard
-            name="Sarah Williams"
-            role="Lead Developer"
-            image="https://randomuser.me/api/portraits/women/44.jpg"
+            name="Osama Abbadi"
+            role="Frontend Developer & UI/UX Designer"
+            image="/lovable-uploads/11003c1a-89df-4858-9bfb-b0340362cd87.png"
+            description="Focuses on designing the user interface and enhancing user experience. Works on implementing layouts, managing local storage, and connecting the frontend to backend services."
           />
           <TeamMemberCard
-            name="Michael Chen"
-            role="Head of Operations"
-            image="https://randomuser.me/api/portraits/men/52.jpg"
+            name="Amjad Alhalleeq"
+            role="Full Stack Developer"
+            image="/lovable-uploads/801c7456-11c0-4592-88c8-1c7ff69fdde6.png"
+            description="Handles development of interactive and reusable UI components. Works closely with Osama to integrate frontend logic with backend APIs, ensuring smooth data interaction."
           />
         </div>
       </div>
@@ -177,13 +181,14 @@ const FeatureCard = ({ icon, title, description }) => (
   </Card>
 );
 
-const TeamMemberCard = ({ name, role, image }) => (
-  <div className="text-center">
-    <div className="w-32 h-32 mx-auto mb-4 overflow-hidden rounded-full">
+const TeamMemberCard = ({ name, role, image, description }) => (
+  <div className="text-center bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+    <div className="w-32 h-32 mx-auto mb-4 overflow-hidden rounded-full border-4 border-[#0F766E]/20">
       <img src={image} alt={name} className="w-full h-full object-cover" />
     </div>
-    <h3 className="text-lg font-medium">{name}</h3>
-    <p className="text-gray-600">{role}</p>
+    <h3 className="text-lg font-bold text-gray-900 mb-1">{name}</h3>
+    <p className="text-[#0F766E] font-medium mb-3">{role}</p>
+    <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
   </div>
 );
 

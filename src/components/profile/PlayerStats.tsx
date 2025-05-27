@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserStats } from "@/types/reservation";
@@ -10,6 +11,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Zap,
+  Award,
 } from "lucide-react";
 
 interface PlayerStatsProps {
@@ -93,100 +95,120 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
         </div>
 
         <div className="p-8">
-          {/* Primary Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-            <div className="group relative p-6 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl border border-teal-100 hover:border-teal-200 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-between mb-3">
-                <Target
-                  className="h-6 w-6 group-hover:scale-110 transition-transform duration-200"
-                  style={{ color: "#0f766e" }}
-                />
-                <div
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: "#0f766e" }}
-                ></div>
+          {/* Primary Stats - Top Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div className="group relative p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 hover:border-green-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-4">
+                <Target className="h-8 w-8 text-white" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {isLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
-                ) : (
-                  <span style={{ color: "#0f766e" }}>{stats.goals || 0}</span>
-                )}
-              </div>
-              <div className="text-sm font-medium text-gray-700">
-                Goals Scored
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Find the back of the net
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.goals || 0
+                  )}
+                </div>
+                <div className="text-sm font-medium text-green-600">Goals</div>
               </div>
             </div>
 
-            <div className="group relative p-6 bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-between mb-3">
-                <Users className="h-6 w-6 text-slate-600 group-hover:scale-110 transition-transform duration-200" />
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
+            <div className="group relative p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 hover:border-blue-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mx-auto mb-4">
+                <Zap className="h-8 w-8 text-white" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {isLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
-                ) : (
-                  <span className="text-slate-700">{stats.assists || 0}</span>
-                )}
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.assists || 0
+                  )}
+                </div>
+                <div className="text-sm font-medium text-blue-600">Assists</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Assists</div>
-              <div className="text-xs text-gray-500 mt-1">Team player</div>
             </div>
 
-            <div className="group relative p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100 hover:border-amber-200 transition-all duration-200 hover:scale-105 cursor-pointer md:col-span-1 col-span-2">
-              <div className="flex items-center justify-between mb-3">
-                <Trophy className="h-6 w-6 text-amber-600 group-hover:scale-110 transition-transform duration-200" />
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+            <div className="group relative p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 hover:border-purple-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full mx-auto mb-4">
+                <Award className="h-8 w-8 text-white" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {isLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
-                ) : (
-                  <span className="text-amber-600">{stats.mvp || 0}</span>
-                )}
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.mvp || 0
+                  )}
+                </div>
+                <div className="text-sm font-medium text-purple-600">MVP</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">
-                MVP Awards
+            </div>
+
+            <div className="group relative p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200 hover:border-yellow-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full mx-auto mb-4">
+                <Trophy className="h-8 w-8 text-white" />
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Outstanding performances
+              <div className="text-center">
+                <div className="text-3xl font-bold text-yellow-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    winPercentage
+                  )}%
+                </div>
+                <div className="text-sm font-medium text-yellow-600">Win Rate</div>
               </div>
             </div>
           </div>
 
-          {/* Secondary Stats Row */}
-          <div className="flex justify-center mb-8">
-            <div className="flex gap-8 p-6 bg-gray-50 rounded-2xl">
-              <div className="text-center group hover:scale-105 transition-transform duration-200">
-                <div className="flex items-center justify-center w-12 h-12 bg-teal-100 rounded-full mb-2 group-hover:bg-teal-200 transition-colors">
-                  <Star className="h-5 w-5" style={{ color: "#0f766e" }} />
-                </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {isLoading ? "..." : stats.wins || 0}
-                </div>
-                <div className="text-xs text-gray-600">Wins</div>
+          {/* Secondary Stats Row - Bottom Row */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="group relative p-6 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl border border-teal-200 hover:border-teal-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full mx-auto mb-4">
+                <Star className="h-8 w-8 text-white" />
               </div>
-              <div className="text-center group hover:scale-105 transition-transform duration-200">
-                <div className="flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full mb-2 group-hover:bg-slate-200 transition-colors">
-                  <ShieldCheck className="h-5 w-5 text-slate-600" />
+              <div className="text-center">
+                <div className="text-3xl font-bold text-teal-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.wins || 0
+                  )}
                 </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {isLoading ? "..." : stats.cleanSheets || 0}
-                </div>
-                <div className="text-xs text-gray-600">Clean Sheets</div>
+                <div className="text-sm font-medium text-teal-600">Wins</div>
               </div>
-              <div className="text-center group hover:scale-105 transition-transform duration-200">
-                <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-2 group-hover:bg-gray-200 transition-colors">
-                  <TrendingUp className="h-5 w-5 text-gray-600" />
+            </div>
+
+            <div className="group relative p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full mx-auto mb-4">
+                <ShieldCheck className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-slate-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.cleanSheets || 0
+                  )}
                 </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {isLoading ? "..." : stats.interceptions || 0}
+                <div className="text-sm font-medium text-slate-600">Clean Sheets</div>
+              </div>
+            </div>
+
+            <div className="group relative p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl border border-indigo-200 hover:border-indigo-300 transition-all duration-200 hover:scale-105 cursor-pointer">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-indigo-700 mb-1">
+                  {isLoading ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
+                  ) : (
+                    stats.interceptions || 0
+                  )}
                 </div>
-                <div className="text-xs text-gray-600">Interceptions</div>
+                <div className="text-sm font-medium text-indigo-600">Interceptions</div>
               </div>
             </div>
           </div>
