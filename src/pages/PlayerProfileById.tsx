@@ -19,6 +19,8 @@ import {
   AlertTriangle,
   Loader,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { usePlayerProfile, BackendUserProfile } from "@/hooks/usePlayerProfile";
 import BadgeDisplay from "@/components/profile/BadgeDisplay";
@@ -57,6 +59,9 @@ const PlayerProfileById: React.FC = () => {
 
   const isAdmin = userRole === 'admin';
   const isOwnProfile = currentUserId === playerId;
+
+  // Determine if contact info should be shown
+  const shouldShowContactInfo = isAdmin || isOwnProfile;
 
   // Check if user is suspended
   const isSuspended = profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
@@ -172,16 +177,31 @@ const PlayerProfileById: React.FC = () => {
             </div>
           </div>
 
-          {/* Role Badge */}
-          <div className="text-right">
+          {/* Role Badge and Access Indicator */}
+          <div className="text-right space-y-2">
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               {profile.role === 'admin' ? 'Admin' : 'Player'}
             </Badge>
+            {!isOwnProfile && (
+              <div className="flex items-center gap-1 text-xs text-blue-100">
+                {shouldShowContactInfo ? (
+                  <>
+                    <Eye className="h-3 w-3" />
+                    Full Access
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3 w-3" />
+                    Public View
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Suspension Warning */}
-        {isSuspended && (isAdmin || isOwnProfile) && (
+        {isSuspended && shouldShowContactInfo && (
           <div className="mt-4 p-3 bg-red-500/20 border border-red-300/30 rounded-lg backdrop-blur-sm">
             <div className="flex items-center gap-2 text-red-100">
               <AlertTriangle className="h-4 w-4" />
@@ -226,12 +246,23 @@ const PlayerProfileById: React.FC = () => {
 
         {/* Right Column - Info */}
         <div className="space-y-8">
-          {/* Contact Info */}
+          {/* Contact/Public Info */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="h-5 w-5 text-gray-600" />
-              {isAdmin || isOwnProfile ? 'Contact Info' : 'Public Info'}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5 text-gray-600" />
+                {shouldShowContactInfo ? 'Contact Information' : 'Public Information'}
+              </h3>
+              {!isOwnProfile && (
+                <Badge 
+                  variant={shouldShowContactInfo ? "default" : "secondary"}
+                  className="text-xs"
+                >
+                  {shouldShowContactInfo ? "Full Access" : "Limited View"}
+                </Badge>
+              )}
+            </div>
+            
             <div className="space-y-4">
               {/* Always show public info */}
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -242,29 +273,53 @@ const PlayerProfileById: React.FC = () => {
                 </div>
               </div>
 
-              {/* Show private info only to admin or own profile */}
-              {(isAdmin || isOwnProfile) && (
+              {/* Conditional contact information */}
+              {shouldShowContactInfo ? (
                 <>
-                  {profile.email && (
+                  {profile.email ? (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <Mail className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <div className="text-sm text-blue-600 font-medium">Email</div>
+                        <div className="font-medium text-gray-900">{profile.email}</div>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Mail className="h-4 w-4 text-gray-500" />
+                      <Mail className="h-4 w-4 text-gray-400" />
                       <div>
                         <div className="text-sm text-gray-500">Email</div>
-                        <div className="font-medium">{profile.email}</div>
+                        <div className="text-gray-400 italic">Not provided</div>
                       </div>
                     </div>
                   )}
                   
-                  {profile.phone && (
+                  {profile.phone ? (
+                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <Phone className="h-4 w-4 text-green-500" />
+                      <div>
+                        <div className="text-sm text-green-600 font-medium">Phone</div>
+                        <div className="font-medium text-gray-900">{profile.phone}</div>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Phone className="h-4 w-4 text-gray-500" />
+                      <Phone className="h-4 w-4 text-gray-400" />
                       <div>
                         <div className="text-sm text-gray-500">Phone</div>
-                        <div className="font-medium">{profile.phone}</div>
+                        <div className="text-gray-400 italic">Not provided</div>
                       </div>
                     </div>
                   )}
                 </>
+              ) : (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                  <EyeOff className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-sm text-amber-700 font-medium">Private Information</p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Contact details are only visible to admins and the profile owner
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -274,6 +329,29 @@ const PlayerProfileById: React.FC = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-6">
               <h3 className="text-xl font-semibold text-gray-900 mb-4">About</h3>
               <p className="text-gray-700 leading-relaxed">{profile.bio}</p>
+            </div>
+          )}
+
+          {/* Access Level Info */}
+          {!isOwnProfile && (
+            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-slate-600" />
+                Viewing Permissions
+              </h3>
+              <div className="text-sm text-slate-600 space-y-2">
+                <p>
+                  <strong>Your Role:</strong> {userRole === 'admin' ? 'Administrator' : 'Player'}
+                </p>
+                <p>
+                  <strong>Access Level:</strong> {shouldShowContactInfo ? 'Full Profile Access' : 'Public Profile Only'}
+                </p>
+                {!shouldShowContactInfo && (
+                  <p className="text-amber-600 italic">
+                    Private contact information is hidden for privacy protection.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
