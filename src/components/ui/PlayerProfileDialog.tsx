@@ -51,6 +51,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   console.log("PlayerProfileDialog - Current user role:", userRole);
   console.log("PlayerProfileDialog - Viewing player ID:", playerId);
   console.log("PlayerProfileDialog - Current user ID:", currentUserId);
+  console.log("PlayerProfileDialog - Profile data:", profile);
 
   // Get user role and ID from localStorage
   useEffect(() => {
@@ -97,6 +98,8 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   console.log("PlayerProfileDialog - Is admin:", isAdmin);
   console.log("PlayerProfileDialog - Is own profile:", isOwnProfile);
   console.log("PlayerProfileDialog - Should show contact info:", shouldShowContactInfo);
+  console.log("PlayerProfileDialog - Profile email:", profile?.email);
+  console.log("PlayerProfileDialog - Profile phone:", profile?.phone);
 
   // Check if user is suspended
   const isSuspended = profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
@@ -293,47 +296,35 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     {/* Conditional contact information - ONLY FOR ADMINS OR OWN PROFILE */}
                     {shouldShowContactInfo ? (
                       <>
-                        {profile.email ? (
-                          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <Mail className="h-4 w-4 text-blue-500" />
-                            <div>
-                              <div className="text-sm text-blue-600 font-medium">Email</div>
-                              <div className="font-medium text-gray-900">{profile.email}</div>
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          <div className="flex-1">
+                            <div className="text-sm text-blue-600 font-medium">Email</div>
+                            <div className="font-medium text-gray-900">
+                              {profile.email || "Not provided"}
                             </div>
-                            <Badge variant="outline" className="ml-auto text-xs bg-blue-100 text-blue-700 border-blue-300">
+                          </div>
+                          {isAdmin && !isOwnProfile && (
+                            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
                               Admin Only
                             </Badge>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <div className="text-sm text-gray-500">Email</div>
-                              <div className="text-gray-400 italic">Not provided</div>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                         
-                        {profile.phone ? (
-                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                            <Phone className="h-4 w-4 text-green-500" />
-                            <div>
-                              <div className="text-sm text-green-600 font-medium">Phone</div>
-                              <div className="font-medium text-gray-900">{profile.phone}</div>
+                        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                          <Phone className="h-4 w-4 text-green-500" />
+                          <div className="flex-1">
+                            <div className="text-sm text-green-600 font-medium">Phone</div>
+                            <div className="font-medium text-gray-900">
+                              {profile.phone || "Not provided"}
                             </div>
-                            <Badge variant="outline" className="ml-auto text-xs bg-green-100 text-green-700 border-green-300">
+                          </div>
+                          {isAdmin && !isOwnProfile && (
+                            <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
                               Admin Only
                             </Badge>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <Phone className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <div className="text-sm text-gray-500">Phone</div>
-                              <div className="text-gray-400 italic">Not provided</div>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </>
                     ) : (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
