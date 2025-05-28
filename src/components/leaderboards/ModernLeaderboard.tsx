@@ -43,7 +43,14 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   const handlePlayerClick = (playerId: string) => {
-    console.log("Opening profile for player:", playerId);
+    console.log("ModernLeaderboard - Opening profile for player:", playerId);
+    
+    // Log current user info for debugging
+    const userRole = localStorage.getItem('userRole');
+    const currentUser = localStorage.getItem('currentUser');
+    console.log("ModernLeaderboard - Current user role:", userRole);
+    console.log("ModernLeaderboard - Current user data:", currentUser);
+    
     setSelectedPlayerId(playerId);
     setIsProfileDialogOpen(true);
   };
@@ -281,7 +288,7 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
         })}
       </div>
 
-      {/* Player Profile Dialog */}
+      {/* Player Profile Dialog - Updated to ensure proper admin access */}
       {selectedPlayerId && (
         <PlayerProfileDialog
           isOpen={isProfileDialogOpen}
