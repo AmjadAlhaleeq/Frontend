@@ -342,7 +342,35 @@ const ReservationsEnhanced = () => {
   };
 
   const handlePlayerClick = (playerId: string, playerName?: string) => {
-    navigate(`/player/${playerId}`);
+    // Validate player ID before navigation
+    if (!playerId || playerId.length < 10) {
+      console.warn("Invalid player ID, cannot navigate:", playerId);
+      toast({
+        title: "Error",
+        description: "Invalid player information",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Close any open dialogs first to prevent conflicts
+    setDialogStates({
+      joinGame: false,
+      joinWaitlist: false,
+      leaveGame: false,
+      leaveWaitlist: false,
+      gameDetails: false,
+      gameSummary: false,
+      deleteReservation: false,
+      completeGame: false,
+      playerProfile: false,
+      playerSuspension: false,
+    });
+
+    // Use setTimeout to ensure dialog is closed before navigation
+    setTimeout(() => {
+      navigate(`/player/${playerId}`);
+    }, 100);
   };
 
   const handleSuspendPlayer = async (

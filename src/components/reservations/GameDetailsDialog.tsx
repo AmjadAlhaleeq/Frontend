@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import {
@@ -16,8 +17,6 @@ import {
   Calendar,
   Clock,
   Users,
-  UserMinus,
-  UserX,
   Shield,
   Star,
   Zap,
@@ -28,7 +27,6 @@ import {
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
 import TransferReservationDialog from "./TransferReservationDialog";
-import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 
 interface GameDetailsDialogProps {
   reservation: Reservation;
@@ -62,17 +60,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   onPlayerClick,
 }) => {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
-  const [suspensionDialog, setSuspensionDialog] = useState<{
-    isOpen: boolean;
-    playerName: string;
-    playerId: string;
-    action: "kick" | "suspend";
-  }>({
-    isOpen: false,
-    playerName: "",
-    playerId: "",
-    action: "kick",
-  });
 
   const currentPlayers = reservation.lineup?.length || 0;
 
@@ -96,43 +83,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       .join(",")}`;
   };
 
-  // FIXED: Separate kick and suspend handlers
-  const handleKickPlayer = (playerId: string, playerName: string) => {
-    setSuspensionDialog({
-      isOpen: true,
-      playerName,
-      playerId,
-      action: "kick",
-    });
-  };
-
-  const handleSuspendPlayer = (playerId: string, playerName: string) => {
-    setSuspensionDialog({
-      isOpen: true,
-      playerName,
-      playerId,
-      action: "suspend",
-    });
-  };
-
-  const handleSuspensionConfirm = (
-    playerId: string,
-    suspensionDays: number,
-    reason: string
-  ) => {
-    if (suspensionDialog.action === "kick" && onKickPlayer) {
-      onKickPlayer(reservation.id, playerId);
-    } else if (suspensionDialog.action === "suspend" && onSuspendPlayer) {
-      onSuspendPlayer(playerId, suspensionDays, reason);
-    }
-    setSuspensionDialog({
-      isOpen: false,
-      playerName: "",
-      playerId: "",
-      action: "kick",
-    });
-  };
-
   const handleAddPlayerFromWaitlist = (userId: string) => {
     // This would need to be implemented in the parent component
     console.log("Adding player from waitlist:", userId);
@@ -143,11 +93,24 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     console.log("Removing from waitlist:", userId);
   };
 
+  const handlePlayerClick = (playerId: string, playerName?: string) => {
+    // Prevent navigation if there's no valid player ID
+    if (!playerId || playerId.length < 10) {
+      console.warn("Invalid player ID:", playerId);
+      return;
+    }
+    
+    // Call the parent's player click handler
+    if (onPlayerClick) {
+      onPlayerClick(playerId, playerName);
+    }
+  };
+
   const renderPlayerItem = (player: any, index: number) => (
     <div
       key={player.userId}
       className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-      onClick={() => onPlayerClick?.(player.userId, player.name)}
+      onClick={() => handlePlayerClick(player.userId, player.name)}
     >
       <div className="flex items-center space-x-3">
         <span className="text-sm font-medium text-gray-500 w-6">
@@ -170,36 +133,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           </p>
         </div>
       </div>
-
-      {/* FIXED: Separate kick and suspend buttons for admin */}
-      {isAdmin && player.userId !== currentUserId && (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleKickPlayer(player.userId, player.name);
-            }}
-            className="h-8 text-xs text-orange-600 hover:text-orange-700 hover:border-orange-300"
-          >
-            <UserMinus className="h-3.5 w-3.5 mr-1" />
-            Kick
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSuspendPlayer(player.userId, player.name);
-            }}
-            className="h-8 text-xs text-red-600 hover:text-red-700 hover:border-red-300"
-          >
-            <UserX className="h-3.5 w-3.5 mr-1" />
-            Suspend
-          </Button>
-        </div>
-      )}
     </div>
   );
 
@@ -391,23 +324,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         isOpen={showTransferDialog}
         onClose={() => setShowTransferDialog(false)}
         reservation={reservation}
-      />
-
-      {/* Suspension Dialog */}
-      <PlayerSuspensionDialog
-        isOpen={suspensionDialog.isOpen}
-        onClose={() =>
-          setSuspensionDialog({
-            isOpen: false,
-            playerName: "",
-            playerId: "",
-            action: "kick",
-          })
-        }
-        playerName={suspensionDialog.playerName}
-        playerId={suspensionDialog.playerId}
-        onConfirm={handleSuspensionConfirm}
-        actionType={suspensionDialog.action}
       />
     </>
   );
