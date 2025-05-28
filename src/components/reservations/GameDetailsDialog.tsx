@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -101,8 +102,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       return;
     }
     
-    console.log("Navigating to player profile:", playerId);
-    // Navigate to the new player profile page
+    console.log("Navigating to player profile with ID:", playerId);
+    // Close the dialog first
+    onClose();
+    // Navigate to the player profile page
     navigate(`/player-profile/${playerId}`);
   };
 
@@ -302,7 +305,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 </div>
               )}
 
-              {/* Admin Actions */}
+              {/* Admin Actions - REMOVED KICK AND SUSPEND BUTTONS */}
               {isAdmin && reservation.status === "upcoming" && (
                 <div className="flex gap-3 pt-4 border-t">
                   <Button

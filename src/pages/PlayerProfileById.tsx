@@ -30,6 +30,9 @@ const PlayerProfileById: React.FC = () => {
   const { profile, loading, error, fetchProfile } = usePlayerProfile();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
+  console.log("PlayerProfileById rendered with playerId:", playerId);
 
   // Get user role and ID from localStorage
   useEffect(() => {
@@ -43,13 +46,14 @@ const PlayerProfileById: React.FC = () => {
     }
   }, []);
 
-  // Fetch profile when component mounts
+  // Fetch profile when component mounts - ONLY ONCE
   useEffect(() => {
-    if (playerId) {
-      console.log("Fetching profile for player ID:", playerId);
+    if (playerId && !hasAttemptedFetch) {
+      console.log("Attempting to fetch profile for player ID:", playerId);
+      setHasAttemptedFetch(true);
       fetchProfile(playerId);
     }
-  }, [playerId, fetchProfile]);
+  }, [playerId, hasAttemptedFetch, fetchProfile]);
 
   const isAdmin = userRole === 'admin';
   const isOwnProfile = currentUserId === playerId;
@@ -57,7 +61,7 @@ const PlayerProfileById: React.FC = () => {
   // Check if user is suspended
   const isSuspended = profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
 
-  if (loading) {
+  if (loading && !hasAttemptedFetch) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center py-20">
@@ -87,7 +91,13 @@ const PlayerProfileById: React.FC = () => {
               Go Back
             </Button>
             {playerId && (
-              <Button onClick={() => fetchProfile(playerId)} variant="outline">
+              <Button 
+                onClick={() => {
+                  setHasAttemptedFetch(false);
+                  fetchProfile(playerId);
+                }} 
+                variant="outline"
+              >
                 Try Again
               </Button>
             )}
@@ -170,7 +180,7 @@ const PlayerProfileById: React.FC = () => {
           </div>
         </div>
 
-        {/* Suspension Warning (only show to admin or if it's own profile) */}
+        {/* Suspension Warning */}
         {isSuspended && (isAdmin || isOwnProfile) && (
           <div className="mt-4 p-3 bg-red-500/20 border border-red-300/30 rounded-lg backdrop-blur-sm">
             <div className="flex items-center gap-2 text-red-100">

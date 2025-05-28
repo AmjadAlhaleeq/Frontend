@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export interface BackendUserProfile {
   _id: string;
@@ -38,12 +38,13 @@ export const usePlayerProfile = () => {
   const [profile, setProfile] = useState<BackendUserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     if (!userId || userId.length < 10) {
       setError("Invalid user ID");
       return;
     }
 
+    console.log("usePlayerProfile: Starting fetch for user:", userId);
     setLoading(true);
     setProfile(null);
     setError(null);
@@ -58,6 +59,7 @@ export const usePlayerProfile = () => {
         headers.Authorization = `Bearer ${token}`;
       }
 
+      console.log("usePlayerProfile: Making API call to:", `http://127.0.0.1:3000/users/${userId}`);
       const resp = await fetch(`http://127.0.0.1:3000/users/${userId}`, {
         method: "GET",
         headers,
@@ -68,20 +70,23 @@ export const usePlayerProfile = () => {
       }
       
       const json = await resp.json();
-      console.log("API Response:", json);
+      console.log("usePlayerProfile: API Response:", json);
       
       if (json.status === "success" && json.data?.user) {
+        console.log("usePlayerProfile: Setting profile data");
         setProfile(json.data.user);
+        setError(null);
       } else {
+        console.error("usePlayerProfile: API returned error:", json.message);
         setError(json.message || "Error fetching profile");
       }
     } catch (e: any) {
-      console.error("Error fetching profile:", e);
+      console.error("usePlayerProfile: Error fetching profile:", e);
       setError(e.message || "Unknown error");
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No dependencies to prevent recreating the function
 
   return { profile, loading, error, fetchProfile };
 };
