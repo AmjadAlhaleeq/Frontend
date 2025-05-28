@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -22,12 +21,13 @@ import {
   Star,
   Zap,
   Target,
-  Save,
   Trophy,
+  UserX,
+  AlertCircle,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
-import TransferReservationDialog from "./TransferReservationDialog";
+import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 
 interface GameDetailsDialogProps {
   reservation: Reservation;
@@ -60,10 +60,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   pitchImage,
   onPlayerClick,
 }) => {
-  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [kickDialog, setKickDialog] = useState<{open: boolean, playerId: string, playerName: string} | null>(null);
   const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
+
+  // Check if we're within 3 days of game start for kick functionality
+  const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
+  const now = new Date();
+  const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
+  const canKickPlayers = isAdmin && now >= threeDaysBeforeGame && reservation.status !== "completed" && reservation.lineup && reservation.lineup.length > 0;
 
   let formattedDate = "Invalid Date";
   try {
@@ -86,36 +92,44 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   const handleAddPlayerFromWaitlist = (userId: string) => {
-    // This would need to be implemented in the parent component
     console.log("Adding player from waitlist:", userId);
   };
 
   const handleRemoveFromWaitlist = (userId: string) => {
-    // This would need to be implemented in the parent component
     console.log("Removing from waitlist:", userId);
   };
 
   const handlePlayerClick = (playerId: string, playerName?: string) => {
-    // Prevent navigation if there's no valid player ID
     if (!playerId || playerId.length < 10) {
       console.warn("Invalid player ID:", playerId);
       return;
     }
     
     console.log("Navigating to player profile with ID:", playerId);
-    // Close the dialog first
     onClose();
-    // Navigate to the player profile page
     navigate(`/player-profile/${playerId}`);
+  };
+
+  const handleKickPlayer = (playerId: string, playerName: string) => {
+    setKickDialog({ open: true, playerId, playerName });
+  };
+
+  const confirmKickPlayer = (playerId: string, suspensionDays: number, reason: string) => {
+    if (onSuspendPlayer) {
+      onSuspendPlayer(playerId, suspensionDays, reason);
+    }
+    setKickDialog(null);
   };
 
   const renderPlayerItem = (player: any, index: number) => (
     <div
       key={player.userId}
-      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-      onClick={() => handlePlayerClick(player.userId, player.name)}
+      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
     >
-      <div className="flex items-center space-x-3">
+      <div 
+        className="flex items-center space-x-3 flex-1 cursor-pointer"
+        onClick={() => handlePlayerClick(player.userId, player.name)}
+      >
         <span className="text-sm font-medium text-gray-500 w-6">
           {index + 1}
         </span>
@@ -136,6 +150,19 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           </p>
         </div>
       </div>
+      
+      {/* Kick button for admins within 3 days */}
+      {canKickPlayers && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleKickPlayer(player.userId, player.name)}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+        >
+          <UserX className="h-3 w-3 mr-1" />
+          Kick
+        </Button>
+      )}
     </div>
   );
 
@@ -270,6 +297,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 <h3 className="font-semibold text-lg mb-4 flex items-center">
                   <Users className="h-5 w-5 mr-2" />
                   Player Lineup ({currentPlayers})
+                  {canKickPlayers && (
+                    <div className="ml-4 text-xs text-red-600 flex items-center">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Kick window active
+                    </div>
+                  )}
                 </h3>
                 <div className="space-y-2">
                   {reservation.lineup && reservation.lineup.length > 0 ? (
@@ -304,30 +337,22 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   {renderHighlights()}
                 </div>
               )}
-
-              {/* Admin Actions - REMOVED KICK AND SUSPEND BUTTONS */}
-              {isAdmin && reservation.status === "upcoming" && (
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    onClick={() => setShowTransferDialog(true)}
-                    className="flex-1"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Complete Game
-                  </Button>
-                </div>
-              )}
             </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Transfer Dialog */}
-      <TransferReservationDialog
-        isOpen={showTransferDialog}
-        onClose={() => setShowTransferDialog(false)}
-        reservation={reservation}
-      />
+      {/* Kick Player Dialog */}
+      {kickDialog && (
+        <PlayerSuspensionDialog
+          isOpen={kickDialog.open}
+          onClose={() => setKickDialog(null)}
+          playerName={kickDialog.playerName}
+          playerId={kickDialog.playerId}
+          onConfirm={confirmKickPlayer}
+          actionType="kick"
+        />
+      )}
     </>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,13 +63,13 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
     (reservation.summary as any)?.completed;
 
   // Check if reservation is in progress (started but not completed)
-  const gameDate = new Date(reservation.date);
+  const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
   const now = new Date();
-  const isInProgress = reservation.status === "upcoming" && gameDate <= now;
+  const isInProgress = reservation.status === "upcoming" && gameDateTime <= now;
   
-  // Check if we're within 3 days of game start for kick functionality
-  const threeDaysBeforeGame = new Date(gameDate.getTime() - (3 * 24 * 60 * 60 * 1000));
-  const canKickPlayers = userRole === "admin" && now >= threeDaysBeforeGame && !isCompleted;
+  // FIXED: Check if we're within 3 days of game start for kick functionality
+  const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
+  const canKickPlayers = userRole === "admin" && now >= threeDaysBeforeGame && !isCompleted && reservation.lineup && reservation.lineup.length > 0;
 
   const getStatusBadge = () => {
     if (isInProgress) {
@@ -187,7 +186,7 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
         )}
 
         {/* Show joined players with kick option if within kick window */}
-        {canKickPlayers && reservation.lineup && reservation.lineup.length > 0 && (
+        {canKickPlayers && (
           <div className="w-full mt-2">
             <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />

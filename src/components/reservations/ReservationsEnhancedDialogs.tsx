@@ -96,15 +96,6 @@ const ReservationsEnhancedDialogs: React.FC<ReservationsEnhancedDialogsProps> = 
         confirmButtonVariant="destructive"
       />
 
-      <ActionConfirmationDialog
-        open={dialogStates.completeGame}
-        onOpenChange={(open) => !open && onCloseDialog("completeGame")}
-        onConfirm={onCompleteGame}
-        title="Complete Game"
-        description="Are you sure you want to mark this game as completed?"
-        confirmButtonText="Complete"
-      />
-
       <GameDetailsDialog
         reservation={selectedReservation}
         isOpen={dialogStates.gameDetails}
@@ -115,8 +106,9 @@ const ReservationsEnhancedDialogs: React.FC<ReservationsEnhancedDialogsProps> = 
         pitchImage={pitchImages[selectedReservation.pitchId]}
         onPlayerClick={onPlayerClick}
         onStatusChange={(status) => {
-          // Handle status change
+          // Handle status change if needed
         }}
+        onSuspendPlayer={onSuspendPlayer}
       />
 
       <GameSummaryDialog
