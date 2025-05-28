@@ -10,7 +10,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// Join a reservation
+// Join a reservation (handles both joining game and waitlist automatically)
 export const joinReservation = async (reservationId: string) => {
   const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/join`, {
     method: 'POST',
@@ -31,7 +31,7 @@ export const joinReservation = async (reservationId: string) => {
   return result;
 };
 
-// Cancel a reservation
+// Cancel a reservation (leave game)
 export const cancelReservation = async (reservationId: string) => {
   const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/cancel`, {
     method: 'POST',
@@ -73,30 +73,8 @@ export const removeFromWaitlist = async (reservationId: string) => {
   return result;
 };
 
-// Add to waitlist - this endpoint doesn't exist in your backend yet, so we'll simulate it
+// Add to waitlist - use the same join endpoint as backend handles this automatically
 export const addToWaitlist = async (reservationId: string) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/waitlist/add`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      // If endpoint doesn't exist, we'll simulate success for now
-      console.warn('Add to waitlist endpoint not available');
-      return { status: 'success', message: 'Added to waitlist' };
-    }
-
-    const result = await response.json();
-    
-    if (result.status !== 'success') {
-      throw new Error(result.message || 'Failed to add to waitlist');
-    }
-    
-    return result;
-  } catch (error) {
-    console.warn('Failed to add to waitlist:', error);
-    // Simulate success for now
-    return { status: 'success', message: 'Added to waitlist' };
-  }
+  // Use the same join endpoint as your backend automatically adds to waitlist when full
+  return await joinReservation(reservationId);
 };

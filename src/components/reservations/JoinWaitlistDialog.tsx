@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Dialog,
@@ -41,11 +42,10 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <UserPlus className="h-5 w-5 mr-2 text-amber-600" />
-            Join Waiting List
+            Join Game (Waiting List)
           </DialogTitle>
           <DialogDescription>
-            The game is full. Join the waiting list to be notified if a spot
-            becomes available.
+            The game is full, but you can still join and will be automatically added to the waiting list.
           </DialogDescription>
         </DialogHeader>
 
@@ -57,7 +57,7 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
             </span>
           </div>
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            You'll be position #{waitlistPosition} on the waiting list
+            You'll be automatically added to the waiting list and notified if a spot becomes available.
           </p>
         </div>
 

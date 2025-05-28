@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -154,13 +153,22 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
-      await joinReservationApi(selectedReservation.backendId);
+      const result = await joinReservationApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("joinGame");
-      toast({
-        title: "Joined Game!",
-        description: "You have successfully joined the game.",
-      });
+      
+      // Check if user was added to waitlist or joined directly
+      if (result.message.includes("waitlist")) {
+        toast({
+          title: "Added to Waiting List",
+          description: "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
+        });
+      } else {
+        toast({
+          title: "Joined Game!",
+          description: "You have successfully joined the game.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Failed to Join",
@@ -196,12 +204,12 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
-      await joinWaitlistApi(selectedReservation.backendId);
+      const result = await joinWaitlistApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("joinWaitlist");
       toast({
         title: "Added to Waiting List",
-        description: "You've been added to the waiting list.",
+        description: "You've been added to the waiting list and will be notified if a spot becomes available.",
       });
     } catch (error) {
       toast({
