@@ -50,35 +50,20 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
   console.log("PlayerProfileDialog - Current user role:", userRole);
   console.log("PlayerProfileDialog - Viewing player ID:", playerId);
-  console.log("PlayerProfileDialog - Current user ID:", currentUserId);
   console.log("PlayerProfileDialog - Profile data:", profile);
 
   // Get user role and ID from localStorage
   useEffect(() => {
     const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
-    console.log("PlayerProfileDialog - Retrieved role from localStorage:", role);
     setUserRole(role);
     
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        console.log("PlayerProfileDialog - Retrieved user data:", userData);
         setCurrentUserId(userData.id || userData._id);
       } catch (e) {
         console.error("PlayerProfileDialog - Error parsing user data:", e);
-      }
-    }
-
-    // Also check the 'user' key in localStorage as backup
-    const backupUser = localStorage.getItem('user');
-    if (backupUser && !currentUserId) {
-      try {
-        const userData = JSON.parse(backupUser);
-        console.log("PlayerProfileDialog - Retrieved backup user data:", userData);
-        setCurrentUserId(userData.id || userData._id);
-      } catch (e) {
-        console.error("PlayerProfileDialog - Error parsing backup user data:", e);
       }
     }
   }, []);
@@ -94,12 +79,6 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   const isAdmin = userRole === 'admin';
   const isOwnProfile = currentUserId === playerId;
   const shouldShowContactInfo = isAdmin || isOwnProfile;
-
-  console.log("PlayerProfileDialog - Is admin:", isAdmin);
-  console.log("PlayerProfileDialog - Is own profile:", isOwnProfile);
-  console.log("PlayerProfileDialog - Should show contact info:", shouldShowContactInfo);
-  console.log("PlayerProfileDialog - Profile email:", profile?.email);
-  console.log("PlayerProfileDialog - Profile phone:", profile?.phone);
 
   // Check if user is suspended
   const isSuspended = profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
@@ -228,7 +207,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                 </div>
               </div>
 
-              {/* Suspension Warning (only show to admin or if it's own profile) */}
+              {/* Suspension Warning */}
               {isSuspended && shouldShowContactInfo && (
                 <div className="mt-4 p-3 bg-red-500/20 border border-red-300/30 rounded-lg backdrop-blur-sm">
                   <div className="flex items-center gap-2 text-red-100">
@@ -293,7 +272,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                       </div>
                     </div>
 
-                    {/* Conditional contact information - ONLY FOR ADMINS OR OWN PROFILE */}
+                    {/* Contact information - Show real data for admins */}
                     {shouldShowContactInfo ? (
                       <>
                         <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -301,7 +280,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                           <div className="flex-1">
                             <div className="text-sm text-blue-600 font-medium">Email</div>
                             <div className="font-medium text-gray-900">
-                              {profile.email || "Not provided"}
+                              {profile.email || "Email not available"}
                             </div>
                           </div>
                           {isAdmin && !isOwnProfile && (
@@ -316,7 +295,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                           <div className="flex-1">
                             <div className="text-sm text-green-600 font-medium">Phone</div>
                             <div className="font-medium text-gray-900">
-                              {profile.phone || "Not provided"}
+                              {profile.phone || "Phone not available"}
                             </div>
                           </div>
                           {isAdmin && !isOwnProfile && (

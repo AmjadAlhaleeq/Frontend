@@ -361,8 +361,8 @@ export const useReservationActions = (
     async (
       reservationId: number,
       playerId: string,
-      reason: string,
-      suspensionDays: number
+      suspensionDays: number,
+      reason: string
     ) => {
       if (userRole !== "admin") return;
 
@@ -386,8 +386,7 @@ export const useReservationActions = (
 
         toast({
           title: "Player Kicked",
-          description:
-            "The player has been removed and suspended from the game.",
+          description: `The player has been removed and suspended for ${suspensionDays} day${suspensionDays > 1 ? 's' : ''}.`,
         });
       } catch (error) {
         toast({

@@ -35,6 +35,7 @@ const PlayerProfileById: React.FC = () => {
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   console.log("PlayerProfileById rendered with playerId:", playerId);
+  console.log("Profile data received:", profile);
 
   // Get user role and ID from localStorage
   useEffect(() => {
@@ -273,44 +274,38 @@ const PlayerProfileById: React.FC = () => {
                 </div>
               </div>
 
-              {/* Conditional contact information */}
+              {/* Contact information - Show real data for admins */}
               {shouldShowContactInfo ? (
                 <>
-                  {profile.email ? (
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <Mail className="h-4 w-4 text-blue-500" />
-                      <div>
-                        <div className="text-sm text-blue-600 font-medium">Email</div>
-                        <div className="font-medium text-gray-900">{profile.email}</div>
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                    <div className="flex-1">
+                      <div className="text-sm text-blue-600 font-medium">Email</div>
+                      <div className="font-medium text-gray-900">
+                        {profile.email || "Email not available"}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <div className="text-sm text-gray-500">Email</div>
-                        <div className="text-gray-400 italic">Not provided</div>
-                      </div>
-                    </div>
-                  )}
+                    {isAdmin && !isOwnProfile && (
+                      <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                        Admin View
+                      </Badge>
+                    )}
+                  </div>
                   
-                  {profile.phone ? (
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <Phone className="h-4 w-4 text-green-500" />
-                      <div>
-                        <div className="text-sm text-green-600 font-medium">Phone</div>
-                        <div className="font-medium text-gray-900">{profile.phone}</div>
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <Phone className="h-4 w-4 text-green-500" />
+                    <div className="flex-1">
+                      <div className="text-sm text-green-600 font-medium">Phone</div>
+                      <div className="font-medium text-gray-900">
+                        {profile.phone || "Phone not available"}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <div className="text-sm text-gray-500">Phone</div>
-                        <div className="text-gray-400 italic">Not provided</div>
-                      </div>
-                    </div>
-                  )}
+                    {isAdmin && !isOwnProfile && (
+                      <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
+                        Admin View
+                      </Badge>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
