@@ -1,5 +1,29 @@
+
 import { useCallback } from "react";
-import { Reservation, UserStats } from "@/types/reservation";
+import { Reservation } from "@/types/reservation";
+
+// Updated interface to match backend stats structure
+interface BackendUserStats {
+  matches: number;
+  wins: number;
+  mvp: number;
+  goals: number;
+  assists: number;
+  interceptions: number;
+  cleanSheets: number;
+}
+
+// Legacy UserStats interface for backward compatibility
+export interface UserStats {
+  wins: number;
+  goals: number;
+  assists: number;
+  matches: number;
+  winPercentage: number;
+  cleanSheets: number;
+  mvp: number;
+  interceptions: number;
+}
 
 export const useUserStats = (reservations: Reservation[]) => {
   const getUserStats = useCallback(
@@ -12,7 +36,7 @@ export const useUserStats = (reservations: Reservation[]) => {
       let cleansheets = 0;
       let mvp = 0;
 
-      // FIXED: Calculate actual stats from reservations
+      // Calculate stats from reservations (legacy fallback)
       reservations.forEach((reservation) => {
         // Check if user participated in this game
         const userInLineup = reservation.lineup?.some(
@@ -88,5 +112,23 @@ export const useUserStats = (reservations: Reservation[]) => {
     [reservations]
   );
 
-  return { getUserStats };
+  // Helper function to convert backend stats to frontend format
+  const convertBackendStats = useCallback((backendStats: BackendUserStats): UserStats => {
+    const winPercentage = backendStats.matches > 0 
+      ? Math.round((backendStats.wins / backendStats.matches) * 100) 
+      : 0;
+
+    return {
+      wins: backendStats.wins,
+      goals: backendStats.goals,
+      assists: backendStats.assists,
+      matches: backendStats.matches,
+      winPercentage,
+      cleanSheets: backendStats.cleanSheets,
+      mvp: backendStats.mvp,
+      interceptions: backendStats.interceptions,
+    };
+  }, []);
+
+  return { getUserStats, convertBackendStats };
 };

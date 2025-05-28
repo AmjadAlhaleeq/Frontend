@@ -1,7 +1,6 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserStats } from "@/types/reservation";
 import {
   Calendar,
   Target,
@@ -14,8 +13,18 @@ import {
   Award,
 } from "lucide-react";
 
+interface BackendUserStats {
+  matches: number;
+  wins: number;
+  mvp: number;
+  goals: number;
+  assists: number;
+  interceptions: number;
+  cleanSheets: number;
+}
+
 interface PlayerStatsProps {
-  stats: UserStats;
+  stats: BackendUserStats;
   className?: string;
   isLoading?: boolean;
 }
@@ -25,13 +34,8 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
   className = "",
   isLoading = false,
 }) => {
-  // Calculate win percentage if not provided
-  const winPercentage =
-    stats.winPercentage ||
-    (stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0);
-
-  // Get total matches played (use the more appropriate field from your interface)
-  const totalMatches = stats.matches ?? 0;
+  // Calculate win percentage from backend stats
+  const winPercentage = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
 
   return (
     <div className={className}>
@@ -52,7 +56,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold" style={{ color: "#0f766e" }}>
-                {totalMatches}
+                {stats.matches}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide">
                 Total Games
@@ -73,7 +77,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.goals || 0
+                    stats.goals
                   )}
                 </div>
                 <div className="text-sm font-medium text-green-600">Goals</div>
@@ -89,7 +93,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.assists || 0
+                    stats.assists
                   )}
                 </div>
                 <div className="text-sm font-medium text-blue-600">Assists</div>
@@ -105,7 +109,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.mvp || 0
+                    stats.mvp
                   )}
                 </div>
                 <div className="text-sm font-medium text-purple-600">MVP</div>
@@ -140,7 +144,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.wins || 0
+                    stats.wins
                   )}
                 </div>
                 <div className="text-sm font-medium text-teal-600">Wins</div>
@@ -156,7 +160,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.cleanSheets || 0
+                    stats.cleanSheets
                   )}
                 </div>
                 <div className="text-sm font-medium text-slate-600">Clean Sheets</div>
@@ -172,7 +176,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
                   ) : (
-                    stats.interceptions || 0
+                    stats.interceptions
                   )}
                 </div>
                 <div className="text-sm font-medium text-indigo-600">Interceptions</div>
@@ -181,7 +185,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
           </div>
 
           {/* Performance Highlight */}
-          {!isLoading && totalMatches > 0 && (
+          {!isLoading && stats.matches > 0 && (
             <div
               className="relative overflow-hidden p-6 rounded-2xl text-white"
               style={{
@@ -194,9 +198,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
                   <div>
                     <div className="text-sm opacity-90 mb-1">Total Impact</div>
                     <div className="text-4xl font-bold">
-                      {stats.goals && stats.assists
-                        ? stats.goals + stats.assists
-                        : stats.goals || 0}
+                      {stats.goals + stats.assists}
                     </div>
                     <div className="text-sm opacity-75">
                       Goals + Assists combined
@@ -213,7 +215,7 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({
           )}
 
           {/* Enhanced No Data State */}
-          {!isLoading && totalMatches === 0 && (
+          {!isLoading && stats.matches === 0 && (
             <div className="text-center py-12">
               <div className="relative inline-block">
                 <div className="w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-full flex items-center justify-center mb-4 animate-pulse">

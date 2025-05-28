@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ProfileEditor from "@/components/profile/ProfileEditor";
 import PlayerStats from "@/components/profile/PlayerStats";
-import { useUserStats } from "@/hooks/useUserStats";
+import BadgeDisplay from "@/components/profile/BadgeDisplay";
 import {
   getMyProfile,
   updateMyProfile,
@@ -57,12 +57,8 @@ const Profile = () => {
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [reservations, setReservations] = useState([]);
 
-  // Use the real stats hook
-  const { getUserStats } = useUserStats(reservations);
-
-  // Fetch user data and reservations on component mount
+  // Fetch user data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
       const authToken = localStorage.getItem("authToken");
@@ -90,10 +86,6 @@ const Profile = () => {
 
           // Update localStorage with fresh data
           localStorage.setItem("currentUser", JSON.stringify(frontendUser));
-
-          // Also fetch reservations for real stats
-          const reservationsData = JSON.parse(localStorage.getItem("reservations") || "[]");
-          setReservations(reservationsData);
         } else {
           throw new Error("Invalid response format");
         }
@@ -111,52 +103,6 @@ const Profile = () => {
 
     fetchUserProfile();
   }, [toast, navigate]);
-
-  // Helper function to get badge colors based on level with circular design
-  const getBadgeColors = (level: number) => {
-    switch (level) {
-      case 1:
-        return {
-          bg: "from-amber-50 to-orange-50",
-          border: "border-amber-300",
-          icon: "bg-gradient-to-br from-amber-400 to-amber-600",
-          iconColor: "text-white",
-          text: "text-amber-800",
-          badge: "🥉",
-          name: "Bronze"
-        };
-      case 2:
-        return {
-          bg: "from-gray-50 to-slate-100",
-          border: "border-gray-300",
-          icon: "bg-gradient-to-br from-gray-400 to-gray-600",
-          iconColor: "text-white",
-          text: "text-gray-800",
-          badge: "🥈",
-          name: "Silver"
-        };
-      case 3:
-        return {
-          bg: "from-yellow-50 to-amber-50",
-          border: "border-yellow-300",
-          icon: "bg-gradient-to-br from-yellow-400 to-yellow-600",
-          iconColor: "text-white",
-          text: "text-yellow-800",
-          badge: "🥇",
-          name: "Gold"
-        };
-      default:
-        return {
-          bg: "from-amber-50 to-orange-50",
-          border: "border-amber-300",
-          icon: "bg-gradient-to-br from-amber-400 to-amber-600",
-          iconColor: "text-white",
-          text: "text-amber-800",
-          badge: "🥉",
-          name: "Bronze"
-        };
-    }
-  };
 
   // Handle profile update from editor
   const handleProfileUpdate = async (
@@ -246,24 +192,6 @@ const Profile = () => {
     }
   };
 
-  // Get real user stats
-  const realUserStats = currentUser ? getUserStats(currentUser.id) : {
-    gamesPlayed: 0,
-    goalsScored: 0,
-    assists: 0,
-    cleansheets: 0,
-    mvps: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
-    goals: 0,
-    matches: 0,
-    winPercentage: 0,
-    cleanSheets: 0,
-    mvp: 0,
-    interceptions: 0,
-  };
-
   // Check if user is suspended
   const isSuspended =
     backendUser?.suspendedUntil &&
@@ -280,7 +208,7 @@ const Profile = () => {
     );
   }
 
-  if (!currentUser) {
+  if (!currentUser || !backendUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
@@ -360,7 +288,7 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    {realUserStats.matches || 0} matches played
+                    {backendUser.stats?.matches || 0} matches played
                   </div>
                 </div>
               </div>
@@ -396,10 +324,21 @@ const Profile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Stats & Performance */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Performance Stats using real data */}
-            <PlayerStats stats={realUserStats} isLoading={isLoading} />
+            {/* Performance Stats using real backend data */}
+            <PlayerStats 
+              stats={backendUser.stats || {
+                matches: 0,
+                wins: 0,
+                mvp: 0,
+                goals: 0,
+                assists: 0,
+                interceptions: 0,
+                cleanSheets: 0
+              }} 
+              isLoading={isLoading} 
+            />
 
-            {/* Badges & Achievements with circular toggle design */}
+            {/* Badges & Achievements with unique designs */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-2xl">
@@ -410,54 +349,10 @@ const Profile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {backendUser?.badges && backendUser.badges.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {backendUser.badges.map((badge) => {
-                      const colors = getBadgeColors(badge.level);
-                      return (
-                        <div
-                          key={badge._id}
-                          className={`group p-6 bg-gradient-to-br ${colors.bg} rounded-2xl border ${colors.border} hover:scale-105 transition-all duration-200 cursor-pointer`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`flex-shrink-0 w-16 h-16 ${colors.icon} rounded-full flex items-center justify-center transition-colors shadow-lg`}>
-                              <Award className={`h-8 w-8 ${colors.iconColor}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 truncate mb-1">
-                                {badge.name}
-                              </h4>
-                              <p className="text-sm text-gray-600 mb-3">
-                                {badge.description}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-2xl">{colors.badge}</span>
-                                <span className={`text-sm font-medium ${colors.text}`}>
-                                  {colors.name}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="relative inline-block">
-                      <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mb-4">
-                        <Award className="h-10 w-10 text-amber-600" />
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      No Badges Yet
-                    </h3>
-                    <p className="text-gray-600 max-w-sm mx-auto">
-                      Earn badges by achieving great performances in matches!
-                      Your first badge is waiting.
-                    </p>
-                  </div>
-                )}
+                <BadgeDisplay 
+                  badges={backendUser.badges || []} 
+                  isLoading={isLoading} 
+                />
               </CardContent>
             </Card>
           </div>
