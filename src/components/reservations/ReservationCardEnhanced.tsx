@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,9 +68,12 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   const now = new Date();
   const isInProgress = reservation.status === "upcoming" && gameDateTime <= now;
   
-  // FIXED: Check if we're within 3 days of game start for kick functionality
+  // Check if we can join waitlist (3 days before to game end)
   const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
-  const canKickPlayers = userRole === "admin" && now >= threeDaysBeforeGame && !isCompleted && reservation.lineup && reservation.lineup.length > 0;
+  const canJoinWaitlist = now >= threeDaysBeforeGame && now <= gameDateTime;
+  
+  // Check if we can kick players (until game is completed)
+  const canKickPlayers = userRole === "admin" && !isCompleted && reservation.lineup && reservation.lineup.length > 0;
 
   const getStatusBadge = () => {
     if (isInProgress) {
@@ -131,7 +135,8 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
       );
     }
 
-    if (isFull) {
+    // Show join waitlist button if game is full and within the allowed time window
+    if (isFull && canJoinWaitlist) {
       return (
         <Button
           variant="outline"
@@ -145,16 +150,21 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
       );
     }
 
-    return (
-      <Button
-        size="sm"
-        onClick={onJoinGame}
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        <UserPlus className="h-4 w-4 mr-1" />
-        Join Game
-      </Button>
-    );
+    // Show join game button if not full
+    if (!isFull) {
+      return (
+        <Button
+          size="sm"
+          onClick={onJoinGame}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          <UserPlus className="h-4 w-4 mr-1" />
+          Join Game
+        </Button>
+      );
+    }
+
+    return null;
   };
 
   const renderAdminActions = () => {
@@ -185,12 +195,41 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
           </Button>
         )}
 
-        {/* Show joined players with kick option if within kick window */}
+        {/* Show waitlist management buttons */}
+        {reservation.waitingList && reservation.waitingList.length > 0 && (
+          <div className="w-full mt-2">
+            <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Waitlist: {reservation.waitingList.length} player(s)
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {reservation.waitingList.slice(0, 2).map((userId: string, index: number) => (
+                <Button
+                  key={userId}
+                  variant="outline"
+                  size="sm"
+                  onClick={onLeaveWaitlist}
+                  className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-7"
+                >
+                  <UserMinus className="h-3 w-3 mr-1" />
+                  Remove #{index + 1}
+                </Button>
+              ))}
+              {reservation.waitingList.length > 2 && (
+                <span className="text-xs text-gray-500 self-center">
+                  +{reservation.waitingList.length - 2} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Show joined players with kick option */}
         {canKickPlayers && (
           <div className="w-full mt-2">
             <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
-              Players can be kicked (within 3 days of game)
+              Kick players from game
             </div>
             <div className="flex flex-wrap gap-1">
               {reservation.lineup.slice(0, 3).map((player: any) => (

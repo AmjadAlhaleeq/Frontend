@@ -34,6 +34,15 @@ export const useReservationActions = (
     return maxPlayers;
   };
 
+  // Check if user can join waitlist (3 days before game to game end)
+  const canJoinWaitlist = (reservation: any) => {
+    const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
+    const now = new Date();
+    const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
+    
+    return now >= threeDaysBeforeGame && now <= gameDateTime;
+  };
+
   const handleJoinGame = useCallback(
     async (reservationId: number) => {
       if (!currentUserId) {
@@ -92,26 +101,29 @@ export const useReservationActions = (
       const currentPlayers = reservation.lineup?.length || 0;
       const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
 
-      // FIXED: Only auto-join waiting list if game is actually full
-      if (currentPlayers >= maxPlayers) {
-        console.log("Game is full, attempting to join waiting list");
-        await handleJoinWaitingList(reservationId);
-        return;
-      }
-
       try {
         console.log(
           "Attempting to join reservation with ID:",
           reservation.backendId
         );
-        await joinReservationApi(reservation.backendId);
-        joinGame(reservationId, undefined, currentUserId);
-
-        toast({
-          title: "Joined Game!",
-          description:
-            "You have successfully joined the game. See you on the pitch!",
-        });
+        const result = await joinReservationApi(reservation.backendId);
+        
+        // Check if user was added to waitlist or joined directly
+        if (result.message.includes("waitlist")) {
+          // User was added to waitlist
+          joinWaitingList(reservationId, currentUserId);
+          toast({
+            title: "Added to Waiting List",
+            description: "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
+          });
+        } else {
+          // User joined the game directly
+          joinGame(reservationId, undefined, currentUserId);
+          toast({
+            title: "Joined Game!",
+            description: "You have successfully joined the game. See you on the pitch!",
+          });
+        }
 
         await loadReservations();
       } catch (error) {
@@ -124,7 +136,7 @@ export const useReservationActions = (
         });
       }
     },
-    [currentUserId, userRole, reservations, joinGame, toast, loadReservations]
+    [currentUserId, userRole, reservations, joinGame, joinWaitingList, toast, loadReservations]
   );
 
   const handleCancelReservation = useCallback(
@@ -197,6 +209,16 @@ export const useReservationActions = (
         return;
       }
 
+      // Check if within allowed time window
+      if (!canJoinWaitlist(reservation)) {
+        toast({
+          title: "Cannot Join Waitlist",
+          description: "You can only join the waitlist from 3 days before the game until the game ends.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Check if user is already in the game
       const isUserJoined = reservation.lineup?.some(
         (player: any) => player.userId === currentUserId
@@ -222,19 +244,6 @@ export const useReservationActions = (
         return;
       }
 
-      // FIXED: Check if all slots are full - ONLY allow waitlist if reservation is actually full
-      const currentPlayers = reservation.lineup?.length || 0;
-      const maxPlayers = calculateActualMaxPlayers(reservation.maxPlayers);
-      if (currentPlayers < maxPlayers) {
-        toast({
-          title: "Game Not Full",
-          description: `You can only join the waiting list when all ${maxPlayers} slots are filled. Currently ${currentPlayers}/${maxPlayers} players joined.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // FIXED: No limit on waiting list players - infinite waiting list
       try {
         console.log(
           "Adding to waiting list for reservation:",
