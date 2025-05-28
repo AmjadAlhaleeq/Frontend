@@ -20,7 +20,6 @@ import Pitches from "@/pages/Pitches";
 import AddPitch from "@/pages/admin/AddPitch";
 import Leaderboards from "@/pages/Leaderboards";
 import MyBookings from "@/pages/MyBookings";
-import PlayerLineup from "@/pages/PlayerLineup";
 import AboutPage from "@/pages/AboutPage";
 import Rules from "@/pages/Rules";
 import Faq from "@/pages/Faq";
@@ -63,7 +62,6 @@ function App() {
                   <Route path="/admin/add-pitch" element={<AddPitch />} />
                   <Route path="/leaderboards" element={<Leaderboards />} />
                   <Route path="/my-bookings" element={<MyBookings />} />
-                  <Route path="/player-lineup" element={<PlayerLineup />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/rules" element={<Rules />} />
                   <Route path="/faq" element={<Faq />} />
