@@ -9,20 +9,20 @@ import { useToast } from "@/hooks/use-toast";
 
 /**
  * Home page component showing main app features and CTAs
- * 
+ *
  * @param {Object} props - Component props
  * @param {boolean} props.isFirstTimeLogin - Flag indicating if this is the first time login
  */
 const Home = ({ isFirstTimeLogin = false }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   // Check for first-time login flag
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn");
     const userRole = localStorage.getItem("userRole");
-    
-    if (isFirstTimeLogin && isLoggedIn === "true") {      
+
+    if (isFirstTimeLogin && isLoggedIn === "true") {
       // Show welcome toast based on role
       if (userRole === "admin") {
         toast({
@@ -64,7 +64,7 @@ const Home = ({ isFirstTimeLogin = false }) => {
               asChild
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white/10"
+              className="border-white text-black hover:bg-white/10"
             >
               <Link to="/reservations">{t("home.cta.viewReservations")}</Link>
             </Button>
