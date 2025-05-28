@@ -1,23 +1,18 @@
+
 import React, { useState, useEffect, useCallback } from "react";
-import { CheckCircle, Loader, Plus } from "lucide-react";
+import { Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Reservation } from "@/types/reservation";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
-import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
-import GameSummaryDialog from "@/components/reservations/GameSummaryDialog";
-import PlayerSuspensionDialog from "@/components/reservations/PlayerSuspensionDialog";
-import PlayerProfileDialog from "@/components/ui/PlayerProfileDialog";
-import ReservationCardEnhanced from "@/components/reservations/ReservationCardEnhanced";
+import ReservationsEnhancedHeader from "@/components/reservations/ReservationsEnhancedHeader";
+import ReservationsEnhancedList from "@/components/reservations/ReservationsEnhancedList";
+import ReservationsEnhancedDialogs from "@/components/reservations/ReservationsEnhancedDialogs";
 
-// New confirmation dialogs
-import JoinGameDialog from "@/components/reservations/JoinGameDialog";
-import JoinWaitlistDialog from "@/components/reservations/JoinWaitlistDialog";
-import LeaveGameDialog from "@/components/reservations/LeaveGameDialog";
-import LeaveWaitlistDialog from "@/components/reservations/LeaveWaitlistDialog";
-import ActionConfirmationDialog from "@/components/reservations/ActionConfirmationDialog";
+import { useReservationDialogs } from "@/hooks/useReservationDialogs";
+import { useReservationFiltering } from "@/hooks/useReservationFiltering";
 
 import {
   fetchAllReservations,
@@ -30,7 +25,6 @@ import {
   addGameSummaryApi,
   kickPlayerApi,
   suspendPlayerApi,
-  getPlayerProfileApi,
   type GameSummaryData,
 } from "@/services/reservationApiService";
 
@@ -46,31 +40,20 @@ const ReservationsEnhanced = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [pitchImages, setPitchImages] = useState<Record<string, string>>({});
 
-  // Dialog states
-  const [selectedReservation, setSelectedReservation] =
-    useState<Reservation | null>(null);
-  const [dialogStates, setDialogStates] = useState({
-    joinGame: false,
-    joinWaitlist: false,
-    leaveGame: false,
-    leaveWaitlist: false,
-    gameDetails: false,
-    gameSummary: false,
-    deleteReservation: false,
-    completeGame: false,
-    playerProfile: false,
-    playerSuspension: false,
-  });
+  // Custom hooks
+  const {
+    selectedReservation,
+    dialogStates,
+    suspensionData,
+    setSuspensionData,
+    openDialog,
+    closeDialog,
+  } = useReservationDialogs();
 
-  const [playerProfile, setPlayerProfile] = useState<{
-    playerId: string;
-    playerName?: string;
-  }>({ playerId: "", playerName: "" });
-
-  const [suspensionData, setSuspensionData] = useState<{
-    playerName: string;
-    playerId: string;
-  }>({ playerName: "", playerId: "" });
+  const { upcomingReservations, completedReservations } = useReservationFiltering(
+    reservations,
+    currentDate
+  );
 
   // Initialize user data
   useEffect(() => {
@@ -150,22 +133,6 @@ const ReservationsEnhanced = () => {
   useEffect(() => {
     loadReservations();
   }, [loadReservations]);
-
-  // Dialog management
-  const openDialog = (
-    dialogName: keyof typeof dialogStates,
-    reservation?: Reservation
-  ) => {
-    if (reservation) setSelectedReservation(reservation);
-    setDialogStates((prev) => ({ ...prev, [dialogName]: true }));
-  };
-
-  const closeDialog = (dialogName: keyof typeof dialogStates) => {
-    setDialogStates((prev) => ({ ...prev, [dialogName]: false }));
-    if (dialogName !== "playerProfile" && dialogName !== "playerSuspension") {
-      setSelectedReservation(null);
-    }
-  };
 
   // Utility functions
   const isUserJoined = (reservation: Reservation): boolean => {
@@ -341,7 +308,6 @@ const ReservationsEnhanced = () => {
     }
   };
 
-  // Add kick player handler
   const handleKickPlayer = async (
     playerId: string,
     suspensionDays: number,
@@ -376,7 +342,6 @@ const ReservationsEnhanced = () => {
   };
 
   const handlePlayerClick = (playerId: string, playerName?: string) => {
-    // Validate player ID before navigation
     if (!playerId || playerId.length < 10) {
       console.warn("Invalid player ID, cannot navigate:", playerId);
       toast({
@@ -387,21 +352,6 @@ const ReservationsEnhanced = () => {
       return;
     }
 
-    // Close any open dialogs first to prevent conflicts
-    setDialogStates({
-      joinGame: false,
-      joinWaitlist: false,
-      leaveGame: false,
-      leaveWaitlist: false,
-      gameDetails: false,
-      gameSummary: false,
-      deleteReservation: false,
-      completeGame: false,
-      playerProfile: false,
-      playerSuspension: false,
-    });
-
-    // Use setTimeout to ensure dialog is closed before navigation
     setTimeout(() => {
       navigate(`/player/${playerId}`);
     }, 100);
@@ -434,23 +384,6 @@ const ReservationsEnhanced = () => {
     }
   };
 
-  // Filter reservations
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const filteredReservations = currentDate
-    ? reservations.filter(
-        (res) => res.date === format(currentDate, "yyyy-MM-dd")
-      )
-    : reservations.filter((res) => new Date(res.date) >= today);
-
-  const upcomingReservations = filteredReservations.filter(
-    (res) => res.status === "upcoming"
-  );
-  const completedReservations = filteredReservations.filter(
-    (res) => res.status === "completed"
-  );
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -462,18 +395,7 @@ const ReservationsEnhanced = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-teal-700 dark:text-teal-400">
-          Football Reservations
-        </h1>
-        {userRole === "admin" && (
-          <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Reservation
-          </button>
-        )}
-      </div>
+      <ReservationsEnhancedHeader userRole={userRole} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calendar */}
@@ -490,192 +412,44 @@ const ReservationsEnhanced = () => {
         </div>
 
         {/* Reservations List */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Upcoming Games */}
-          <div>
-            <div className="flex items-center mb-4">
-              <CheckCircle className="h-5 w-5 mr-2 text-teal-600" />
-              <h2 className="text-xl font-semibold text-teal-600">
-                Upcoming Games
-              </h2>
-            </div>
-
-            {upcomingReservations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No upcoming games found.
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {upcomingReservations.map((reservation) => (
-                  <ReservationCardEnhanced
-                    key={reservation.id}
-                    reservation={reservation}
-                    userRole={userRole}
-                    currentUserId={currentUserId || ""}
-                    isUserJoined={isUserJoined(reservation)}
-                    isUserInWaitlist={isUserInWaitlist(reservation)}
-                    isFull={isFull(reservation)}
-                    onJoinGame={() => openDialog("joinGame", reservation)}
-                    onLeaveGame={() => openDialog("leaveGame", reservation)}
-                    onJoinWaitlist={() =>
-                      openDialog("joinWaitlist", reservation)
-                    }
-                    onLeaveWaitlist={() =>
-                      openDialog("leaveWaitlist", reservation)
-                    }
-                    onViewDetails={() => openDialog("gameDetails", reservation)}
-                    onDeleteReservation={() =>
-                      openDialog("deleteReservation", reservation)
-                    }
-                    onKickPlayer={handleKickPlayer}
-                    onAddSummary={() => openDialog("gameSummary", reservation)}
-                    pitchImage={pitchImages[reservation.pitchId]}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Completed Games (Admin Only) */}
-          {userRole === "admin" && (
-            <div>
-              <div className="flex items-center mb-4">
-                <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
-                <h2 className="text-xl font-semibold text-blue-600">
-                  Completed Games
-                </h2>
-              </div>
-
-              {completedReservations.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No completed games found.
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {completedReservations.map((reservation) => {
-                    const hasGameSummary =
-                      reservation.summary &&
-                      typeof reservation.summary === "object" &&
-                      (reservation.summary as any)?.completed;
-
-                    if (hasGameSummary) return null; // Don't show games with completed summaries
-
-                    return (
-                      <ReservationCardEnhanced
-                        key={reservation.id}
-                        reservation={reservation}
-                        userRole={userRole}
-                        currentUserId={currentUserId || ""}
-                        isUserJoined={isUserJoined(reservation)}
-                        isUserInWaitlist={isUserInWaitlist(reservation)}
-                        isFull={isFull(reservation)}
-                        onJoinGame={() => {}}
-                        onLeaveGame={() => {}}
-                        onJoinWaitlist={() => {}}
-                        onLeaveWaitlist={() => {}}
-                        onViewDetails={() =>
-                          openDialog("gameDetails", reservation)
-                        }
-                        onKickPlayer={handleKickPlayer}
-                        onAddSummary={() =>
-                          openDialog("gameSummary", reservation)
-                        }
-                        pitchImage={pitchImages[reservation.pitchId]}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <ReservationsEnhancedList
+          upcomingReservations={upcomingReservations}
+          completedReservations={completedReservations}
+          userRole={userRole}
+          currentUserId={currentUserId || ""}
+          pitchImages={pitchImages}
+          isUserJoined={isUserJoined}
+          isUserInWaitlist={isUserInWaitlist}
+          isFull={isFull}
+          onJoinGame={(reservation) => openDialog("joinGame", reservation)}
+          onLeaveGame={(reservation) => openDialog("leaveGame", reservation)}
+          onJoinWaitlist={(reservation) => openDialog("joinWaitlist", reservation)}
+          onLeaveWaitlist={(reservation) => openDialog("leaveWaitlist", reservation)}
+          onViewDetails={(reservation) => openDialog("gameDetails", reservation)}
+          onDeleteReservation={(reservation) => openDialog("deleteReservation", reservation)}
+          onKickPlayer={handleKickPlayer}
+          onAddSummary={(reservation) => openDialog("gameSummary", reservation)}
+        />
       </div>
 
       {/* Dialogs */}
-      {selectedReservation && (
-        <>
-          <JoinGameDialog
-            isOpen={dialogStates.joinGame}
-            onClose={() => closeDialog("joinGame")}
-            onConfirm={handleJoinGame}
-            reservation={selectedReservation}
-          />
-
-          <JoinWaitlistDialog
-            isOpen={dialogStates.joinWaitlist}
-            onClose={() => closeDialog("joinWaitlist")}
-            onConfirm={handleJoinWaitlist}
-            reservation={selectedReservation}
-          />
-
-          <LeaveGameDialog
-            isOpen={dialogStates.leaveGame}
-            onClose={() => closeDialog("leaveGame")}
-            onConfirm={handleLeaveGame}
-            gameName={
-              selectedReservation.pitchName || selectedReservation.title
-            }
-            gameDate={selectedReservation.date}
-            gameTime={selectedReservation.time}
-            isPenalty={false} // You can implement penalty logic here
-            timeToGame="Unknown" // You can implement time calculation here
-          />
-
-          <LeaveWaitlistDialog
-            isOpen={dialogStates.leaveWaitlist}
-            onClose={() => closeDialog("leaveWaitlist")}
-            onConfirm={handleLeaveWaitlist}
-            reservation={selectedReservation}
-          />
-
-          <ActionConfirmationDialog
-            open={dialogStates.deleteReservation}
-            onOpenChange={(open) => !open && closeDialog("deleteReservation")}
-            onConfirm={handleDeleteReservation}
-            title="Delete Reservation"
-            description="Are you sure you want to delete this reservation? This action cannot be undone."
-            confirmButtonText="Delete"
-            confirmButtonVariant="destructive"
-          />
-
-          <ActionConfirmationDialog
-            open={dialogStates.completeGame}
-            onOpenChange={(open) => !open && closeDialog("completeGame")}
-            onConfirm={handleCompleteGame}
-            title="Complete Game"
-            description="Are you sure you want to mark this game as completed?"
-            confirmButtonText="Complete"
-          />
-
-          <GameDetailsDialog
-            reservation={selectedReservation}
-            isOpen={dialogStates.gameDetails}
-            onClose={() => closeDialog("gameDetails")}
-            isAdmin={userRole === "admin"}
-            currentUserId={currentUserId || ""}
-            actualMaxPlayers={selectedReservation.maxPlayers}
-            pitchImage={pitchImages[selectedReservation.pitchId]}
-            onPlayerClick={handlePlayerClick}
-            onStatusChange={(status) => {
-              // Handle status change
-            }}
-          />
-
-          <GameSummaryDialog
-            isOpen={dialogStates.gameSummary}
-            onClose={() => closeDialog("gameSummary")}
-            reservation={selectedReservation}
-            onSaveSummary={handleAddSummary}
-          />
-        </>
-      )}
-
-      <PlayerSuspensionDialog
-        isOpen={dialogStates.playerSuspension}
-        onClose={() => closeDialog("playerSuspension")}
-        playerName={suspensionData.playerName}
-        playerId={suspensionData.playerId}
-        onConfirm={handleSuspendPlayer}
+      <ReservationsEnhancedDialogs
+        selectedReservation={selectedReservation}
+        dialogStates={dialogStates}
+        suspensionData={suspensionData}
+        userRole={userRole}
+        currentUserId={currentUserId || ""}
+        pitchImages={pitchImages}
+        onCloseDialog={closeDialog}
+        onJoinGame={handleJoinGame}
+        onJoinWaitlist={handleJoinWaitlist}
+        onLeaveGame={handleLeaveGame}
+        onLeaveWaitlist={handleLeaveWaitlist}
+        onDeleteReservation={handleDeleteReservation}
+        onCompleteGame={handleCompleteGame}
+        onAddSummary={handleAddSummary}
+        onSuspendPlayer={handleSuspendPlayer}
+        onPlayerClick={handlePlayerClick}
       />
     </div>
   );
