@@ -3,6 +3,7 @@ import { CheckCircle, Loader, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Reservation } from "@/types/reservation";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
@@ -34,6 +35,7 @@ import {
 } from "@/services/reservationApiService";
 
 const ReservationsEnhanced = () => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<"admin" | "player" | null>(null);
@@ -340,8 +342,7 @@ const ReservationsEnhanced = () => {
   };
 
   const handlePlayerClick = (playerId: string, playerName?: string) => {
-    setPlayerProfile({ playerId, playerName });
-    openDialog("playerProfile");
+    navigate(`/player/${playerId}`);
   };
 
   const handleSuspendPlayer = async (
@@ -606,23 +607,6 @@ const ReservationsEnhanced = () => {
           />
         </>
       )}
-
-      <PlayerProfileDialog
-        isOpen={dialogStates.playerProfile}
-        onClose={() => closeDialog("playerProfile")}
-        playerId={playerProfile.playerId}
-        playerName={playerProfile.playerName}
-        playerStats={{
-          matches: 0,
-          goals: 0,
-          assists: 0,
-          wins: 0,
-          interceptions: 0,
-          cleanSheets: 0,
-          mvp: 0,
-          winPercentage: 0,
-        }}
-      />
 
       <PlayerSuspensionDialog
         isOpen={dialogStates.playerSuspension}

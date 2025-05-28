@@ -1,43 +1,84 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import "@/lib/theme";
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import { LanguageProvider } from "@/context/LanguageContext";
+import { ReservationProvider } from "@/context/ReservationContext";
+import Layout from "@/components/layout/Layout";
+import ScrollToTop from "@/components/shared/ScrollToTop";
 
-import Index from "./pages/Index";
-import ScrollToTop from "./components/shared/ScrollToTop";
-import { ReservationProvider } from "./context/ReservationContext";
+// Pages
+import Index from "@/pages/Index";
+import Home from "@/pages/Home";
+import Reservations from "@/pages/Reservations";
+import ReservationsEnhanced from "@/pages/ReservationsEnhanced";
+import Profile from "@/pages/Profile";
+import PlayerProfile from "@/pages/PlayerProfile";
+import Pitches from "@/pages/Pitches";
+import AddPitch from "@/pages/admin/AddPitch";
+import Leaderboards from "@/pages/Leaderboards";
+import MyBookings from "@/pages/MyBookings";
+import PlayerLineup from "@/pages/PlayerLineup";
+import AboutPage from "@/pages/AboutPage";
+import Rules from "@/pages/Rules";
+import Faq from "@/pages/Faq";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import ForgotPassword from "@/pages/ForgotPassword";
+import NotFound from "@/pages/NotFound";
 
-// Initialize QueryClient for data fetching
+import "./App.css";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      retry: 1, // Only retry failed queries once
-      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-/**
- * Main App component
- * Sets up routing, providers, and app structure
- */
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <ReservationProvider>
-          <ScrollToTop /> {/* Scroll to top on page change */}
-          <Toaster />
-          <Sonner />
-          <Index />
-        </ReservationProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  useEffect(() => {
+    console.log("App initialized");
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <LanguageProvider>
+          <ReservationProvider>
+            <Router>
+              <ScrollToTop />
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/reservations" element={<Reservations />} />
+                  <Route path="/reservations-enhanced" element={<ReservationsEnhanced />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/player/:playerId" element={<PlayerProfile />} />
+                  <Route path="/pitches" element={<Pitches />} />
+                  <Route path="/admin/add-pitch" element={<AddPitch />} />
+                  <Route path="/leaderboards" element={<Leaderboards />} />
+                  <Route path="/my-bookings" element={<MyBookings />} />
+                  <Route path="/player-lineup" element={<PlayerLineup />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/rules" element={<Rules />} />
+                  <Route path="/faq" element={<Faq />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
+              <Toaster />
+            </Router>
+          </ReservationProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

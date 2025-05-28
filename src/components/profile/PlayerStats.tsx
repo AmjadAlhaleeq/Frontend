@@ -1,254 +1,142 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Calendar,
-  Target,
-  Users,
-  Trophy,
-  Star,
-  ShieldCheck,
-  TrendingUp,
+import { 
+  Trophy, 
+  Target, 
+  Users, 
+  Shield, 
   Zap,
-  Award,
+  Medal,
+  TrendingUp
 } from "lucide-react";
 
-interface BackendUserStats {
-  matches: number;
-  wins: number;
-  mvp: number;
-  goals: number;
-  assists: number;
-  interceptions: number;
-  cleanSheets: number;
-}
-
 interface PlayerStatsProps {
-  stats: BackendUserStats;
-  className?: string;
+  stats: {
+    matches: number;
+    wins: number;
+    mvp: number;
+    goals: number;
+    assists: number;
+    interceptions: number;
+    cleanSheets: number;
+  };
   isLoading?: boolean;
 }
 
-const PlayerStats: React.FC<PlayerStatsProps> = ({
-  stats,
-  className = "",
-  isLoading = false,
-}) => {
-  // Calculate win percentage from backend stats
+const PlayerStats: React.FC<PlayerStatsProps> = ({ stats, isLoading = false }) => {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <div key={i} className="animate-pulse p-4 bg-gray-100 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const winPercentage = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
 
+  const statItems = [
+    {
+      label: "Matches",
+      value: stats.matches,
+      icon: Users,
+      color: "bg-blue-500",
+      bgColor: "from-blue-50 to-blue-100",
+      borderColor: "border-blue-200"
+    },
+    {
+      label: "Wins", 
+      value: stats.wins,
+      icon: Trophy,
+      color: "bg-yellow-500",
+      bgColor: "from-yellow-50 to-yellow-100",
+      borderColor: "border-yellow-200"
+    },
+    {
+      label: "Win Rate",
+      value: `${winPercentage}%`,
+      icon: TrendingUp,
+      color: "bg-green-500",
+      bgColor: "from-green-50 to-green-100", 
+      borderColor: "border-green-200"
+    },
+    {
+      label: "Goals",
+      value: stats.goals,
+      icon: Target,
+      color: "bg-red-500",
+      bgColor: "from-red-50 to-red-100",
+      borderColor: "border-red-200"
+    },
+    {
+      label: "Assists",
+      value: stats.assists,
+      icon: Zap,
+      color: "bg-purple-500",
+      bgColor: "from-purple-50 to-purple-100",
+      borderColor: "border-purple-200"
+    },
+    {
+      label: "MVP Awards",
+      value: stats.mvp,
+      icon: Medal,
+      color: "bg-amber-500",
+      bgColor: "from-amber-50 to-amber-100",
+      borderColor: "border-amber-200"
+    },
+    {
+      label: "Clean Sheets",
+      value: stats.cleanSheets,
+      icon: Shield,
+      color: "bg-teal-500",
+      bgColor: "from-teal-50 to-teal-100",
+      borderColor: "border-teal-200"
+    },
+    {
+      label: "Interceptions",
+      value: stats.interceptions,
+      icon: Zap,
+      color: "bg-indigo-500",
+      bgColor: "from-indigo-50 to-indigo-100",
+      borderColor: "border-indigo-200"
+    }
+  ];
+
   return (
-    <div className={className}>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
-        {/* Header */}
-        <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-teal-50 rounded-t-2xl border-b border-gray-100">
-          <div className="flex items-center justify-between">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {statItems.map((stat, index) => {
+        const Icon = stat.icon;
+        
+        return (
+          <div
+            key={index}
+            className={`group p-4 bg-gradient-to-br ${stat.bgColor} rounded-xl border ${stat.borderColor} hover:scale-105 transition-all duration-200`}
+          >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <Zap className="h-5 w-5" style={{ color: "#0f766e" }} />
+              <div className={`flex-shrink-0 w-12 h-12 ${stat.color} rounded-full flex items-center justify-center shadow-lg`}>
+                <Icon className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Your Performance
-                </h2>
-                <p className="text-sm text-gray-600">Season overview</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold" style={{ color: "#0f766e" }}>
-                {stats.matches}
-              </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                Total Games
+              <div className="flex-1 min-w-0">
+                <p className="text-2xl font-bold text-gray-900 mb-1">
+                  {stat.value}
+                </p>
+                <p className="text-sm font-medium text-gray-600 truncate">
+                  {stat.label}
+                </p>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="p-8">
-          {/* Primary Stats - Top Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <div className="group relative p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 hover:border-green-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-4">
-                <Target className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.goals
-                  )}
-                </div>
-                <div className="text-sm font-medium text-green-600">Goals</div>
-              </div>
-            </div>
-
-            <div className="group relative p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 hover:border-blue-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mx-auto mb-4">
-                <Zap className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.assists
-                  )}
-                </div>
-                <div className="text-sm font-medium text-blue-600">Assists</div>
-              </div>
-            </div>
-
-            <div className="group relative p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 hover:border-purple-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full mx-auto mb-4">
-                <Award className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.mvp
-                  )}
-                </div>
-                <div className="text-sm font-medium text-purple-600">MVP</div>
-              </div>
-            </div>
-
-            <div className="group relative p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200 hover:border-yellow-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full mx-auto mb-4">
-                <Trophy className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    winPercentage
-                  )}%
-                </div>
-                <div className="text-sm font-medium text-yellow-600">Win Rate</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Secondary Stats Row - Bottom Row */}
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="group relative p-6 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl border border-teal-200 hover:border-teal-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full mx-auto mb-4">
-                <Star className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-teal-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.wins
-                  )}
-                </div>
-                <div className="text-sm font-medium text-teal-600">Wins</div>
-              </div>
-            </div>
-
-            <div className="group relative p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full mx-auto mb-4">
-                <ShieldCheck className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-slate-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.cleanSheets
-                  )}
-                </div>
-                <div className="text-sm font-medium text-slate-600">Clean Sheets</div>
-              </div>
-            </div>
-
-            <div className="group relative p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl border border-indigo-200 hover:border-indigo-300 transition-all duration-200 hover:scale-105 cursor-pointer">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-700 mb-1">
-                  {isLoading ? (
-                    <div className="animate-pulse bg-gray-200 h-8 w-12 rounded mx-auto"></div>
-                  ) : (
-                    stats.interceptions
-                  )}
-                </div>
-                <div className="text-sm font-medium text-indigo-600">Interceptions</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Highlight */}
-          {!isLoading && stats.matches > 0 && (
-            <div
-              className="relative overflow-hidden p-6 rounded-2xl text-white"
-              style={{
-                background: "linear-gradient(135deg, #0f766e 0%, #134e4a 100%)",
-              }}
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm opacity-90 mb-1">Total Impact</div>
-                    <div className="text-4xl font-bold">
-                      {stats.goals + stats.assists}
-                    </div>
-                    <div className="text-sm opacity-75">
-                      Goals + Assists combined
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                      <TrendingUp className="h-8 w-8" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced No Data State */}
-          {!isLoading && stats.matches === 0 && (
-            <div className="text-center py-12">
-              <div className="relative inline-block">
-                <div className="w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-50 rounded-full flex items-center justify-center mb-4 animate-pulse">
-                  <Calendar
-                    className="h-10 w-10"
-                    style={{ color: "#0f766e" }}
-                  />
-                </div>
-                <div
-                  className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "#0f766e" }}
-                >
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Ready to Make History!
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                Your journey starts here. Every great player began with their
-                first match.
-              </p>
-              <div
-                className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-full font-medium hover:opacity-90 transition-all cursor-pointer"
-                style={{ backgroundColor: "#0f766e" }}
-              >
-                <Zap className="h-4 w-4" />
-                Book Your First Game
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 };

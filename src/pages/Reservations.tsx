@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
 import { Reservation } from "@/types/reservation";
 import { format } from 'date-fns';
+import { useNavigate } from "react-router-dom";
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
 import GameDetailsDialog from "@/components/reservations/GameDetailsDialog";
@@ -18,6 +19,7 @@ import { useReservationsData } from "@/hooks/useReservationsData";
 import { useReservationActions } from "@/hooks/useReservationActions";
 
 const Reservations = () => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
@@ -83,14 +85,10 @@ const Reservations = () => {
     }
   }, []);
 
-  // NOTE: Handle player click to open profile dialog
+  // NOTE: Handle player click to navigate to profile page
   const handlePlayerClick = useCallback((playerId: string, playerName?: string) => {
-    setPlayerProfile({
-      isOpen: true,
-      playerId,
-      playerName
-    });
-  }, []);
+    navigate(`/player/${playerId}`);
+  }, [navigate]);
 
   // --- Upcoming/Completed section admin filter ---
   const upcomingReservations = useMemo(() => {
@@ -306,15 +304,6 @@ const Reservations = () => {
           onSaveSummary={handleSaveSummaryWrapper}
         />
       )}
-
-      {/* Player Profile Dialog on any player click */}
-      <PlayerProfileDialog
-        isOpen={playerProfile.isOpen}
-        onClose={() => setPlayerProfile({ isOpen: false, playerId: "", playerName: "" })}
-        playerId={playerProfile.playerId}
-        playerName={playerProfile.playerName}
-        playerStats={getUserStats(playerProfile.playerId)}
-      />
 
       {/* Player Suspension Dialog */}
       <PlayerSuspensionDialog
