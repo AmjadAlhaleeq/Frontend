@@ -47,8 +47,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
         <LanguageProvider>
-          <ReservationProvider>
-            <Router>
+          <Router>
+            <ReservationProvider>
               <ScrollToTop />
               <Layout>
                 <Routes>
@@ -71,8 +71,8 @@ function App() {
                 </Routes>
               </Layout>
               <Toaster />
-            </Router>
-          </ReservationProvider>
+            </ReservationProvider>
+          </Router>
         </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
