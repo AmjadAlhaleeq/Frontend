@@ -5,11 +5,14 @@ export interface BackendUserProfile {
   _id: string;
   firstName: string;
   lastName: string;
+  email?: string;
+  phone?: string;
   city?: string;
   age?: number;
   preferredPosition?: string;
   bio?: string;
   profilePicture?: string;
+  role?: string;
   suspended?: boolean;
   suspendedUntil?: string | null;
   badges?: Array<{ 
