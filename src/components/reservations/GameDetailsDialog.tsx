@@ -1,6 +1,6 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +60,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   onPlayerClick,
 }) => {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
 
@@ -100,10 +101,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       return;
     }
     
-    // Call the parent's player click handler
-    if (onPlayerClick) {
-      onPlayerClick(playerId, playerName);
-    }
+    console.log("Navigating to player profile:", playerId);
+    // Navigate to the new player profile page
+    navigate(`/player-profile/${playerId}`);
   };
 
   const renderPlayerItem = (player: any, index: number) => (

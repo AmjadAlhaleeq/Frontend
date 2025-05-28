@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Home from "./Home";
 import Profile from "./Profile";
+import PlayerProfileById from "./PlayerProfileById";
 import Pitches from "./Pitches";
 import Reservations from "./Reservations";
 import Leaderboards from "./Leaderboards";
@@ -91,6 +92,14 @@ const Index = () => {
         element={
           <PageTransition>
             <Profile />
+          </PageTransition>
+        }
+      />
+      <Route
+        path="/player-profile/:playerId"
+        element={
+          <PageTransition>
+            <PlayerProfileById />
           </PageTransition>
         }
       />

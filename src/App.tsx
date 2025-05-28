@@ -16,6 +16,7 @@ import Reservations from "@/pages/Reservations";
 import ReservationsEnhanced from "@/pages/ReservationsEnhanced";
 import Profile from "@/pages/Profile";
 import PlayerProfile from "@/pages/PlayerProfile";
+import PlayerProfileById from "@/pages/PlayerProfileById";
 import Pitches from "@/pages/Pitches";
 import AddPitch from "@/pages/admin/AddPitch";
 import Leaderboards from "@/pages/Leaderboards";
@@ -58,6 +59,7 @@ function App() {
                   <Route path="/reservations-enhanced" element={<ReservationsEnhanced />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/player/:playerId" element={<PlayerProfile />} />
+                  <Route path="/player-profile/:playerId" element={<PlayerProfileById />} />
                   <Route path="/pitches" element={<Pitches />} />
                   <Route path="/admin/add-pitch" element={<AddPitch />} />
                   <Route path="/leaderboards" element={<Leaderboards />} />
