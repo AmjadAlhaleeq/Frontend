@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { LeaderboardPlayer, LeaderboardType } from "@/lib/leaderboardApi";
 import LeaderboardSkeleton from "@/components/ui/leaderboard-skeleton";
+import PlayerProfileDialog from "@/components/ui/PlayerProfileDialog";
 
 interface ModernLeaderboardProps {
   players: LeaderboardPlayer[];
@@ -37,8 +38,21 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
   loading = false,
   currentType = "goals",
   typeConfig = {},
-  onPlayerClick,
 }) => {
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+
+  const handlePlayerClick = (playerId: string) => {
+    console.log("Opening profile for player:", playerId);
+    setSelectedPlayerId(playerId);
+    setIsProfileDialogOpen(true);
+  };
+
+  const handleCloseProfileDialog = () => {
+    setIsProfileDialogOpen(false);
+    setSelectedPlayerId(null);
+  };
+
   // Get rank icon based on position
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -174,97 +188,108 @@ const ModernLeaderboard: React.FC<ModernLeaderboardProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      {players.map((player, index) => {
-        const stats = formatStatValue(player, currentType);
-        const isTopThree = player.rank <= 3;
+    <>
+      <div className="space-y-3">
+        {players.map((player, index) => {
+          const stats = formatStatValue(player, currentType);
+          const isTopThree = player.rank <= 3;
 
-        // Define card styling based on rank
-        const getCardStyling = (rank: number) => {
-          switch (rank) {
-            case 1:
-              return "border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-500";
-            case 2:
-              return "border-2 border-gray-400 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/20 dark:border-gray-400";
-            case 3:
-              return "border-2 border-amber-600 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:border-amber-600";
-            default:
-              return "";
-          }
-        };
+          // Define card styling based on rank
+          const getCardStyling = (rank: number) => {
+            switch (rank) {
+              case 1:
+                return "border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20 dark:border-yellow-500";
+              case 2:
+                return "border-2 border-gray-400 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800/20 dark:border-gray-400";
+              case 3:
+                return "border-2 border-amber-600 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:border-amber-600";
+              default:
+                return "";
+            }
+          };
 
-        return (
-          <Card
-            key={player.userId}
-            className={`transition-all duration-200 hover:shadow-md cursor-pointer ${getCardStyling(
-              player.rank
-            )}`}
-            onClick={() => onPlayerClick?.(player.userId)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-4">
-                {/* Rank */}
-                <div className="flex-shrink-0">{getRankIcon(player.rank)}</div>
+          return (
+            <Card
+              key={player.userId}
+              className={`transition-all duration-200 hover:shadow-md cursor-pointer hover:scale-[1.02] ${getCardStyling(
+                player.rank
+              )}`}
+              onClick={() => handlePlayerClick(player.userId)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-4">
+                  {/* Rank */}
+                  <div className="flex-shrink-0">{getRankIcon(player.rank)}</div>
 
-                {/* Avatar */}
-                <Avatar className="h-12 w-12">
-                  <AvatarImage
-                    src={player.profilePicture || player.avatar}
-                    alt={player.name}
-                  />
-                  <AvatarFallback className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-semibold">
-                    {getPlayerInitials(player)}
-                  </AvatarFallback>
-                </Avatar>
+                  {/* Avatar */}
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage
+                      src={player.profilePicture || player.avatar}
+                      alt={player.name}
+                    />
+                    <AvatarFallback className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-semibold">
+                      {getPlayerInitials(player)}
+                    </AvatarFallback>
+                  </Avatar>
 
-                {/* Player Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {player.name || "Unknown Player"}
-                    </h3>
-                    {isTopThree && (
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${
-                          player.rank === 1
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                            : player.rank === 2
-                            ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
-                        }`}
-                      >
-                        #{player.rank}
-                      </Badge>
-                    )}
+                  {/* Player Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        {player.name || "Unknown Player"}
+                      </h3>
+                      {isTopThree && (
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs ${
+                            player.rank === 1
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                              : player.rank === 2
+                              ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                          }`}
+                        >
+                          #{player.rank}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {stats.sub}
+                      </p>
+                      <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                        <Gamepad2 className="h-3 w-3" />
+                        {player.matches} games
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 mt-1">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {stats.sub}
-                    </p>
-                    <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                      <Gamepad2 className="h-3 w-3" />
-                      {player.matches} games
+
+                  {/* Stats */}
+                  <div className="flex-shrink-0 text-right">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+                      {getStatIcon(currentType)}
+                      <span>{stats.main}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                      {currentType.replace("_", " ")}
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-                {/* Stats */}
-                <div className="flex-shrink-0 text-right">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-                    {getStatIcon(currentType)}
-                    <span>{stats.main}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {currentType.replace("_", " ")}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+      {/* Player Profile Dialog */}
+      {selectedPlayerId && (
+        <PlayerProfileDialog
+          isOpen={isProfileDialogOpen}
+          onClose={handleCloseProfileDialog}
+          playerId={selectedPlayerId}
+        />
+      )}
+    </>
   );
 };
 
