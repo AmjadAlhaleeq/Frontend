@@ -341,6 +341,40 @@ const ReservationsEnhanced = () => {
     }
   };
 
+  // Add kick player handler
+  const handleKickPlayer = async (
+    playerId: string,
+    suspensionDays: number,
+    reason: string
+  ) => {
+    if (!selectedReservation || userRole !== "admin") return;
+
+    try {
+      await kickPlayerApi(
+        selectedReservation.backendId,
+        playerId,
+        reason,
+        suspensionDays
+      );
+      await loadReservations();
+      toast({
+        title: "Player Kicked",
+        description: `Player has been removed and suspended for ${suspensionDays} day${
+          suspensionDays > 1 ? "s" : ""
+        }.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to Kick Player",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to kick the player",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePlayerClick = (playerId: string, playerName?: string) => {
     // Validate player ID before navigation
     if (!playerId || playerId.length < 10) {
@@ -493,9 +527,8 @@ const ReservationsEnhanced = () => {
                     onDeleteReservation={() =>
                       openDialog("deleteReservation", reservation)
                     }
-                    onCompleteGame={() =>
-                      openDialog("completeGame", reservation)
-                    }
+                    onKickPlayer={handleKickPlayer}
+                    onAddSummary={() => openDialog("gameSummary", reservation)}
                     pitchImage={pitchImages[reservation.pitchId]}
                   />
                 ))}
@@ -543,6 +576,7 @@ const ReservationsEnhanced = () => {
                         onViewDetails={() =>
                           openDialog("gameDetails", reservation)
                         }
+                        onKickPlayer={handleKickPlayer}
                         onAddSummary={() =>
                           openDialog("gameSummary", reservation)
                         }
