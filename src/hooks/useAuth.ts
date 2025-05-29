@@ -2,13 +2,13 @@
 import { useState, useEffect } from 'react';
 
 interface User {
-  _id: string;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phoneNumber: string;
   city: string;
-  age: number;
+  age: string;
 }
 
 interface AuthState {
@@ -28,10 +28,11 @@ export const useAuth = () => {
   useEffect(() => {
     // Check for existing auth data on mount
     const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem('currentUser');
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
 
-    // Only set authenticated if both token and user data exist
-    if (token && userData) {
+    // Only set authenticated if all required data exists and isLoggedIn is true
+    if (token && userData && isLoggedIn === 'true') {
       try {
         const user = JSON.parse(userData);
         setAuthState({
@@ -46,11 +47,12 @@ export const useAuth = () => {
     }
 
     // Listen for login/logout events
-    const handleLogin = () => {
+    const handleLoginStatusChange = () => {
       const token = localStorage.getItem('authToken');
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem('currentUser');
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
       
-      if (token && userData) {
+      if (token && userData && isLoggedIn === 'true') {
         try {
           const user = JSON.parse(userData);
           setAuthState({
@@ -60,36 +62,39 @@ export const useAuth = () => {
           });
         } catch (error) {
           console.error('Error parsing user data:', error);
+          logout();
         }
+      } else {
+        setAuthState({
+          isAuthenticated: false,
+          user: null,
+          token: null
+        });
       }
     };
 
-    const handleLogout = () => {
-      setAuthState({
-        isAuthenticated: false,
-        user: null,
-        token: null
-      });
-    };
-
-    window.addEventListener('userLoggedIn', handleLogin);
-    window.addEventListener('userLoggedOut', handleLogout);
+    window.addEventListener('loginStatusChanged', handleLoginStatusChange);
+    window.addEventListener('userLoggedIn', handleLoginStatusChange);
+    window.addEventListener('userLoggedOut', handleLoginStatusChange);
 
     return () => {
-      window.removeEventListener('userLoggedIn', handleLogin);
-      window.removeEventListener('userLoggedOut', handleLogout);
+      window.removeEventListener('loginStatusChanged', handleLoginStatusChange);
+      window.removeEventListener('userLoggedIn', handleLoginStatusChange);
+      window.removeEventListener('userLoggedOut', handleLoginStatusChange);
     };
   }, []);
 
   const logout = () => {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('isLoggedIn');
     setAuthState({
       isAuthenticated: false,
       user: null,
       token: null
     });
-    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    window.dispatchEvent(new Event('userLoggedOut'));
   };
 
   return {

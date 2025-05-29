@@ -23,6 +23,7 @@ import LogoutConfirmationDialog from "../shared/LogoutConfirmationDialog";
 import Logo from "../shared/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const isMobile = useIsMobile();
@@ -30,10 +31,11 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  
+  // Use the useAuth hook
+  const { isAuthenticated, user, logout: authLogout } = useAuth();
 
   const location = useLocation();
 
@@ -44,55 +46,28 @@ const Navbar = () => {
       : "text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400";
   };
 
-  // Check login status on mount and when localStorage changes
+  // Check user role on mount and when authentication changes
   useEffect(() => {
-    const checkLoginStatus = () => {
-      const storedUser = localStorage.getItem("currentUser");
+    const checkUserRole = () => {
       const storedRole = localStorage.getItem("userRole");
-
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setCurrentUser(userData);
-          setIsLoggedIn(true);
-          setUserRole(storedRole);
-        } catch (e) {
-          console.error("Error parsing user data:", e);
-          setIsLoggedIn(false);
-          setCurrentUser(null);
-          setUserRole(null);
-        }
-      } else {
-        setIsLoggedIn(false);
-        setCurrentUser(null);
-        setUserRole(null);
-      }
+      setUserRole(storedRole);
     };
 
-    checkLoginStatus();
+    checkUserRole();
 
     // Add event listener for localStorage changes
-    window.addEventListener("storage", checkLoginStatus);
-    
-    // Custom event for login status changes within the app
-    window.addEventListener("loginStatusChanged", checkLoginStatus);
+    window.addEventListener("storage", checkUserRole);
+    window.addEventListener("loginStatusChanged", checkUserRole);
 
     return () => {
-      window.removeEventListener("storage", checkLoginStatus);
-      window.removeEventListener("loginStatusChanged", checkLoginStatus);
+      window.removeEventListener("storage", checkUserRole);
+      window.removeEventListener("loginStatusChanged", checkUserRole);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
-    // Clear user data from localStorage
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("isLoggedIn");
-    
-    // Update state
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setUserRole(null);
+    // Use the auth logout function
+    authLogout();
     
     // Close the dialog
     setIsLogoutDialogOpen(false);
@@ -106,9 +81,6 @@ const Navbar = () => {
     // Close mobile menu if open
     setMobileMenuOpen(false);
     
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event("loginStatusChanged"));
-    
     // Navigate to home page
     navigate('/');
   };
@@ -120,8 +92,6 @@ const Navbar = () => {
 
   // Handle successful login
   const handleLoginSuccess = (role: 'admin' | 'player', userDetails?: any) => {
-    setIsLoggedIn(true);
-    setCurrentUser(userDetails);
     setUserRole(role);
     setIsLoginDialogOpen(false);
     
@@ -157,7 +127,7 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {isLoggedIn ? (
+            {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -165,8 +135,8 @@ const Navbar = () => {
                     className="relative h-8 w-8 rounded-full"
                   >
                     <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center text-white text-sm font-bold">
-                      {currentUser?.firstName?.[0]}
-                      {currentUser?.lastName?.[0]}
+                      {user.firstName?.[0]?.toUpperCase() || 'U'}
+                      {user.lastName?.[0]?.toUpperCase() || ''}
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
@@ -174,10 +144,10 @@ const Navbar = () => {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {currentUser?.firstName} {currentUser?.lastName}
+                        {user.firstName} {user.lastName}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email}
+                        {user.email}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -272,7 +242,7 @@ const Navbar = () => {
                   >
                     Leaderboards
                   </NavLink>
-                  {isLoggedIn && userRole !== "admin" && (
+                  {isAuthenticated && userRole !== "admin" && (
                     <>
                       <NavLink
                         to="/profile"
