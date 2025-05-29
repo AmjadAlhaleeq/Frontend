@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -154,6 +153,7 @@ const Navbar = () => {
               <NavLink to="/leaderboards" className={getNavClassName}>
                 Leaderboards
               </NavLink>
+              {/* Only show Add Pitch in mobile menu for admin */}
             </nav>
           </div>
 
@@ -163,17 +163,16 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-10 rounded-full p-0 ring-2 ring-transparent hover:ring-teal-200 transition-all duration-200"
+                    className="relative h-8 w-8 rounded-full"
                   >
-                    <Avatar className="h-10 w-10 shadow-lg ring-2 ring-white dark:ring-gray-800">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={currentUser?.photo}
-                        alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
-                        className="object-cover"
+                        src={currentUser?.avatarUrl}
+                        alt={currentUser?.firstName}
                       />
-                      <AvatarFallback className="bg-gradient-to-br from-teal-500 to-teal-600 text-white font-semibold text-sm shadow-inner">
-                        {currentUser?.firstName?.[0] || 'U'}
-                        {currentUser?.lastName?.[0] || ''}
+                      <AvatarFallback>
+                        {currentUser?.firstName?.[0]}
+                        {currentUser?.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -206,6 +205,7 @@ const Navbar = () => {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {/* Removed Add Pitch from dropdown */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-red-600 focus:text-red-600"
