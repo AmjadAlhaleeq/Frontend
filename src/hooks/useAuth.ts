@@ -18,7 +18,7 @@ interface AuthState {
 }
 
 export const useAuth = () => {
-  // Set default state to not authenticated - this is the default when entering the website
+  // Set default state to not authenticated
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -29,10 +29,9 @@ export const useAuth = () => {
     // Check for existing auth data on mount
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('currentUser');
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-
-    // Only set authenticated if all required data exists and isLoggedIn is true
-    if (token && userData && isLoggedIn === 'true') {
+    
+    // Only set authenticated if both token and user data exist
+    if (token && userData) {
       try {
         const user = JSON.parse(userData);
         setAuthState({
@@ -50,9 +49,8 @@ export const useAuth = () => {
     const handleLoginStatusChange = () => {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('currentUser');
-      const isLoggedIn = localStorage.getItem('isLoggedIn');
       
-      if (token && userData && isLoggedIn === 'true') {
+      if (token && userData) {
         try {
           const user = JSON.parse(userData);
           setAuthState({
