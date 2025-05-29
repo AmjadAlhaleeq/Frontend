@@ -129,7 +129,7 @@ const PlayerProfileById: React.FC = () => {
       {/* Header Section */}
       <div className="relative bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl p-6 text-white mb-8">
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          {/* Avatar - Only show database profile picture */}
+          {/* Profile Picture - Only show database profile picture */}
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 overflow-hidden">
               {profile.profilePicture ? (

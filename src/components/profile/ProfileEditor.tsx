@@ -1,8 +1,8 @@
+
 import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,6 @@ interface ProfileEditorProps {
     city?: string;
     position?: string;
     bio?: string;
-    avatarUrl?: string;
   };
   onSave: (updatedProfile: any, profilePictureFile?: File) => void;
   onCancel: () => void;
@@ -36,11 +35,11 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     age: currentUserDetails.age || "",
     city: currentUserDetails.city || "",
     position: currentUserDetails.position || "",
-    bio: currentUserDetails.bio || "",
-    avatarUrl: currentUserDetails.avatarUrl || ""
+    bio: currentUserDetails.bio || ""
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Handle file input change for photo upload
@@ -73,10 +72,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
     // Create a data URL for preview
     const reader = new FileReader();
     reader.onload = () => {
-      setProfile(prev => ({
-        ...prev,
-        avatarUrl: reader.result as string
-      }));
+      setPreviewUrl(reader.result as string);
       
       toast({
         title: "Photo Selected",
@@ -131,19 +127,22 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUserDetails, onSav
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col items-center mb-6">
-            {/* Circular Avatar */}
+            {/* Profile Picture Display */}
             <div className="relative mb-4">
-              <Avatar className="h-32 w-32 border-4 border-gray-200 shadow-lg">
-                <AvatarImage 
-                  src={profile.avatarUrl} 
-                  alt={`${profile.firstName} ${profile.lastName}`}
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 text-white text-4xl font-bold">
-                  {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "U"}
-                  {profile.lastName ? profile.lastName.charAt(0).toUpperCase() : ""}
-                </AvatarFallback>
-              </Avatar>
+              <div className="h-32 w-32 border-4 border-gray-200 shadow-lg rounded-full overflow-hidden">
+                {previewUrl ? (
+                  <img 
+                    src={previewUrl} 
+                    alt="Profile preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center text-white text-4xl font-bold">
+                    {profile.firstName ? profile.firstName.charAt(0).toUpperCase() : "U"}
+                    {profile.lastName ? profile.lastName.charAt(0).toUpperCase() : ""}
+                  </div>
+                )}
+              </div>
             </div>
             
             <input 

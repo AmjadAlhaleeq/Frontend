@@ -18,7 +18,7 @@ interface AuthState {
 }
 
 export const useAuth = () => {
-  // Set default state to not authenticated
+  // Set default state to not authenticated - this is the default when entering the website
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,

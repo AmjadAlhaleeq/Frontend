@@ -88,7 +88,6 @@ interface UserProfileData {
   phoneNumber: string;
   email: string;
   password: string;
-  avatarUrl?: string;
 }
 
 interface LoginDialogProps {
@@ -276,9 +275,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             city: user.city,
             position: user.preferredPosition || "",
             phoneNumber: user.phone,
-            avatarUrl:
-              user.profilePicture ||
-              `https://i.pravatar.cc/300?u=${user.email}`,
           })
         );
 
@@ -313,8 +309,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
           phoneNumber: user.phone,
           email: user.email,
           password: "", // Don't store password
-          avatarUrl:
-            user.profilePicture || `https://i.pravatar.cc/300?u=${user.email}`,
         });
 
         onClose();
