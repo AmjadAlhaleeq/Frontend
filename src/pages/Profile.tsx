@@ -8,18 +8,13 @@ import {
   Trophy,
   User,
   Loader,
-  AlertTriangle,
   Trash2,
   Loader2,
-  Target,
-  TrendingUp,
-  Medal,
   Calendar,
   MapPin,
   Phone,
   Mail,
   Users,
-  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -246,17 +241,17 @@ const Profile = () => {
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Circular Avatar */}
+              {/* Avatar - Only show database profile picture */}
               <div className="relative">
                 <div className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 overflow-hidden">
-                  {currentUser.avatarUrl ? (
+                  {backendUser.profilePicture ? (
                     <img
-                      src={currentUser.avatarUrl}
+                      src={backendUser.profilePicture}
                       alt={`${currentUser.firstName} ${currentUser.lastName}`}
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center">
+                    <div className="w-full h-full rounded-full bg-white/20 flex items-center justify-center">
                       <span className="text-4xl font-bold text-white">
                         {currentUser.firstName?.[0]}
                         {currentUser.lastName?.[0]}
@@ -309,7 +304,7 @@ const Profile = () => {
           {isSuspended && (
             <div className="mt-6 p-4 bg-red-500/20 border border-red-300/30 rounded-lg backdrop-blur-sm">
               <div className="flex items-center gap-2 text-red-100">
-                <AlertTriangle className="h-5 w-5" />
+                <User className="h-5 w-5" />
                 <span className="font-medium">Account Suspended</span>
               </div>
               <p className="text-sm text-red-200 mt-1">

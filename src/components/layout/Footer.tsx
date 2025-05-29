@@ -26,16 +26,16 @@ const Footer = () => {
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 justify-items-center md:justify-items-start">
           {/* Logo and About Section */}
-          <div className="space-y-4">
-            <div className="flex items-center">
+          <div className="space-y-4 text-center md:text-left">
+            <div className="flex justify-center md:justify-start">
               <Logo height={145} />
             </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 max-w-sm">
               BOKIT is the premier platform for football pitch reservations, connecting players with the best pitches in your area.
             </p>
-            <div className="flex space-x-4 pt-2">
+            <div className="flex space-x-4 pt-2 justify-center md:justify-start">
               <SocialLink href="#" aria-label="Facebook">
                 <Facebook size={20} />
               </SocialLink>
@@ -49,7 +49,7 @@ const Footer = () => {
           </div>
 
           {/* Quick Links */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
               Quick Links
             </h3>
@@ -66,13 +66,13 @@ const Footer = () => {
           </div>
 
           {/* Contact Information */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
               Contact Us
             </h3>
             <div className="space-y-3">
-              <div className="flex items-start">
-                <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
+              <div className="flex items-start justify-center md:justify-start">
+                <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3 flex-shrink-0" />
                 <button 
                   onClick={handleEmailClick}
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
@@ -80,8 +80,8 @@ const Footer = () => {
                   bookitandkickit@gmail.com
                 </button>
               </div>
-              <div className="flex items-start">
-                <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
+              <div className="flex items-start justify-center md:justify-start">
+                <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3 flex-shrink-0" />
                 <a 
                   href="tel:+962795016133"
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors"
@@ -89,8 +89,8 @@ const Footer = () => {
                   00962795016133
                 </a>
               </div>
-              <div className="flex items-start">
-                <MapPin className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3" />
+              <div className="flex items-start justify-center md:justify-start">
+                <MapPin className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3 flex-shrink-0" />
                 <span className="text-gray-600 dark:text-gray-400">
                   Amman, Jordan
                 </span>

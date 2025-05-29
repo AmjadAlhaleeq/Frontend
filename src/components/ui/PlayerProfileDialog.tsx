@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,12 +13,8 @@ import {
   MapPin,
   Calendar,
   Trophy,
-  Target,
   Users,
   Award,
-  Star,
-  Shield,
-  Zap,
   Phone,
   Mail,
   AlertTriangle,
@@ -78,6 +75,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   const isAdmin = userRole === "admin";
   const isOwnProfile = currentUserId === playerId;
   const shouldShowContactInfo = isAdmin || isOwnProfile;
+  const shouldShowLocation = isAdmin || isOwnProfile;
 
   // Check if user is suspended
   const isSuspended =
@@ -147,7 +145,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
             {/* Header Section */}
             <div className="relative bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-4">
-                {/* Avatar */}
+                {/* Avatar - Only show database profile picture */}
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30 overflow-hidden">
                     {profile.profilePicture ? (
@@ -157,7 +155,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center">
+                      <div className="w-full h-full rounded-full bg-white/20 flex items-center justify-center">
                         <span className="text-2xl font-bold text-white">
                           {profile.firstName?.[0]}
                           {profile.lastName?.[0]}
@@ -179,10 +177,13 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     {profile.preferredPosition || "Football Player"}
                   </p>
                   <div className="flex flex-wrap gap-3 justify-center sm:justify-start text-sm">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {profile.city || "Unknown"}
-                    </div>
+                    {/* Only show location if allowed */}
+                    {shouldShowLocation && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {profile.city || "Unknown"}
+                      </div>
+                    )}
                     {profile.age && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -205,7 +206,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     {profile.role === "admin" ? "Admin" : "Player"}
                   </Badge>
                   <div className="flex items-center gap-1 text-xs text-blue-100">
-                    <Shield className="h-3 w-3" />
+                    <User className="h-3 w-3" />
                     <span>
                       Your Role: {userRole === "admin" ? "Admin" : "Player"}
                     </span>
@@ -269,16 +270,18 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    {/* Always show public info */}
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <div className="text-sm text-gray-500">Location</div>
-                        <div className="font-medium">
-                          {profile.city || "Not specified"}
+                    {/* Show location only if allowed */}
+                    {shouldShowLocation && (
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <div className="text-sm text-gray-500">Location</div>
+                          <div className="font-medium">
+                            {profile.city || "Not specified"}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Contact information - Show real data for admins */}
                     {shouldShowContactInfo ? (
@@ -352,7 +355,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                 {/* Access Level Info */}
                 <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-slate-600" />
+                    <User className="h-5 w-5 text-slate-600" />
                     Viewing Permissions
                   </h3>
                   <div className="text-sm text-slate-600 space-y-2">

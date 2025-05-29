@@ -18,6 +18,7 @@ interface AuthState {
 }
 
 export const useAuth = () => {
+  // Set default state to not authenticated
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -29,6 +30,7 @@ export const useAuth = () => {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
 
+    // Only set authenticated if both token and user data exist
     if (token && userData) {
       try {
         const user = JSON.parse(userData);
