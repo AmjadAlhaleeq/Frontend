@@ -20,15 +20,16 @@ import PageTransition from "@/components/shared/PageTransition";
 /**
  * Main routing component for the application
  * Defines all available routes and their corresponding components
+ * Handles first-time login redirects and localStorage initialization
  */
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false);
 
-  // Check for first-time login redirect and handle login/logout redirects
+  // Initialize app and handle first-time login
   useEffect(() => {
-    // Initialize storage if needed
+    // Initialize localStorage with default data if needed
     if (!localStorage.getItem("pitches")) {
       localStorage.setItem("pitches", JSON.stringify([]));
     }
@@ -36,33 +37,25 @@ const Index = () => {
       localStorage.setItem("reservations", JSON.stringify([]));
     }
 
-    // Handle first time login
+    // Handle first-time login flow
     const firstTimeLogin = localStorage.getItem("firstTimeLogin");
-
     if (firstTimeLogin === "true") {
-      // Mark that we've handled this first-time login
       setIsFirstTimeLogin(true);
-      // Clear the flag so it only happens once
       localStorage.removeItem("firstTimeLogin");
 
-      // If we're not on the home page, redirect there
+      // Redirect to home page for first-time users
       if (location.pathname !== "/") {
         navigate("/");
       }
-      // Else the Home component will handle the welcome messages
     }
 
-    // Handle user login event listener
+    // Event listeners for login/logout events
     const handleLogin = () => {
-      console.log("User logged in, refreshing the page");
-      // When user logs in successfully, we don't need to reload the whole page
-      // The navbar and other components will be updated through the loginStatusChanged event
+      console.log("User logged in, refreshing components");
     };
 
-    // Handle logout event listener
     const handleLogout = () => {
       console.log("User logged out, redirecting to home page");
-      // When user logs out, redirect to home page and reload
       navigate("/");
       setTimeout(() => window.location.reload(), 100);
     };
@@ -70,7 +63,6 @@ const Index = () => {
     window.addEventListener("userLoggedIn", handleLogin);
     window.addEventListener("userLoggedOut", handleLogout);
 
-    // Cleanup
     return () => {
       window.removeEventListener("userLoggedIn", handleLogin);
       window.removeEventListener("userLoggedOut", handleLogout);

@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { LanguageProvider } from "@/context/LanguageContext";
 import { ReservationProvider } from "@/context/ReservationContext";
 import Layout from "@/components/layout/Layout";
 import ScrollToTop from "@/components/shared/ScrollToTop";
@@ -39,6 +38,10 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Main application component
+ * Sets up routing, providers, and global configurations
+ */
 function App() {
   useEffect(() => {
     console.log("App initialized");
@@ -47,35 +50,33 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-        <LanguageProvider>
-          <Router>
-            <ReservationProvider>
-              <ScrollToTop />
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/reservations" element={<Reservations />} />
-                  <Route path="/reservations-enhanced" element={<ReservationsEnhanced />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/player/:playerId" element={<PlayerProfile />} />
-                  <Route path="/player-profile/:playerId" element={<PlayerProfileById />} />
-                  <Route path="/pitches" element={<Pitches />} />
-                  <Route path="/admin/add-pitch" element={<AddPitch />} />
-                  <Route path="/leaderboards" element={<Leaderboards />} />
-                  <Route path="/my-bookings" element={<MyBookings />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/rules" element={<Rules />} />
-                  <Route path="/faq" element={<Faq />} />
-                  <Route path="/privacy" element={<PrivacyPolicy />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Layout>
-              <Toaster />
-            </ReservationProvider>
-          </Router>
-        </LanguageProvider>
+        <Router>
+          <ReservationProvider>
+            <ScrollToTop />
+            <Layout>
+              <Routes>
+                <Route path="/*" element={<Index />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/reservations" element={<Reservations />} />
+                <Route path="/reservations-enhanced" element={<ReservationsEnhanced />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/player/:playerId" element={<PlayerProfile />} />
+                <Route path="/player-profile/:playerId" element={<PlayerProfileById />} />
+                <Route path="/pitches" element={<Pitches />} />
+                <Route path="/admin/add-pitch" element={<AddPitch />} />
+                <Route path="/leaderboards" element={<Leaderboards />} />
+                <Route path="/my-bookings" element={<MyBookings />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/rules" element={<Rules />} />
+                <Route path="/faq" element={<Faq />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+            <Toaster />
+          </ReservationProvider>
+        </Router>
       </ThemeProvider>
     </QueryClientProvider>
   );
