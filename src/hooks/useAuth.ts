@@ -6,9 +6,12 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
-  city: string;
-  age: string;
+  phoneNumber?: string;
+  city?: string;
+  age?: string;
+  profilePicture?: string;
+  preferredPosition?: string;
+  bio?: string;
 }
 
 interface AuthState {
@@ -18,7 +21,7 @@ interface AuthState {
 }
 
 export const useAuth = () => {
-  // Set default state to not authenticated
+  // Always start with logged out state
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -26,27 +29,18 @@ export const useAuth = () => {
   });
 
   useEffect(() => {
-    // Check for existing auth data on mount
-    const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('currentUser');
+    // Clear any existing auth data on initial load to ensure logout by default
+    const clearAuthOnLoad = () => {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('isLoggedIn');
+    };
     
-    // Only set authenticated if both token and user data exist
-    if (token && userData) {
-      try {
-        const user = JSON.parse(userData);
-        setAuthState({
-          isAuthenticated: true,
-          user,
-          token
-        });
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        logout();
-      }
-    }
+    clearAuthOnLoad();
 
-    // Listen for login/logout events
-    const handleLoginStatusChange = () => {
+    // Check for existing auth data after clearing
+    const checkAuthStatus = () => {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('currentUser');
       
@@ -62,23 +56,22 @@ export const useAuth = () => {
           console.error('Error parsing user data:', error);
           logout();
         }
-      } else {
-        setAuthState({
-          isAuthenticated: false,
-          user: null,
-          token: null
-        });
       }
     };
 
-    window.addEventListener('loginStatusChanged', handleLoginStatusChange);
-    window.addEventListener('userLoggedIn', handleLoginStatusChange);
-    window.addEventListener('userLoggedOut', handleLoginStatusChange);
+    // Listen for auth events
+    const handleAuthEvents = () => {
+      checkAuthStatus();
+    };
+
+    window.addEventListener('loginStatusChanged', handleAuthEvents);
+    window.addEventListener('userLoggedIn', handleAuthEvents);
+    window.addEventListener('userLoggedOut', handleAuthEvents);
 
     return () => {
-      window.removeEventListener('loginStatusChanged', handleLoginStatusChange);
-      window.removeEventListener('userLoggedIn', handleLoginStatusChange);
-      window.removeEventListener('userLoggedOut', handleLoginStatusChange);
+      window.removeEventListener('loginStatusChanged', handleAuthEvents);
+      window.removeEventListener('userLoggedIn', handleAuthEvents);
+      window.removeEventListener('userLoggedOut', handleAuthEvents);
     };
   }, []);
 

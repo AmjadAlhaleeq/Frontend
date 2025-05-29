@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,29 +11,62 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut, Calendar } from "lucide-react";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { getMyProfile } from "@/lib/userApi";
 
 interface UserMenuProps {
   user: {
     firstName: string;
     lastName: string;
     email: string;
+    profilePicture?: string;
   };
   userRole: string | null;
   onLogout: () => void;
 }
 
-const UserMenu = ({ user, userRole, onLogout }: UserMenuProps) => {
+const UserMenu = ({ user: initialUser, userRole, onLogout }: UserMenuProps) => {
+  const [user, setUser] = useState(initialUser);
+
+  useEffect(() => {
+    // Fetch complete user profile including profile picture
+    const fetchUserProfile = async () => {
+      try {
+        const response = await getMyProfile();
+        if (response.status === 'success' && response.data?.user) {
+          const backendUser = response.data.user;
+          const updatedUser = {
+            firstName: backendUser.firstName,
+            lastName: backendUser.lastName,
+            email: backendUser.email,
+            profilePicture: backendUser.profilePicture
+          };
+          setUser(updatedUser);
+          
+          // Update localStorage with new user data including profile picture
+          const currentUserData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+          const newUserData = { ...currentUserData, ...updatedUser };
+          localStorage.setItem('currentUser', JSON.stringify(newUserData));
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Continue with the initial user data if fetch fails
+      }
+    };
+
+    if (initialUser) {
+      fetchUserProfile();
+    }
+  }, [initialUser]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-8 w-8 rounded-full"
+          className="relative p-1 rounded-full hover:bg-transparent"
         >
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center text-white text-sm font-bold">
-            {user.firstName?.[0]?.toUpperCase() || 'U'}
-            {user.lastName?.[0]?.toUpperCase() || ''}
-          </div>
+          <UserAvatar user={user} size="sm" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

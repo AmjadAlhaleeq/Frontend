@@ -60,6 +60,12 @@ const Navbar = () => {
   const handleLoginSuccess = (role: 'admin' | 'player', userDetails?: any) => {
     setUserRole(role);
     setIsLoginDialogOpen(false);
+    
+    // Store updated user data with profile picture if available
+    if (userDetails) {
+      localStorage.setItem('currentUser', JSON.stringify(userDetails));
+    }
+    
     window.dispatchEvent(new Event("loginStatusChanged"));
   };
 
