@@ -17,6 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, X, User, LogOut, Settings, Calendar } from "lucide-react";
 import LoginDialog from "../auth/LoginDialog";
 import LogoutConfirmationDialog from "../shared/LogoutConfirmationDialog";
@@ -162,15 +163,19 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
+                    className="relative h-10 w-10 rounded-full p-0 ring-2 ring-transparent hover:ring-teal-200 transition-all duration-200"
                   >
-                    {/* Only show initials - no avatar images */}
-                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-700">
+                    <Avatar className="h-10 w-10 shadow-lg ring-2 ring-white dark:ring-gray-800">
+                      <AvatarImage
+                        src={currentUser?.photo}
+                        alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-gradient-to-br from-teal-500 to-teal-600 text-white font-semibold text-sm shadow-inner">
                         {currentUser?.firstName?.[0] || 'U'}
                         {currentUser?.lastName?.[0] || ''}
-                      </span>
-                    </div>
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
