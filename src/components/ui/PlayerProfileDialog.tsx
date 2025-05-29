@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -45,7 +44,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
   playerName,
 }) => {
   const { profile, loading, error, fetchProfile } = usePlayerProfile();
-  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "player" | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   console.log("PlayerProfileDialog - Current user role:", userRole);
@@ -54,10 +53,10 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
   // Get user role and ID from localStorage
   useEffect(() => {
-    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+    const role = localStorage.getItem("userRole") as "admin" | "player" | null;
     setUserRole(role);
-    
-    const storedUser = localStorage.getItem('currentUser');
+
+    const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
@@ -76,12 +75,13 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
     }
   }, [isOpen, playerId, fetchProfile]);
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === "admin";
   const isOwnProfile = currentUserId === playerId;
   const shouldShowContactInfo = isAdmin || isOwnProfile;
 
   // Check if user is suspended
-  const isSuspended = profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
+  const isSuspended =
+    profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date();
 
   const handleClose = () => {
     onClose();
@@ -91,7 +91,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -99,7 +99,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
             </div>
             Player Profile
             {/* Access Level Indicator */}
-            <Badge 
+            <Badge
               variant={shouldShowContactInfo ? "default" : "secondary"}
               className="ml-auto text-xs"
             >
@@ -159,7 +159,8 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     ) : (
                       <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-400 via-blue-500 to-teal-400 flex items-center justify-center">
                         <span className="text-2xl font-bold text-white">
-                          {profile.firstName?.[0]}{profile.lastName?.[0]}
+                          {profile.firstName?.[0]}
+                          {profile.lastName?.[0]}
                         </span>
                       </div>
                     )}
@@ -197,12 +198,17 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
 
                 {/* Role Badge and Access Indicator */}
                 <div className="text-right space-y-2">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    {profile.role === 'admin' ? 'Admin' : 'Player'}
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/20 text-white border-white/30"
+                  >
+                    {profile.role === "admin" ? "Admin" : "Player"}
                   </Badge>
                   <div className="flex items-center gap-1 text-xs text-blue-100">
                     <Shield className="h-3 w-3" />
-                    <span>Your Role: {userRole === 'admin' ? 'Admin' : 'Player'}</span>
+                    <span>
+                      Your Role: {userRole === "admin" ? "Admin" : "Player"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -215,7 +221,8 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     <span className="font-medium">Account Suspended</span>
                   </div>
                   <p className="text-sm text-red-200 mt-1">
-                    Suspended until {new Date(profile.suspendedUntil!).toLocaleDateString()}
+                    Suspended until{" "}
+                    {new Date(profile.suspendedUntil!).toLocaleDateString()}
                   </p>
                 </div>
               )}
@@ -226,10 +233,7 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
               <div className="lg:col-span-2 space-y-6">
                 {/* Performance Stats */}
                 {profile.stats && (
-                  <PlayerStats 
-                    stats={profile.stats} 
-                    isLoading={false}
-                  />
+                  <PlayerStats stats={profile.stats} isLoading={false} />
                 )}
 
                 {/* Badges */}
@@ -238,8 +242,8 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     <Award className="h-5 w-5 text-yellow-600" />
                     Achievements
                   </h3>
-                  <BadgeDisplay 
-                    badges={profile.badges || []} 
+                  <BadgeDisplay
+                    badges={profile.badges || []}
                     isLoading={false}
                   />
                 </div>
@@ -252,23 +256,27 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-600" />
-                      {shouldShowContactInfo ? 'Contact Information' : 'Public Information'}
+                      {shouldShowContactInfo
+                        ? "Contact Information"
+                        : "Public Information"}
                     </h3>
-                    <Badge 
+                    <Badge
                       variant={shouldShowContactInfo ? "default" : "secondary"}
                       className="text-xs"
                     >
                       {shouldShowContactInfo ? "Full Access" : "Limited View"}
                     </Badge>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {/* Always show public info */}
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <MapPin className="h-4 w-4 text-gray-500" />
                       <div>
                         <div className="text-sm text-gray-500">Location</div>
-                        <div className="font-medium">{profile.city || "Not specified"}</div>
+                        <div className="font-medium">
+                          {profile.city || "Not specified"}
+                        </div>
                       </div>
                     </div>
 
@@ -278,28 +286,38 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                         <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <Mail className="h-4 w-4 text-blue-500" />
                           <div className="flex-1">
-                            <div className="text-sm text-blue-600 font-medium">Email</div>
+                            <div className="text-sm text-blue-600 font-medium">
+                              Email
+                            </div>
                             <div className="font-medium text-gray-900">
                               {profile.email || "Email not available"}
                             </div>
                           </div>
                           {isAdmin && !isOwnProfile && (
-                            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-blue-100 text-blue-700 border-blue-300"
+                            >
                               Admin Only
                             </Badge>
                           )}
                         </div>
-                        
+
                         <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
                           <Phone className="h-4 w-4 text-green-500" />
                           <div className="flex-1">
-                            <div className="text-sm text-green-600 font-medium">Phone</div>
+                            <div className="text-sm text-green-600 font-medium">
+                              Phone
+                            </div>
                             <div className="font-medium text-gray-900">
                               {profile.phone || "Phone not available"}
                             </div>
                           </div>
                           {isAdmin && !isOwnProfile && (
-                            <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-green-100 text-green-700 border-green-300"
+                            >
                               Admin Only
                             </Badge>
                           )}
@@ -308,7 +326,9 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                     ) : (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
                         <EyeOff className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                        <p className="text-sm text-amber-700 font-medium">Private Information</p>
+                        <p className="text-sm text-amber-700 font-medium">
+                          Private Information
+                        </p>
                         <p className="text-xs text-amber-600 mt-1">
                           Contact details are only visible to administrators
                         </p>
@@ -320,8 +340,12 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                 {/* Bio */}
                 {profile.bio && (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">About</h3>
-                    <p className="text-gray-700 leading-relaxed">{profile.bio}</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      About
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {profile.bio}
+                    </p>
                   </div>
                 )}
 
@@ -333,19 +357,25 @@ const PlayerProfileDialog: React.FC<PlayerProfileDialogProps> = ({
                   </h3>
                   <div className="text-sm text-slate-600 space-y-2">
                     <p>
-                      <strong>Your Role:</strong> {userRole === 'admin' ? 'Administrator' : 'Player'}
+                      <strong>Your Role:</strong>{" "}
+                      {userRole === "admin" ? "Administrator" : "Player"}
                     </p>
                     <p>
-                      <strong>Access Level:</strong> {shouldShowContactInfo ? 'Full Profile Access' : 'Public Profile Only'}
+                      <strong>Access Level:</strong>{" "}
+                      {shouldShowContactInfo
+                        ? "Full Profile Access"
+                        : "Public Profile Only"}
                     </p>
                     {!shouldShowContactInfo && (
                       <p className="text-amber-600 italic">
-                        Private contact information is hidden. Only administrators can view email and phone numbers.
+                        Private contact information is hidden. Only
+                        administrators can view email and phone numbers.
                       </p>
                     )}
                     {isOwnProfile && (
                       <p className="text-blue-600 italic">
-                        This is your own profile, so you can see all information.
+                        This is your own profile, so you can see all
+                        information.
                       </p>
                     )}
                   </div>
