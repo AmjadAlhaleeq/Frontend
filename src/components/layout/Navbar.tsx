@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, X, User, LogOut, Settings, Calendar } from "lucide-react";
 import LoginDialog from "../auth/LoginDialog";
 import LogoutConfirmationDialog from "../shared/LogoutConfirmationDialog";
@@ -153,7 +153,6 @@ const Navbar = () => {
               <NavLink to="/leaderboards" className={getNavClassName}>
                 Leaderboards
               </NavLink>
-              {/* Only show Add Pitch in mobile menu for admin */}
             </nav>
           </div>
 
@@ -165,16 +164,13 @@ const Navbar = () => {
                     variant="ghost"
                     className="relative h-8 w-8 rounded-full"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={currentUser?.avatarUrl}
-                        alt={currentUser?.firstName}
-                      />
-                      <AvatarFallback>
-                        {currentUser?.firstName?.[0]}
-                        {currentUser?.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    {/* Only show initials - no avatar images */}
+                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-700">
+                        {currentUser?.firstName?.[0] || 'U'}
+                        {currentUser?.lastName?.[0] || ''}
+                      </span>
+                    </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -205,7 +201,6 @@ const Navbar = () => {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {/* Removed Add Pitch from dropdown */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-red-600 focus:text-red-600"
