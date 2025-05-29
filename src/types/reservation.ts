@@ -1,3 +1,4 @@
+
 export interface Player {
   userId: string;
   name: string;
@@ -78,4 +79,5 @@ export interface Reservation {
         completedAt: string;
       };
   additionalImages?: string[];
+  userInWaitlist?: boolean;
 }

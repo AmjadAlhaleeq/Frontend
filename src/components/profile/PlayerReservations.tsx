@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useReservation } from '@/context/ReservationContext';
 import { Reservation } from '@/types/reservation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Clock, MapPin, Users, AlertTriangle, UserClock } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -326,7 +326,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
             </Badge>
             {userWaitlisted && (
               <Badge className="text-xs bg-amber-500">
-                <UserClock className="h-3 w-3 mr-1" />
+                <Clock className="h-3 w-3 mr-1" />
                 Waitlisted
               </Badge>
             )}
