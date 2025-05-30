@@ -131,9 +131,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       confirmText: 'Join Game',
       action: async () => {
         setLoading(`join-${reservation.id}`, true);
-        await onJoin(reservation.id);
-        setLoading(`join-${reservation.id}`, false);
-        setConfirmationDialog(prev => ({ ...prev, open: false }));
+        try {
+          await onJoin(reservation.id);
+        } finally {
+          setLoading(`join-${reservation.id}`, false);
+          setConfirmationDialog(prev => ({ ...prev, open: false }));
+        }
       }
     });
   };
@@ -149,9 +152,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       action: async () => {
         if (currentUserId) {
           setLoading(`leave-${reservation.id}`, true);
-          await onCancel(reservation.id, currentUserId);
-          setLoading(`leave-${reservation.id}`, false);
-          setConfirmationDialog(prev => ({ ...prev, open: false }));
+          try {
+            await onCancel(reservation.id, currentUserId);
+          } finally {
+            setLoading(`leave-${reservation.id}`, false);
+            setConfirmationDialog(prev => ({ ...prev, open: false }));
+          }
         }
       }
     });
@@ -179,16 +185,18 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     const reservation = waitlistDialog.reservation;
     setLoading(`waitlist-${reservation.id}`, true);
 
-    if (waitlistDialog.isJoining) {
-      await onJoinWaitingList(reservation.id, currentUserId);
-      addToWaitingList(reservation.id.toString());
-    } else {
-      await onLeaveWaitingList(reservation.id, currentUserId);
-      removeFromWaitingList(reservation.id.toString());
+    try {
+      if (waitlistDialog.isJoining) {
+        await onJoinWaitingList(reservation.id, currentUserId);
+        addToWaitingList(reservation.id.toString());
+      } else {
+        await onLeaveWaitingList(reservation.id, currentUserId);
+        removeFromWaitingList(reservation.id.toString());
+      }
+    } finally {
+      setLoading(`waitlist-${reservation.id}`, false);
+      setWaitlistDialog({ open: false, isJoining: false });
     }
-
-    setLoading(`waitlist-${reservation.id}`, false);
-    setWaitlistDialog({ open: false, isJoining: false });
   };
 
   const handleDeleteClick = (reservation: Reservation) => {
@@ -202,9 +210,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       action: async () => {
         if (onDeleteReservation) {
           setLoading(`delete-${reservation.id}`, true);
-          await onDeleteReservation(reservation.id);
-          setLoading(`delete-${reservation.id}`, false);
-          setConfirmationDialog(prev => ({ ...prev, open: false }));
+          try {
+            await onDeleteReservation(reservation.id);
+          } finally {
+            setLoading(`delete-${reservation.id}`, false);
+            setConfirmationDialog(prev => ({ ...prev, open: false }));
+          }
         }
       }
     });
@@ -222,9 +233,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   const handleKickPlayerConfirm = async (playerId: string, suspensionDays: number, reason: string) => {
     if (onKickPlayer) {
       setLoading(`kick-${playerId}`, true);
-      await onKickPlayer(suspensionDialog.reservationId, playerId, suspensionDays, reason);
-      setLoading(`kick-${playerId}`, false);
-      setSuspensionDialog({ open: false, playerName: '', playerId: '', reservationId: 0 });
+      try {
+        await onKickPlayer(suspensionDialog.reservationId, playerId, suspensionDays, reason);
+      } finally {
+        setLoading(`kick-${playerId}`, false);
+        setSuspensionDialog({ open: false, playerName: '', playerId: '', reservationId: 0 });
+      }
     }
   };
 
