@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
@@ -77,7 +78,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     setLoadingStates(prev => ({ ...prev, [key]: loading }));
   };
 
-  // "Two-way-pending" = live update both upcoming/completed sections for admin; Only show upcoming to users
+  // Filter reservations by status and date
   const todayISO = new Date().toISOString().slice(0, 10);
   const completedReservations = upcomingReservations.filter(
     (r) => r.status === "completed" || new Date(r.date) < new Date(todayISO)
@@ -228,8 +229,12 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     }
   };
 
+  // Check if user is in waiting list - combining server data with local persistence
   const isUserInWaitingListCheck = (reservation: Reservation): boolean => {
-    return isInWaitingList(reservation.id.toString());
+    // Check both server data and local persistence
+    const serverWaitlist = reservation.waitingList?.includes(currentUserId || "");
+    const localWaitlist = isInWaitingList(reservation.id.toString());
+    return serverWaitlist || localWaitlist;
   };
 
   return (
