@@ -71,7 +71,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
 
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
-  const { addToWaitingList, removeFromWaitingList, isInWaitingList } = useWaitingListPersistence(currentUserId);
+  const { addToWaitingList, removeFromWaitingList, isInWaitingList, syncWithServerData } = useWaitingListPersistence(currentUserId);
 
   const setLoading = (key: string, loading: boolean) => {
     setLoadingStates(prev => ({ ...prev, [key]: loading }));
@@ -293,7 +293,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
                   onKickPlayer={(playerId, playerName) => handleKickPlayerClick(reservation, playerId, playerName)}
                   isUserLoggedIn={!!currentUserId}
                   pitchImage={pitchImages[reservation.pitchId]}
-                  isUserInWaitingList={isUserInWaitingListCheck(reservation)}
+                  isUserInWaitingList={isUserInWaitingListCheck}
                   loadingStates={loadingStates}
                 />
               </div>
