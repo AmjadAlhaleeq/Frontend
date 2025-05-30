@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -204,12 +205,6 @@ const Reservations = () => {
 
     return gameExists;
   }, [selectedGameForDetails, reservations]);
-  const isUserInWaitingList = useCallback(
-    (reservation: Reservation): boolean => {
-      return reservation.waitingList?.includes(currentUserId ?? "") ?? false;
-    },
-    [currentUserId]
-  );
 
   if (isLoading) {
     return (
@@ -260,7 +255,6 @@ const Reservations = () => {
                 ...upcomingReservations,
                 ...(userRole === "admin" ? completedReservations : []),
               ]}
-              isUserInWaitingList={isUserInWaitingList}
               currentDate={currentDate}
               userRole={userRole}
               currentUserId={currentUserId}
@@ -290,6 +284,7 @@ const Reservations = () => {
               }}
               onAddSummary={userRole === "admin" ? handleAddSummary : undefined}
               onClearDateFilter={() => setCurrentDate(undefined)}
+              onKickPlayer={userRole === "admin" ? handleKickPlayer : undefined}
             />
           )}
         </div>
