@@ -14,7 +14,7 @@ import { format } from "date-fns";
 
 /**
  * AddReservationDialog Component
- * Dialog for creating new game reservations with comprehensive fields
+ * Dialog for creating new game reservations with comprehensive fields including max players control
  */
 const AddReservationDialog = () => {
   const [open, setOpen] = useState(false);
@@ -22,11 +22,16 @@ const AddReservationDialog = () => {
   const [title, setTitle] = useState("");
   const [pitchName, setPitchName] = useState("");
   const [time, setTime] = useState("");
-  const [maxPlayers, setMaxPlayers] = useState<number | null>(null);
+  const [maxPlayers, setMaxPlayers] = useState<number>(12);
   const [price, setPrice] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
   const { addReservation, pitches } = useReservation();
   const { toast } = useToast();
+
+  // Get user role to determine max players limit
+  const userRole = localStorage.getItem("userRole");
+  const isAdmin = userRole === "admin";
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -36,7 +41,7 @@ const AddReservationDialog = () => {
         setTitle("");
         setPitchName("");
         setTime("");
-        setMaxPlayers(null);
+        setMaxPlayers(12);
         setPrice("");
       }, 200);
     }
@@ -54,7 +59,7 @@ const AddReservationDialog = () => {
     }
   }, [pitchName, pitches]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate required fields
@@ -62,6 +67,16 @@ const AddReservationDialog = () => {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate max players range
+    if (maxPlayers < 6 || maxPlayers > 30) {
+      toast({
+        title: "Invalid Max Players",
+        description: "Max players must be between 6 and 30.",
         variant: "destructive"
       });
       return;
@@ -89,6 +104,8 @@ const AddReservationDialog = () => {
       return;
     }
     
+    setIsLoading(true);
+    
     // Create the reservation data object with all required fields
     const reservationData = {
       pitchId: selectedPitch?._id || `pitch_${Date.now()}`,
@@ -101,7 +118,7 @@ const AddReservationDialog = () => {
       duration: 90, // Default duration
       location: selectedPitch?.location || "",
       city: selectedPitch?.city || "",
-      maxPlayers: maxPlayers || 12,
+      maxPlayers: maxPlayers,
       price: parseFloat(price) || 0,
       imageUrl: selectedPitch?.images?.[0] || selectedPitch?.backgroundImage || "/football-pitch-bg.jpg",
       additionalImages: selectedPitch?.images || [],
@@ -126,6 +143,8 @@ const AddReservationDialog = () => {
         description: "A reservation for this pitch at this time already exists or the pitch doesn't exist.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,6 +244,31 @@ const AddReservationDialog = () => {
             </p>
           </div>
 
+          {/* Max Players Input with Admin Control */}
+          <div className="space-y-2">
+            <label htmlFor="maxPlayers" className="text-sm font-medium">
+              Max Players* (Required)
+            </label>
+            <div className="relative">
+              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="maxPlayers"
+                type="number"
+                min="6"
+                max={isAdmin ? "30" : "22"}
+                value={maxPlayers}
+                onChange={(e) => setMaxPlayers(parseInt(e.target.value) || 12)}
+                className="pl-10"
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isAdmin 
+                ? "Admin can set up to 30 players (minimum 6)" 
+                : "Regular limit is 22 players (minimum 6)"}
+            </p>
+          </div>
+
           {/* Price Input */}
           <div className="space-y-2">
             <label htmlFor="price" className="text-sm font-medium">
@@ -246,27 +290,24 @@ const AddReservationDialog = () => {
             </div>
           </div>
 
-          {/* Max Players Display */}
-          {maxPlayers && (
-            <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-              <div className="flex items-center text-sm text-teal-800 dark:text-teal-200">
-                <Users className="h-4 w-4 mr-2" />
-                Maximum players for this pitch: <strong className="ml-1">{maxPlayers}</strong>
-                <span className="ml-2 text-xs text-teal-600 dark:text-teal-400">
-                  (Minimum 5v5 + 2 substitutes)
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Submit Button */}
           <div className="flex justify-end">
             <Button 
               type="submit" 
               className="bg-teal-600 hover:bg-teal-700 text-white px-6"
+              disabled={isLoading}
             >
-              <Check className="h-4 w-4 mr-2" />
-              Create Reservation
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Create Reservation
+                </>
+              )}
             </Button>
           </div>
         </form>

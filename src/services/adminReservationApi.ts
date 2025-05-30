@@ -1,3 +1,4 @@
+
 import { apiRequest, API_BASE_URL } from "./apiConfig";
 
 // Helper function to get auth headers
@@ -39,11 +40,10 @@ export const kickPlayer = async (
 ) => {
   try {
     console.log(
-      `Kicking player ${playerId} 
-      from reservation ${reservationId} for reason: ${reason}, suspension days: ${suspensionDays}`
+      `Kicking player ${playerId} from reservation ${reservationId} for reason: ${reason}, suspension days: ${suspensionDays}`
     );
-    // Ensure the reservationId and playerId are valid
-    const response = await fetch(`/reservations/${reservationId}/kick`, {
+    
+    const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/kick`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -110,7 +110,7 @@ export const addGameSummary = async (
   return result;
 };
 
-// Create a reservation
+// Create a reservation with maxPlayers support
 export const createReservation = async (reservationData: any) => {
   const response = await fetch(`${API_BASE_URL}/reservations`, {
     method: "POST",

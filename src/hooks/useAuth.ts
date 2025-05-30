@@ -21,7 +21,6 @@ interface AuthState {
 }
 
 export const useAuth = () => {
-  // Always start with logged out state
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -29,22 +28,13 @@ export const useAuth = () => {
   });
 
   useEffect(() => {
-    // Clear any existing auth data on initial load to ensure logout by default
-    const clearAuthOnLoad = () => {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('isLoggedIn');
-    };
-    
-    clearAuthOnLoad();
-
-    // Check for existing auth data after clearing
+    // Check for existing auth data on initialization
     const checkAuthStatus = () => {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('currentUser');
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
       
-      if (token && userData) {
+      if (token && userData && isLoggedIn === 'true') {
         try {
           const user = JSON.parse(userData);
           setAuthState({
@@ -58,6 +48,8 @@ export const useAuth = () => {
         }
       }
     };
+
+    checkAuthStatus();
 
     // Listen for auth events
     const handleAuthEvents = () => {

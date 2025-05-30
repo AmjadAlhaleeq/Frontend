@@ -1,9 +1,14 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Reservation } from "@/types/reservation";
 import ReservationCard from "./ReservationCard";
+import ActionConfirmationDialog from "./ActionConfirmationDialog";
+import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
+import WaitlistConfirmationDialog from "./WaitlistConfirmationDialog";
+import { useWaitingListPersistence } from "@/hooks/useWaitingListPersistence";
 
 interface ReservationsListProps {
   upcomingReservations: Reservation[];
@@ -21,7 +26,7 @@ interface ReservationsListProps {
   onViewDetails: (reservation: Reservation) => void;
   onAddSummary?: (reservation: Reservation) => void;
   onClearDateFilter: () => void;
-  isUserInWaitingList: (reservation: Reservation) => boolean;
+  onKickPlayer?: (reservationId: number, playerId: string, suspensionDays: number, reason: string) => void;
 }
 
 const ReservationsList: React.FC<ReservationsListProps> = ({
@@ -40,8 +45,39 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   onViewDetails,
   onAddSummary,
   onClearDateFilter,
-  isUserInWaitingList,
+  onKickPlayer,
 }) => {
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    open: boolean;
+    type: 'join' | 'leave' | 'delete';
+    reservation?: Reservation;
+    title: string;
+    description: string;
+    confirmText: string;
+    action: () => void;
+  }>({ open: false, type: 'join', title: '', description: '', confirmText: '', action: () => {} });
+
+  const [waitlistDialog, setWaitlistDialog] = useState<{
+    open: boolean;
+    reservation?: Reservation;
+    isJoining: boolean;
+  }>({ open: false, isJoining: false });
+
+  const [suspensionDialog, setSuspensionDialog] = useState<{
+    open: boolean;
+    playerName: string;
+    playerId: string;
+    reservationId: number;
+  }>({ open: false, playerName: '', playerId: '', reservationId: 0 });
+
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+
+  const { addToWaitingList, removeFromWaitingList, isInWaitingList } = useWaitingListPersistence(currentUserId);
+
+  const setLoading = (key: string, loading: boolean) => {
+    setLoadingStates(prev => ({ ...prev, [key]: loading }));
+  };
+
   // "Two-way-pending" = live update both upcoming/completed sections for admin; Only show upcoming to users
   const todayISO = new Date().toISOString().slice(0, 10);
   const completedReservations = upcomingReservations.filter(
@@ -69,7 +105,6 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
             title: "My Upcoming Games",
             data: filteredUpcoming,
           },
-          // No completed section for non-admins
         ];
 
   // When admin adds a summary, remove from completed section (exclude those with summary.completed)
@@ -79,13 +114,123 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
       userRole === "admin" &&
       !!onAddSummary
     ) {
-      // Hide if already has summary.completed === true
       return data.filter(
         (res) =>
           !(typeof res.summary === "object" && (res.summary as any)?.completed)
       );
     }
     return data;
+  };
+
+  const handleJoinClick = (reservation: Reservation) => {
+    setConfirmationDialog({
+      open: true,
+      type: 'join',
+      reservation,
+      title: 'Join Game?',
+      description: `Are you sure you want to join the game at ${reservation.pitchName || reservation.title} on ${reservation.date} at ${reservation.time}?`,
+      confirmText: 'Join Game',
+      action: async () => {
+        setLoading(`join-${reservation.id}`, true);
+        await onJoin(reservation.id);
+        setLoading(`join-${reservation.id}`, false);
+        setConfirmationDialog(prev => ({ ...prev, open: false }));
+      }
+    });
+  };
+
+  const handleLeaveClick = (reservation: Reservation) => {
+    setConfirmationDialog({
+      open: true,
+      type: 'leave',
+      reservation,
+      title: 'Leave Game?',
+      description: `Are you sure you want to leave the game at ${reservation.pitchName || reservation.title} on ${reservation.date} at ${reservation.time}?`,
+      confirmText: 'Leave Game',
+      action: async () => {
+        if (currentUserId) {
+          setLoading(`leave-${reservation.id}`, true);
+          await onCancel(reservation.id, currentUserId);
+          setLoading(`leave-${reservation.id}`, false);
+          setConfirmationDialog(prev => ({ ...prev, open: false }));
+        }
+      }
+    });
+  };
+
+  const handleJoinWaitlistClick = (reservation: Reservation) => {
+    setWaitlistDialog({
+      open: true,
+      reservation,
+      isJoining: true
+    });
+  };
+
+  const handleLeaveWaitlistClick = (reservation: Reservation) => {
+    setWaitlistDialog({
+      open: true,
+      reservation,
+      isJoining: false
+    });
+  };
+
+  const handleWaitlistConfirm = async () => {
+    if (!waitlistDialog.reservation || !currentUserId) return;
+
+    const reservation = waitlistDialog.reservation;
+    setLoading(`waitlist-${reservation.id}`, true);
+
+    if (waitlistDialog.isJoining) {
+      await onJoinWaitingList(reservation.id, currentUserId);
+      addToWaitingList(reservation.id.toString());
+    } else {
+      await onLeaveWaitingList(reservation.id, currentUserId);
+      removeFromWaitingList(reservation.id.toString());
+    }
+
+    setLoading(`waitlist-${reservation.id}`, false);
+    setWaitlistDialog({ open: false, isJoining: false });
+  };
+
+  const handleDeleteClick = (reservation: Reservation) => {
+    setConfirmationDialog({
+      open: true,
+      type: 'delete',
+      reservation,
+      title: 'Delete Reservation?',
+      description: `Are you sure you want to delete the reservation "${reservation.title}" scheduled for ${reservation.date} at ${reservation.time}? This action cannot be undone.`,
+      confirmText: 'Delete Reservation',
+      action: async () => {
+        if (onDeleteReservation) {
+          setLoading(`delete-${reservation.id}`, true);
+          await onDeleteReservation(reservation.id);
+          setLoading(`delete-${reservation.id}`, false);
+          setConfirmationDialog(prev => ({ ...prev, open: false }));
+        }
+      }
+    });
+  };
+
+  const handleKickPlayerClick = (reservation: Reservation, playerId: string, playerName: string) => {
+    setSuspensionDialog({
+      open: true,
+      playerName,
+      playerId,
+      reservationId: reservation.id
+    });
+  };
+
+  const handleKickPlayerConfirm = async (playerId: string, suspensionDays: number, reason: string) => {
+    if (onKickPlayer) {
+      setLoading(`kick-${playerId}`, true);
+      await onKickPlayer(suspensionDialog.reservationId, playerId, suspensionDays, reason);
+      setLoading(`kick-${playerId}`, false);
+      setSuspensionDialog({ open: false, playerName: '', playerId: '', reservationId: 0 });
+    }
+  };
+
+  const isUserInWaitingListCheck = (reservation: Reservation): boolean => {
+    return isInWaitingList(reservation.id.toString());
   };
 
   return (
@@ -128,10 +273,10 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
                   reservation={reservation}
                   userId={currentUserId || ""}
                   userRole={userRole || "player"}
-                  onJoin={onJoin}
-                  onCancel={onCancel}
-                  onJoinWaitingList={onJoinWaitingList}
-                  onLeaveWaitingList={onLeaveWaitingList}
+                  onJoin={() => handleJoinClick(reservation)}
+                  onCancel={() => handleLeaveClick(reservation)}
+                  onJoinWaitingList={() => handleJoinWaitlistClick(reservation)}
+                  onLeaveWaitingList={() => handleLeaveWaitlistClick(reservation)}
                   isUserJoined={isUserJoined}
                   isFull={
                     reservation.lineup
@@ -139,18 +284,52 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
                         calculateActualMaxPlayers(reservation.maxPlayers)
                       : false
                   }
-                  onDeleteReservation={onDeleteReservation}
+                  onDeleteReservation={() => handleDeleteClick(reservation)}
                   onViewDetails={onViewDetails}
                   onAddSummary={onAddSummary}
+                  onKickPlayer={(playerId, playerName) => handleKickPlayerClick(reservation, playerId, playerName)}
                   isUserLoggedIn={!!currentUserId}
                   pitchImage={pitchImages[reservation.pitchId]}
-                  isUserInWaitingList={isUserInWaitingList(reservation)}
+                  isUserInWaitingList={isUserInWaitingListCheck(reservation)}
+                  loadingStates={loadingStates}
                 />
               </div>
             ))
           )}
         </div>
       ))}
+
+      {/* Confirmation Dialog */}
+      <ActionConfirmationDialog
+        open={confirmationDialog.open}
+        onOpenChange={(open) => setConfirmationDialog(prev => ({ ...prev, open }))}
+        onConfirm={confirmationDialog.action}
+        title={confirmationDialog.title}
+        description={confirmationDialog.description}
+        confirmButtonText={confirmationDialog.confirmText}
+        confirmButtonVariant={confirmationDialog.type === 'delete' ? 'destructive' : 'default'}
+      />
+
+      {/* Waitlist Confirmation Dialog */}
+      <WaitlistConfirmationDialog
+        isOpen={waitlistDialog.open}
+        onClose={() => setWaitlistDialog({ open: false, isJoining: false })}
+        onConfirm={handleWaitlistConfirm}
+        gameName={waitlistDialog.reservation?.pitchName || waitlistDialog.reservation?.title || ''}
+        gameDate={waitlistDialog.reservation?.date || ''}
+        gameTime={waitlistDialog.reservation?.time || ''}
+        isJoining={waitlistDialog.isJoining}
+      />
+
+      {/* Player Suspension Dialog */}
+      <PlayerSuspensionDialog
+        isOpen={suspensionDialog.open}
+        onClose={() => setSuspensionDialog({ open: false, playerName: '', playerId: '', reservationId: 0 })}
+        playerName={suspensionDialog.playerName}
+        playerId={suspensionDialog.playerId}
+        onConfirm={handleKickPlayerConfirm}
+        actionType="kick"
+      />
     </>
   );
 };
