@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,6 @@ import {
   UserPlus,
   UserMinus,
   AlertCircle,
-  Loader2,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
@@ -52,11 +52,9 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   onDeleteReservation,
   onViewDetails,
   onAddSummary,
-  onKickPlayer,
   isUserLoggedIn,
   pitchImage,
-  isUserInWaitingList,
-  loadingStates = {},
+  isUserInWaitingList, // Default to false if not provided
 }) => {
   const [deleting, setDeleting] = React.useState(false);
   const [deleteDialog, setDeleteDialog] = React.useState(false);
@@ -70,6 +68,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     onViewDetails(reservation);
   };
 
+  // Admin Delete Button now shows dialog
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onDeleteReservation) return;
@@ -87,12 +86,15 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   const isJoined = isUserLoggedIn && isUserJoined(reservation.id, userId);
-  const isInWaitingList = isUserLoggedIn && reservation.waitingList?.includes(userId);
+  const isInWaitingList =
+    isUserLoggedIn && reservation.waitingList?.includes(userId);
   const currentPlayers = reservation.lineup?.length || 0;
+  // Use actualMaxPlayers from prop, not hardcoded
   const actualMaxPlayers = reservation.maxPlayers;
   const gameIsFull = currentPlayers >= actualMaxPlayers;
   const waitingListCount = reservation.waitingList?.length || 0;
 
+  // FIXED: Only show waiting list option when game is actually full
   const canJoinWaitingList = gameIsFull && !isJoined && !isInWaitingList;
   const [alreadyInWaitingList, setAlreadyInWaitingList] = useState(
     isUserLoggedIn &&
@@ -100,12 +102,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       reservation.waitingList?.includes(userId)
   );
 
-  // Loading states
-  const isJoinLoading = loadingStates[`join-${reservation.id}`] || false;
-  const isLeaveLoading = loadingStates[`leave-${reservation.id}`] || false;
-  const isWaitlistLoading = loadingStates[`waitlist-${reservation.id}`] || false;
-
-  // FIXED: Only show waiting list option when game is actually full
   let formattedDate = "Invalid Date";
   try {
     if (reservation.date) {
@@ -191,13 +187,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
               onCancel(reservation.id, userId);
             }}
             className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
-            disabled={isLeaveLoading}
           >
-            {isLeaveLoading ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <UserMinus className="h-4 w-4 mr-1" />
-            )}
+            <UserMinus className="h-4 w-4 mr-1" />
             Leave
           </Button>
         </div>
@@ -205,6 +196,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
 
     if (gameIsFull && alreadyInWaitingList) {
+      // User is already in waiting list
       return (
         <div className="flex gap-2 items-center w-full">
           <Badge
@@ -223,21 +215,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               onLeaveWaitingList(reservation.id, userId);
+              setAlreadyInWaitingList(false);
             }}
             className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
-            disabled={isWaitlistLoading}
           >
-            {isWaitlistLoading ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <UserMinus className="h-4 w-4 mr-1" />
-            )}
+            <UserMinus className="h-4 w-4 mr-1" />
             Leave List
           </Button>
         </div>
       );
     }
 
+    // FIXED: Only show waiting list button when game is actually full
     if (gameIsFull && canJoinWaitingList) {
       return (
         <Button
@@ -246,20 +235,17 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onJoinWaitingList(reservation.id, userId);
+            setAlreadyInWaitingList(true);
           }}
           className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
-          disabled={isWaitlistLoading}
         >
-          {isWaitlistLoading ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-1" />
-          )}
+          <UserPlus className="h-4 w-4 mr-1" />
           Join Waiting List
         </Button>
       );
     }
 
+    // Show regular join button if game is not full
     if (!gameIsFull) {
       return (
         <Button
@@ -269,18 +255,14 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             onJoin(reservation.id);
           }}
           className="bg-teal-500 hover:bg-teal-600 text-white w-full"
-          disabled={isJoinLoading}
         >
-          {isJoinLoading ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-1" />
-          )}
+          <UserPlus className="h-4 w-4 mr-1" />
           Join Game
         </Button>
       );
     }
 
+    // Game is full but user can't join waiting list (shouldn't happen with infinite waiting list)
     return (
       <div className="flex items-center gap-2 w-full">
         <Badge variant="destructive">Full</Badge>
@@ -381,7 +363,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </div>
         </div>
       </CardContent>
-      
+      {/* Admin Delete Confirmation Dialog */}
       {onDeleteReservation && (
         <DeleteConfirmationDialog
           open={deleteDialog}
