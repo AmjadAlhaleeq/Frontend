@@ -1,14 +1,14 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { XCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { Reservation } from '@/types/reservation';
-import ReservationCard from './ReservationCard';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { XCircle } from "lucide-react";
+import { format } from "date-fns";
+import { Reservation } from "@/types/reservation";
+import ReservationCard from "./ReservationCard";
 
 interface ReservationsListProps {
   upcomingReservations: Reservation[];
   currentDate: Date | undefined;
-  userRole: 'admin' | 'player' | null;
+  userRole: "admin" | "player" | null;
   currentUserId: string | null;
   pitchImages: Record<string, string>;
   calculateActualMaxPlayers: (maxPlayers: number) => number;
@@ -21,6 +21,7 @@ interface ReservationsListProps {
   onViewDetails: (reservation: Reservation) => void;
   onAddSummary?: (reservation: Reservation) => void;
   onClearDateFilter: () => void;
+  isUserInWaitingList: (reservation: Reservation) => boolean;
 }
 
 const ReservationsList: React.FC<ReservationsListProps> = ({
@@ -38,41 +39,50 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   onDeleteReservation,
   onViewDetails,
   onAddSummary,
-  onClearDateFilter
+  onClearDateFilter,
+  isUserInWaitingList,
 }) => {
   // "Two-way-pending" = live update both upcoming/completed sections for admin; Only show upcoming to users
-  const todayISO = new Date().toISOString().slice(0,10);
+  const todayISO = new Date().toISOString().slice(0, 10);
   const completedReservations = upcomingReservations.filter(
-    r => r.status === "completed" || new Date(r.date) < new Date(todayISO)
+    (r) => r.status === "completed" || new Date(r.date) < new Date(todayISO)
   );
   const filteredUpcoming = upcomingReservations.filter(
-    r => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
+    (r) => r.status === "upcoming" && new Date(r.date) >= new Date(todayISO)
   );
 
   // Only admins see completed games section
-  const sections = userRole === 'admin' ? [
-    {
-      title: 'Upcoming Games',
-      data: filteredUpcoming,
-    },
-    {
-      title: 'Completed Games',
-      data: completedReservations,
-    }
-  ] : [
-    {
-      title: 'My Upcoming Games',
-      data: filteredUpcoming,
-    }
-    // No completed section for non-admins
-  ];
+  const sections =
+    userRole === "admin"
+      ? [
+          {
+            title: "Upcoming Games",
+            data: filteredUpcoming,
+          },
+          {
+            title: "Completed Games",
+            data: completedReservations,
+          },
+        ]
+      : [
+          {
+            title: "My Upcoming Games",
+            data: filteredUpcoming,
+          },
+          // No completed section for non-admins
+        ];
 
   // When admin adds a summary, remove from completed section (exclude those with summary.completed)
   const getSectionData = (section: string, data: Reservation[]) => {
-    if (section === "Completed Games" && userRole === "admin" && !!onAddSummary) {
+    if (
+      section === "Completed Games" &&
+      userRole === "admin" &&
+      !!onAddSummary
+    ) {
       // Hide if already has summary.completed === true
-      return data.filter(res =>
-        !(typeof res.summary === 'object' && (res.summary as any)?.completed)
+      return data.filter(
+        (res) =>
+          !(typeof res.summary === "object" && (res.summary as any)?.completed)
       );
     }
     return data;
@@ -82,26 +92,34 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
     <>
       <div className="flex justify-between items-center mb-1 px-1">
         <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-400">
-          {currentDate 
-            ? `Showing games on ${format(currentDate, "MMM d, yyyy")}` 
-            : `Showing all games`
-          }
+          {currentDate
+            ? `Showing games on ${format(currentDate, "MMM d, yyyy")}`
+            : `Showing all games`}
         </div>
         {currentDate && (
-          <Button variant="ghost" size="sm" onClick={onClearDateFilter} className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearDateFilter}
+            className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+          >
             <XCircle className="h-3.5 w-3.5 mr-1" /> Clear Filter
           </Button>
         )}
       </div>
 
-      {sections.map(s => (
+      {sections.map((s) => (
         <div key={s.title}>
-          <div className="text-sm text-teal-700 mt-4 mb-2 font-semibold">{s.title}</div>
-          {(getSectionData(s.title, s.data)).length === 0 ? (
-            <div className="text-xs text-muted-foreground px-2 pb-4">No games found.</div>
+          <div className="text-sm text-teal-700 mt-4 mb-2 font-semibold">
+            {s.title}
+          </div>
+          {getSectionData(s.title, s.data).length === 0 ? (
+            <div className="text-xs text-muted-foreground px-2 pb-4">
+              No games found.
+            </div>
           ) : (
             getSectionData(s.title, s.data).map((reservation) => (
-              <div 
+              <div
                 key={`reservation-${reservation.id}`}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
                 onClick={() => onViewDetails(reservation)}
@@ -115,12 +133,18 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
                   onJoinWaitingList={onJoinWaitingList}
                   onLeaveWaitingList={onLeaveWaitingList}
                   isUserJoined={isUserJoined}
-                  isFull={reservation.lineup ? reservation.lineup.length >= calculateActualMaxPlayers(reservation.maxPlayers) : false}
+                  isFull={
+                    reservation.lineup
+                      ? reservation.lineup.length >=
+                        calculateActualMaxPlayers(reservation.maxPlayers)
+                      : false
+                  }
                   onDeleteReservation={onDeleteReservation}
                   onViewDetails={onViewDetails}
                   onAddSummary={onAddSummary}
                   isUserLoggedIn={!!currentUserId}
                   pitchImage={pitchImages[reservation.pitchId]}
+                  isUserInWaitingList={isUserInWaitingList(reservation)}
                 />
               </div>
             ))

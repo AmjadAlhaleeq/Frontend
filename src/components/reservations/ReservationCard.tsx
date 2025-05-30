@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +30,12 @@ interface ReservationCardProps {
   isFull: boolean;
   onDeleteReservation?: (id: number) => void;
   onViewDetails: (reservation: Reservation) => void;
+
   onAddSummary?: (reservation: Reservation) => void;
   isUserLoggedIn: boolean;
+
   pitchImage?: string;
+  isUserInWaitingList?: (reservation: Reservation) => boolean;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -50,6 +53,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   onAddSummary,
   isUserLoggedIn,
   pitchImage,
+  isUserInWaitingList, // Default to false if not provided
 }) => {
   const [deleting, setDeleting] = React.useState(false);
   const [deleteDialog, setDeleteDialog] = React.useState(false);
@@ -91,6 +95,11 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 
   // FIXED: Only show waiting list option when game is actually full
   const canJoinWaitingList = gameIsFull && !isJoined && !isInWaitingList;
+  const [alreadyInWaitingList, setAlreadyInWaitingList] = useState(
+    isUserLoggedIn &&
+      isInWaitingList &&
+      reservation.waitingList?.includes(userId)
+  );
 
   let formattedDate = "Invalid Date";
   try {
@@ -185,7 +194,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    if (isInWaitingList) {
+    if (gameIsFull && alreadyInWaitingList) {
+      // User is already in waiting list
       return (
         <div className="flex gap-2 items-center w-full">
           <Badge
@@ -204,6 +214,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               onLeaveWaitingList(reservation.id, userId);
+              setAlreadyInWaitingList(false);
             }}
             className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
           >
@@ -223,6 +234,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onJoinWaitingList(reservation.id, userId);
+            setAlreadyInWaitingList(true);
           }}
           className="border-amber-500 text-amber-600 hover:bg-amber-50 w-full"
         >

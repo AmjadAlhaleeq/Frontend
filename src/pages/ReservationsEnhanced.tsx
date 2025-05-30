@@ -49,10 +49,8 @@ const ReservationsEnhanced = () => {
     closeDialog,
   } = useReservationDialogs();
 
-  const { upcomingReservations, completedReservations } = useReservationFiltering(
-    reservations,
-    currentDate
-  );
+  const { upcomingReservations, completedReservations } =
+    useReservationFiltering(reservations, currentDate);
 
   // Initialize user data
   useEffect(() => {
@@ -156,12 +154,13 @@ const ReservationsEnhanced = () => {
       const result = await joinReservationApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("joinGame");
-      
+
       // Check if user was added to waitlist or joined directly
       if (result.message.includes("waitlist")) {
         toast({
           title: "Added to Waiting List",
-          description: "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
+          description:
+            "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
         });
       } else {
         toast({
@@ -209,7 +208,8 @@ const ReservationsEnhanced = () => {
       closeDialog("joinWaitlist");
       toast({
         title: "Added to Waiting List",
-        description: "You've been added to the waiting list and will be notified if a spot becomes available.",
+        description:
+          "You've been added to the waiting list and will be notified if a spot becomes available.",
       });
     } catch (error) {
       toast({
@@ -341,9 +341,7 @@ const ReservationsEnhanced = () => {
       toast({
         title: "Failed to Kick Player",
         description:
-          error instanceof Error
-            ? error.message
-            : "Failed to kick the player",
+          error instanceof Error ? error.message : "Failed to kick the player",
         variant: "destructive",
       });
     }
@@ -431,10 +429,18 @@ const ReservationsEnhanced = () => {
           isFull={isFull}
           onJoinGame={(reservation) => openDialog("joinGame", reservation)}
           onLeaveGame={(reservation) => openDialog("leaveGame", reservation)}
-          onJoinWaitlist={(reservation) => openDialog("joinWaitlist", reservation)}
-          onLeaveWaitlist={(reservation) => openDialog("leaveWaitlist", reservation)}
-          onViewDetails={(reservation) => openDialog("gameDetails", reservation)}
-          onDeleteReservation={(reservation) => openDialog("deleteReservation", reservation)}
+          onJoinWaitlist={(reservation) =>
+            openDialog("joinWaitlist", reservation)
+          }
+          onLeaveWaitlist={(reservation) =>
+            openDialog("leaveWaitlist", reservation)
+          }
+          onViewDetails={(reservation) =>
+            openDialog("gameDetails", reservation)
+          }
+          onDeleteReservation={(reservation) =>
+            openDialog("deleteReservation", reservation)
+          }
           onKickPlayer={handleKickPlayer}
           onAddSummary={(reservation) => openDialog("gameSummary", reservation)}
         />

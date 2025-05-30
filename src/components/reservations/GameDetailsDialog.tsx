@@ -28,6 +28,8 @@ import {
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
 import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
+import { kickPlayer as kickPlayerApi } from "@/services/adminReservationApi"; // make sure it's imported
+import { toast, useToast } from "@/hooks/use-toast";
 
 interface GameDetailsDialogProps {
   reservation: Reservation;
@@ -60,16 +62,29 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   pitchImage,
   onPlayerClick,
 }) => {
-  const [kickDialog, setKickDialog] = useState<{open: boolean, playerId: string, playerName: string} | null>(null);
+  const [kickDialog, setKickDialog] = useState<{
+    open: boolean;
+    playerId: string;
+    playerName: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
 
   // Check if we're within 3 days of game start for kick functionality
-  const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
+  const gameDateTime = new Date(
+    `${reservation.date}T${reservation.time || "00:00"}`
+  );
   const now = new Date();
-  const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
-  const canKickPlayers = isAdmin && now >= threeDaysBeforeGame && reservation.status !== "completed" && reservation.lineup && reservation.lineup.length > 0;
+  const threeDaysBeforeGame = new Date(
+    gameDateTime.getTime() - 3 * 24 * 60 * 60 * 1000
+  );
+  const canKickPlayers =
+    isAdmin &&
+    now >= threeDaysBeforeGame &&
+    reservation.status !== "completed" &&
+    reservation.lineup &&
+    reservation.lineup.length > 0;
 
   let formattedDate = "Invalid Date";
   try {
@@ -104,7 +119,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       console.warn("Invalid player ID:", playerId);
       return;
     }
-    
+
     console.log("Navigating to player profile with ID:", playerId);
     onClose();
     navigate(`/player-profile/${playerId}`);
@@ -112,13 +127,42 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
   const handleKickPlayer = (playerId: string, playerName: string) => {
     setKickDialog({ open: true, playerId, playerName });
+    // console.log("Opening kick dialog for player:", playerId, playerName);
+    if (onKickPlayer) {
+      onKickPlayer(reservation.id, playerId);
+    }
   };
 
-  const confirmKickPlayer = (playerId: string, suspensionDays: number, reason: string) => {
-    if (onSuspendPlayer) {
-      onSuspendPlayer(playerId, suspensionDays, reason);
+  const { toast } = useToast();
+
+  const confirmKickPlayer = async (
+    playerId: string,
+    suspensionDays: number,
+    reason: string
+  ) => {
+    try {
+      await kickPlayerApi(
+        reservation.id.toString(),
+        playerId,
+        reason,
+        suspensionDays
+      );
+      toast({
+        title: "Player Kicked",
+        description: `${kickDialog?.playerName} was removed and suspended.`,
+      });
+
+      // Optionally, refresh the dialog or close it
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to kick player",
+        variant: "destructive",
+      });
+    } finally {
+      setKickDialog(null);
     }
-    setKickDialog(null);
   };
 
   const renderPlayerItem = (player: any, index: number) => (
@@ -126,7 +170,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       key={player.userId}
       className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
     >
-      <div 
+      <div
         className="flex items-center space-x-3 flex-1 cursor-pointer"
         onClick={() => handlePlayerClick(player.userId, player.name)}
       >
@@ -150,7 +194,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
           </p>
         </div>
       </div>
-      
+
       {/* Kick button for admins within 3 days */}
       {canKickPlayers && (
         <Button

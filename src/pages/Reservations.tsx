@@ -3,7 +3,7 @@ import { CheckCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useReservation } from "@/context/ReservationContext";
 import { Reservation } from "@/types/reservation";
-import { format } from 'date-fns';
+import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 import EnhancedDatePicker from "@/components/reservations/EnhancedDatePicker";
@@ -22,16 +22,18 @@ const Reservations = () => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
-  const [userRole, setUserRole] = useState<'admin' | 'player' | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "player" | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [addDialogKey, setAddDialogKey] = useState(0);
-  
-  const [selectedGameForDetails, setSelectedGameForDetails] = useState<Reservation | null>(null);
+
+  const [selectedGameForDetails, setSelectedGameForDetails] =
+    useState<Reservation | null>(null);
   const [isGameDetailsDialogOpen, setIsGameDetailsDialogOpen] = useState(false);
-  
-  const [selectedGameForSummary, setSelectedGameForSummary] = useState<Reservation | null>(null);
+
+  const [selectedGameForSummary, setSelectedGameForSummary] =
+    useState<Reservation | null>(null);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
-  
+
   const [playerProfile, setPlayerProfile] = useState<{
     isOpen: boolean;
     playerId: string;
@@ -39,9 +41,9 @@ const Reservations = () => {
   }>({
     isOpen: false,
     playerId: "",
-    playerName: ""
+    playerName: "",
   });
-  
+
   const [suspensionDialog, setSuspensionDialog] = useState<{
     isOpen: boolean;
     playerName: string;
@@ -49,15 +51,11 @@ const Reservations = () => {
   }>({
     isOpen: false,
     playerName: "",
-    playerId: ""
+    playerId: "",
   });
-  
-  const {
-    reservations,
-    isUserJoined,
-    updateReservationStatus,
-    getUserStats,
-  } = useReservation();
+
+  const { reservations, isUserJoined, updateReservationStatus, getUserStats } =
+    useReservation();
 
   const { isLoading, pitchImages, loadReservations } = useReservationsData();
 
@@ -70,15 +68,20 @@ const Reservations = () => {
     handleKickPlayer,
     handleSuspendPlayer,
     handleSaveSummary,
-    calculateActualMaxPlayers
-  } = useReservationActions(currentUserId, userRole, reservations, loadReservations);
+    calculateActualMaxPlayers,
+  } = useReservationActions(
+    currentUserId,
+    userRole,
+    reservations,
+    loadReservations
+  );
 
   // Initialize user data
   useEffect(() => {
-    const role = localStorage.getItem('userRole') as 'admin' | 'player' | null;
+    const role = localStorage.getItem("userRole") as "admin" | "player" | null;
     setUserRole(role);
-    
-    const storedUser = localStorage.getItem('currentUser');
+
+    const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setCurrentUserId(userData.id);
@@ -86,106 +89,127 @@ const Reservations = () => {
   }, []);
 
   // NOTE: Handle player click to navigate to profile page
-  const handlePlayerClick = useCallback((playerId: string, playerName?: string) => {
-    navigate(`/player/${playerId}`);
-  }, [navigate]);
+  const handlePlayerClick = useCallback(
+    (playerId: string, playerName?: string) => {
+      navigate(`/player/${playerId}`);
+    },
+    [navigate]
+  );
 
   // --- Upcoming/Completed section admin filter ---
   const upcomingReservations = useMemo(() => {
     let gamesToShow: Reservation[];
-    const today = new Date(new Date().setHours(0, 0, 0, 0)); 
+    const today = new Date(new Date().setHours(0, 0, 0, 0));
     if (currentDate) {
-      const dateString = format(currentDate, 'yyyy-MM-dd');
+      const dateString = format(currentDate, "yyyy-MM-dd");
       gamesToShow = reservations.filter(
-        res => res.date === dateString && res.status === "upcoming"
+        (res) => res.date === dateString && res.status === "upcoming"
       );
     } else {
       gamesToShow = reservations.filter(
-        (res) => res.status === "upcoming" && 
-                 new Date(res.date) >= today
+        (res) => res.status === "upcoming" && new Date(res.date) >= today
       );
     }
-    return gamesToShow.sort((a,b) => {
-      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+    return gamesToShow.sort((a, b) => {
+      const dateCompare =
+        new Date(a.date).getTime() - new Date(b.date).getTime();
       if (dateCompare !== 0) return dateCompare;
-      const aTime = a.startTime || a.time?.split(' - ')[0] || '00:00';
-      const bTime = b.startTime || b.time?.split(' - ')[0] || '00:00';
+      const aTime = a.startTime || a.time?.split(" - ")[0] || "00:00";
+      const bTime = b.startTime || b.time?.split(" - ")[0] || "00:00";
       return aTime.localeCompare(bTime);
     });
   }, [reservations, currentDate]);
 
   // "Completed" section as separate for admin, with live update and removal after summary
   const completedReservations = useMemo(() => {
-    const todayISO = new Date().toISOString().slice(0,10);
+    const todayISO = new Date().toISOString().slice(0, 10);
     return reservations.filter(
-      r => (r.status === "completed" || new Date(r.date) < new Date(todayISO)) &&
-            !(typeof r.summary === 'object' && (r.summary as any)?.completed)
+      (r) =>
+        (r.status === "completed" || new Date(r.date) < new Date(todayISO)) &&
+        !(typeof r.summary === "object" && (r.summary as any)?.completed)
     );
   }, [reservations]);
 
   const checkHasReservationsOnDate = (date: Date): boolean => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    return reservations.some(res => res.date === dateString);
+    const dateString = format(date, "yyyy-MM-dd");
+    return reservations.some((res) => res.date === dateString);
   };
 
-  const handleOpenSuspensionDialog = useCallback((playerId: string, playerName: string) => {
-    setSuspensionDialog({
-      isOpen: true,
-      playerName,
-      playerId
-    });
-  }, []);
+  const handleOpenSuspensionDialog = useCallback(
+    (playerId: string, playerName: string) => {
+      setSuspensionDialog({
+        isOpen: true,
+        playerName,
+        playerId,
+      });
+    },
+    []
+  );
 
   const handleAddSummary = useCallback((reservation: Reservation) => {
     setSelectedGameForSummary(reservation);
     setIsSummaryDialogOpen(true);
   }, []);
 
-  const handleSaveSummaryWrapper = useCallback(async (summaryData: {
-    mvp?: string;
-    players: Array<{
-      userId: string;
-      played: boolean;
-      won: boolean;
-      goals?: number;
-      assists?: number;
-      interceptions?: number;
-      cleanSheet?: boolean;
-    }>;
-    absentees?: Array<{
-      userId: string;
-      reason: string;
-      suspensionDays: number;
-    }>;
-  }) => {
-    if (!selectedGameForSummary) return;
-    
-    await handleSaveSummary(selectedGameForSummary.id, summaryData);
-    
-    setIsSummaryDialogOpen(false);
-    setSelectedGameForSummary(null);
-  }, [selectedGameForSummary, handleSaveSummary]);
+  const handleSaveSummaryWrapper = useCallback(
+    async (summaryData: {
+      mvp?: string;
+      players: Array<{
+        userId: string;
+        played: boolean;
+        won: boolean;
+        goals?: number;
+        assists?: number;
+        interceptions?: number;
+        cleanSheet?: boolean;
+      }>;
+      absentees?: Array<{
+        userId: string;
+        reason: string;
+        suspensionDays: number;
+      }>;
+    }) => {
+      if (!selectedGameForSummary) return;
+
+      await handleSaveSummary(selectedGameForSummary.id, summaryData);
+
+      setIsSummaryDialogOpen(false);
+      setSelectedGameForSummary(null);
+    },
+    [selectedGameForSummary, handleSaveSummary]
+  );
 
   const handleAddReservationSuccess = useCallback(() => {
-    setAddDialogKey(prev => prev + 1);
+    setAddDialogKey((prev) => prev + 1);
   }, []);
 
-  const isUserJoinedFunction = useCallback((reservationId: number, userId: string): boolean => {
-    return isUserJoined(reservationId, userId);
-  }, [isUserJoined]);
+  const isUserJoinedFunction = useCallback(
+    (reservationId: number, userId: string): boolean => {
+      return isUserJoined(reservationId, userId);
+    },
+    [isUserJoined]
+  );
 
   const safeSelectedGameForDetails = useMemo(() => {
     if (!selectedGameForDetails) return null;
-    
-    const gameExists = reservations.find(res => res.id === selectedGameForDetails.id);
+
+    const gameExists = reservations.find(
+      (res) => res.id === selectedGameForDetails.id
+    );
     if (!gameExists) {
       setSelectedGameForDetails(null);
       setIsGameDetailsDialogOpen(false);
       return null;
     }
-    
+
     return gameExists;
   }, [selectedGameForDetails, reservations]);
+  const isUserInWaitingList = useCallback(
+    (reservation: Reservation): boolean => {
+      return reservation.waitingList?.includes(currentUserId ?? "") ?? false;
+    },
+    [currentUserId]
+  );
 
   if (isLoading) {
     return (
@@ -232,7 +256,11 @@ const Reservations = () => {
             />
           ) : (
             <ReservationsList
-              upcomingReservations={[...upcomingReservations, ...(userRole === 'admin' ? completedReservations : [])]}
+              upcomingReservations={[
+                ...upcomingReservations,
+                ...(userRole === "admin" ? completedReservations : []),
+              ]}
+              isUserInWaitingList={isUserInWaitingList}
               currentDate={currentDate}
               userRole={userRole}
               currentUserId={currentUserId}
@@ -241,10 +269,10 @@ const Reservations = () => {
               isUserJoined={isUserJoinedFunction}
               onJoin={(id, playerName) => {
                 if (!currentUserId) {
-                  toast({ 
-                    title: "Login Required", 
-                    description: "Please log in to join a game.", 
-                    variant: "destructive"
+                  toast({
+                    title: "Login Required",
+                    description: "Please log in to join a game.",
+                    variant: "destructive",
                   });
                   return;
                 }
@@ -253,12 +281,14 @@ const Reservations = () => {
               onCancel={(id, userId) => handleCancelReservation(id)}
               onJoinWaitingList={(id, userId) => handleJoinWaitingList(id)}
               onLeaveWaitingList={(id, userId) => handleLeaveWaitingList(id)}
-              onDeleteReservation={userRole === 'admin' ? handleDeleteReservation : undefined}
+              onDeleteReservation={
+                userRole === "admin" ? handleDeleteReservation : undefined
+              }
               onViewDetails={(reservation) => {
                 setSelectedGameForDetails(reservation);
                 setIsGameDetailsDialogOpen(true);
               }}
-              onAddSummary={userRole === 'admin' ? handleAddSummary : undefined}
+              onAddSummary={userRole === "admin" ? handleAddSummary : undefined}
               onClearDateFilter={() => setCurrentDate(undefined)}
             />
           )}
@@ -274,19 +304,27 @@ const Reservations = () => {
             setIsGameDetailsDialogOpen(false);
             setSelectedGameForDetails(null);
           }}
-          isAdmin={userRole === 'admin'}
+          isAdmin={userRole === "admin"}
           onStatusChange={(status) => {
-            if (userRole === 'admin' && safeSelectedGameForDetails) {
+            if (userRole === "admin" && safeSelectedGameForDetails) {
               updateReservationStatus(safeSelectedGameForDetails.id, status);
             }
           }}
           currentUserId={currentUserId || ""}
-          actualMaxPlayers={calculateActualMaxPlayers(safeSelectedGameForDetails.maxPlayers)}
-          onKickPlayer={userRole === 'admin' ? (reservationId, playerId) => {
-            // For kick from game details, we need reason and suspension days
-            handleOpenSuspensionDialog(playerId, "Player");
-          } : undefined}
-          onSuspendPlayer={userRole === 'admin' ? handleSuspendPlayer : undefined}
+          actualMaxPlayers={calculateActualMaxPlayers(
+            safeSelectedGameForDetails.maxPlayers
+          )}
+          onKickPlayer={
+            userRole === "admin"
+              ? (reservationId, playerId) => {
+                  // For kick from game details, we need reason and suspension days
+                  handleOpenSuspensionDialog(playerId, "Player");
+                }
+              : undefined
+          }
+          onSuspendPlayer={
+            userRole === "admin" ? handleSuspendPlayer : undefined
+          }
           pitchImage={pitchImages[safeSelectedGameForDetails.pitchId]}
           onPlayerClick={handlePlayerClick}
         />
@@ -308,7 +346,9 @@ const Reservations = () => {
       {/* Player Suspension Dialog */}
       <PlayerSuspensionDialog
         isOpen={suspensionDialog.isOpen}
-        onClose={() => setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" })}
+        onClose={() =>
+          setSuspensionDialog({ isOpen: false, playerName: "", playerId: "" })
+        }
         playerName={suspensionDialog.playerName}
         playerId={suspensionDialog.playerId}
         onConfirm={handleSuspendPlayer}

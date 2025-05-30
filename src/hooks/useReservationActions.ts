@@ -35,11 +35,44 @@ export const useReservationActions = (
   };
 
   // Check if user can join waitlist (3 days before game to game end)
+  const formatTo24HourTime = (timeStr: string): string => {
+    const [time, modifier] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
+    if (modifier === "PM" && hours < 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+
+    const formatted = `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
+    return formatted;
+  };
+
   const canJoinWaitlist = (reservation: any) => {
-    const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
+    const rawDate = reservation.date;
+    const rawTimeRaw = reservation.time?.split(" - ")[0] || "00:00";
+    const rawTime =
+      rawTimeRaw.includes("AM") || rawTimeRaw.includes("PM")
+        ? formatTo24HourTime(rawTimeRaw)
+        : rawTimeRaw;
+
+    const dateTimeString = `${rawDate}T${rawTime}`;
+    const gameDateTime = new Date(dateTimeString);
     const now = new Date();
-    const threeDaysBeforeGame = new Date(gameDateTime.getTime() - (3 * 24 * 60 * 60 * 1000));
-    
+    const threeDaysBeforeGame = new Date(
+      gameDateTime.getTime() - 3 * 24 * 60 * 60 * 1000
+    );
+
+    console.log({
+      rawDate,
+      rawTime,
+      dateTimeString,
+      gameDateTime,
+      now,
+      threeDaysBeforeGame,
+      canJoin: now >= threeDaysBeforeGame && now <= gameDateTime,
+    });
+
     return now >= threeDaysBeforeGame && now <= gameDateTime;
   };
 
@@ -107,21 +140,23 @@ export const useReservationActions = (
           reservation.backendId
         );
         const result = await joinReservationApi(reservation.backendId);
-        
+
         // Check if user was added to waitlist or joined directly
         if (result.message.includes("waitlist")) {
           // User was added to waitlist
           joinWaitingList(reservationId, currentUserId);
           toast({
             title: "Added to Waiting List",
-            description: "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
+            description:
+              "Game is full. You've been added to the waiting list and will be notified if a spot becomes available.",
           });
         } else {
           // User joined the game directly
           joinGame(reservationId, undefined, currentUserId);
           toast({
             title: "Joined Game!",
-            description: "You have successfully joined the game. See you on the pitch!",
+            description:
+              "You have successfully joined the game. See you on the pitch!",
           });
         }
 
@@ -136,7 +171,15 @@ export const useReservationActions = (
         });
       }
     },
-    [currentUserId, userRole, reservations, joinGame, joinWaitingList, toast, loadReservations]
+    [
+      currentUserId,
+      userRole,
+      reservations,
+      joinGame,
+      joinWaitingList,
+      toast,
+      loadReservations,
+    ]
   );
 
   const handleCancelReservation = useCallback(
@@ -181,6 +224,8 @@ export const useReservationActions = (
 
   const handleJoinWaitingList = useCallback(
     async (reservationId: number) => {
+      console.log("handleJoinWaitingList called with:", reservationId);
+
       if (!currentUserId) {
         toast({
           title: "Login Required",
@@ -213,7 +258,8 @@ export const useReservationActions = (
       if (!canJoinWaitlist(reservation)) {
         toast({
           title: "Cannot Join Waitlist",
-          description: "You can only join the waitlist from 3 days before the game until the game ends.",
+          description:
+            "You can only join the waitlist from 3 days before the game until the game ends.",
           variant: "destructive",
         });
         return;
@@ -395,7 +441,9 @@ export const useReservationActions = (
 
         toast({
           title: "Player Kicked",
-          description: `The player has been removed and suspended for ${suspensionDays} day${suspensionDays > 1 ? 's' : ''}.`,
+          description: `The player has been removed and suspended for ${suspensionDays} day${
+            suspensionDays > 1 ? "s" : ""
+          }.`,
         });
       } catch (error) {
         toast({
