@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,12 +31,12 @@ interface ReservationCardProps {
   isFull: boolean;
   onDeleteReservation?: (id: number) => void;
   onViewDetails: (reservation: Reservation) => void;
-
   onAddSummary?: (reservation: Reservation) => void;
+  onKickPlayer?: (playerId: string, playerName: string) => void;
   isUserLoggedIn: boolean;
-
   pitchImage?: string;
   isUserInWaitingList?: (reservation: Reservation) => boolean;
+  loadingStates?: Record<string, boolean>;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
