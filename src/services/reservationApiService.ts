@@ -45,39 +45,10 @@ export const deleteReservationApi = async (reservationId: string) => {
   return data;
 };
 
-// Kick player (admin)
-export const kickPlayerApi = async (reservationId: string, playerId: string, reason: string, suspensionDays: number) => {
-  const response = await apiRequest(`/reservations/${reservationId}/kick`, {
-    method: 'POST',
-    body: JSON.stringify({
-      userId: playerId,
-      reason,
-      suspensionDays
-    }),
-  });
-  const data = await response.json();
-  return data;
-};
-
 // Complete game (admin)
 export const completeGameApi = async (reservationId: string) => {
-  // This endpoint might not exist in your backend, implement if needed
   const response = await apiRequest(`/reservations/${reservationId}/complete`, {
     method: 'POST',
-  });
-  const data = await response.json();
-  return data;
-};
-
-// Suspend player (admin)
-export const suspendPlayerApi = async (playerId: string, reason: string, suspensionDays: number) => {
-  // This might be handled through kick player, adjust as needed
-  const response = await apiRequest(`/users/${playerId}/suspend`, {
-    method: 'POST',
-    body: JSON.stringify({
-      reason,
-      suspensionDays
-    }),
   });
   const data = await response.json();
   return data;

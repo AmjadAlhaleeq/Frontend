@@ -9,4 +9,4 @@ export * from './playerReservationApi';
 export { getAllReservations as fetchAllReservations } from './publicReservationApi';
 export { getReservationById as fetchReservationById } from './publicReservationApi';
 export { deleteReservationApi as deleteReservationById } from './adminReservationApi';
-export { removeFromWaitlist as suspendPlayer } from './playerReservationApi'; // This was incorrectly mapped
+export { removeFromWaitlist as leaveWaitlist } from './playerReservationApi';
