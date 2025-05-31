@@ -80,7 +80,12 @@ const ReservationsEnhancedList: React.FC<ReservationsEnhancedListProps> = ({
               onLeaveWaitlist={() => onLeaveWaitlist(reservation)}
               onViewDetails={() => onViewDetails(reservation)}
               onDeleteReservation={() => onDeleteReservation(reservation)}
-              onKickPlayer={onKickPlayer}
+              onKickPlayer={(playerId: string, suspensionDays: number, reason: string) => {
+                // Find the player name from the reservation
+                const player = reservation.lineup?.find(p => p.userId === playerId);
+                const playerName = player?.name || player?.playerName || `Player ${playerId.substring(0, 4)}`;
+                onKickPlayer(playerId, playerName);
+              }}
               onAddSummary={() => onAddSummary(reservation)}
               loadingStates={loadingStates}
             />
