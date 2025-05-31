@@ -22,10 +22,10 @@ import {
   deleteReservationApi,
   completeGameApi,
   addGameSummaryApi,
-  kickPlayerApi,
-  suspendPlayerApi,
   type GameSummaryData,
 } from "@/services/reservationApiService";
+
+import { kickPlayer, suspendUser } from "@/services/adminReservationApi";
 
 const ReservationsEnhanced = () => {
   const navigate = useNavigate();
@@ -324,7 +324,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || userRole !== "admin") return;
 
     try {
-      await kickPlayerApi(
+      await kickPlayer(
         selectedReservation.backendId,
         playerId,
         reason,
@@ -369,7 +369,7 @@ const ReservationsEnhanced = () => {
     reason: string
   ) => {
     try {
-      await suspendPlayerApi(playerId, reason, suspensionDays);
+      await suspendUser(playerId, reason, suspensionDays);
       await loadReservations();
       closeDialog("playerSuspension");
       toast({
