@@ -87,7 +87,6 @@ const ReservationsEnhancedList: React.FC<ReservationsEnhancedListProps> = ({
                 onKickPlayer(playerId, playerName);
               }}
               onAddSummary={() => onAddSummary(reservation)}
-              loadingStates={loadingStates}
             />
           ))}
         </div>
