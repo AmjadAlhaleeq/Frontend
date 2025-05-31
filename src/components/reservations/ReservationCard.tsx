@@ -15,6 +15,7 @@ import {
   UserPlus,
   UserMinus,
   AlertCircle,
+  UserX,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import DeleteConfirmationDialog from "@/components/shared/DeleteConfirmationDialog";
@@ -52,9 +53,10 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   onDeleteReservation,
   onViewDetails,
   onAddSummary,
+  onKickPlayer,
   isUserLoggedIn,
   pitchImage,
-  isUserInWaitingList, // Default to false if not provided
+  isUserInWaitingList,
 }) => {
   const [deleting, setDeleting] = React.useState(false);
   const [deleteDialog, setDeleteDialog] = React.useState(false);
@@ -68,7 +70,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     onViewDetails(reservation);
   };
 
-  // Admin Delete Button now shows dialog
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onDeleteReservation) return;
@@ -85,22 +86,28 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
   };
 
+  const handleKickPlayer = (playerId: string, playerName: string) => {
+    if (onKickPlayer) {
+      onKickPlayer(playerId, playerName);
+    }
+  };
+
   const isJoined = isUserLoggedIn && isUserJoined(reservation.id, userId);
   const isInWaitingList =
     isUserLoggedIn && reservation.waitingList?.includes(userId);
   const currentPlayers = reservation.lineup?.length || 0;
-  // Use actualMaxPlayers from prop, not hardcoded
   const actualMaxPlayers = reservation.maxPlayers;
   const gameIsFull = currentPlayers >= actualMaxPlayers;
   const waitingListCount = reservation.waitingList?.length || 0;
-
-  // FIXED: Only show waiting list option when game is actually full
   const canJoinWaitingList = gameIsFull && !isJoined && !isInWaitingList;
   const [alreadyInWaitingList, setAlreadyInWaitingList] = useState(
     isUserLoggedIn &&
       isInWaitingList &&
       reservation.waitingList?.includes(userId)
   );
+
+  // Admin can kick players for upcoming games
+  const canKickPlayers = userRole === "admin" && reservation.status === "upcoming" && onKickPlayer;
 
   let formattedDate = "Invalid Date";
   try {
@@ -196,7 +203,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
     }
 
     if (gameIsFull && alreadyInWaitingList) {
-      // User is already in waiting list
       return (
         <div className="flex gap-2 items-center w-full">
           <Badge
@@ -226,7 +232,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    // FIXED: Only show waiting list button when game is actually full
     if (gameIsFull && canJoinWaitingList) {
       return (
         <Button
@@ -245,7 +250,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    // Show regular join button if game is not full
     if (!gameIsFull) {
       return (
         <Button
@@ -262,7 +266,6 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       );
     }
 
-    // Game is full but user can't join waiting list (shouldn't happen with infinite waiting list)
     return (
       <div className="flex items-center gap-2 w-full">
         <Badge variant="destructive">Full</Badge>
@@ -358,12 +361,44 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
             )}
           </div>
 
+          {/* Show joined players with kick option */}
+          {canKickPlayers && reservation.lineup && reservation.lineup.length > 0 && (
+            <div className="w-full mt-2">
+              <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Kick players from game
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {reservation.lineup.slice(0, 3).map((player: any) => (
+                  <Button
+                    key={player.userId}
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleKickPlayer(player.userId, player.name || player.playerName);
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-7"
+                  >
+                    <UserX className="h-3 w-3 mr-1" />
+                    Kick {player.name?.split(" ")[0] || player.playerName?.split(" ")[0]}
+                  </Button>
+                ))}
+                {reservation.lineup.length > 3 && (
+                  <span className="text-xs text-gray-500 self-center">
+                    +{reservation.lineup.length - 3} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center pt-2">
             {renderActionButtons()}
           </div>
         </div>
       </CardContent>
-      {/* Admin Delete Confirmation Dialog */}
+      
       {onDeleteReservation && (
         <DeleteConfirmationDialog
           open={deleteDialog}

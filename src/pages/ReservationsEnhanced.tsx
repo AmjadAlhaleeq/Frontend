@@ -52,6 +52,9 @@ const ReservationsEnhanced = () => {
   const { upcomingReservations, completedReservations } =
     useReservationFiltering(reservations, currentDate);
 
+  // Add loading states for better UX
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+
   // Initialize user data
   useEffect(() => {
     const role = localStorage.getItem("userRole") as "admin" | "player" | null;
@@ -131,6 +134,10 @@ const ReservationsEnhanced = () => {
     loadReservations();
   }, [loadReservations]);
 
+  const setLoading = (key: string, loading: boolean) => {
+    setLoadingStates(prev => ({ ...prev, [key]: loading }));
+  };
+
   // Utility functions
   const isUserJoined = (reservation: Reservation): boolean => {
     return !!reservation.lineup?.some(
@@ -146,16 +153,16 @@ const ReservationsEnhanced = () => {
     return (reservation.lineup?.length || 0) >= reservation.maxPlayers;
   };
 
-  // Player action handlers
+  // Player action handlers with loading states
   const handleJoinGame = async () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
+      setLoading(`join-${selectedReservation.id}`, true);
       const result = await joinReservationApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("joinGame");
 
-      // Check if user was added to waitlist or joined directly
       if (result.message.includes("waitlist")) {
         toast({
           title: "Added to Waiting List",
@@ -175,6 +182,8 @@ const ReservationsEnhanced = () => {
           error instanceof Error ? error.message : "Failed to join the game",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`join-${selectedReservation.id}`, false);
     }
   };
 
@@ -182,6 +191,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
+      setLoading(`leave-${selectedReservation.id}`, true);
       await cancelReservationApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("leaveGame");
@@ -196,6 +206,8 @@ const ReservationsEnhanced = () => {
           error instanceof Error ? error.message : "Failed to leave the game",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`leave-${selectedReservation.id}`, false);
     }
   };
 
@@ -203,6 +215,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
+      setLoading(`waitlist-${selectedReservation.id}`, true);
       const result = await joinWaitlistApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("joinWaitlist");
@@ -220,6 +233,8 @@ const ReservationsEnhanced = () => {
             : "Failed to join the waiting list",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`waitlist-${selectedReservation.id}`, false);
     }
   };
 
@@ -227,6 +242,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || !currentUserId) return;
 
     try {
+      setLoading(`waitlist-${selectedReservation.id}`, true);
       await leaveWaitlistApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("leaveWaitlist");
@@ -243,6 +259,8 @@ const ReservationsEnhanced = () => {
             : "Failed to leave the waiting list",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`waitlist-${selectedReservation.id}`, false);
     }
   };
 
@@ -251,6 +269,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || userRole !== "admin") return;
 
     try {
+      setLoading(`delete-${selectedReservation.id}`, true);
       await deleteReservationApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("deleteReservation");
@@ -267,6 +286,8 @@ const ReservationsEnhanced = () => {
             : "Failed to delete the reservation",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`delete-${selectedReservation.id}`, false);
     }
   };
 
@@ -274,6 +295,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || userRole !== "admin") return;
 
     try {
+      setLoading(`complete-${selectedReservation.id}`, true);
       await completeGameApi(selectedReservation.backendId);
       await loadReservations();
       closeDialog("completeGame");
@@ -290,6 +312,8 @@ const ReservationsEnhanced = () => {
             : "Failed to complete the game",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`complete-${selectedReservation.id}`, false);
     }
   };
 
@@ -297,6 +321,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || userRole !== "admin") return;
 
     try {
+      setLoading(`summary-${selectedReservation.id}`, true);
       await addGameSummaryApi(selectedReservation.backendId, summaryData);
       await loadReservations();
       closeDialog("gameSummary");
@@ -313,10 +338,25 @@ const ReservationsEnhanced = () => {
             : "Failed to save the game summary",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`summary-${selectedReservation.id}`, false);
     }
   };
 
-  const handleKickPlayer = async (
+  // Fixed kick player handler - now opens suspension dialog
+  const handleKickPlayer = async (playerId: string, playerName: string) => {
+    // Set suspension data and open dialog
+    setSuspensionData({
+      playerId,
+      playerName,
+      reason: "",
+      suspensionDays: 1,
+    });
+    openDialog("playerSuspension");
+  };
+
+  // This will be called from the suspension dialog
+  const handleConfirmKickWithSuspension = async (
     playerId: string,
     suspensionDays: number,
     reason: string
@@ -324,6 +364,7 @@ const ReservationsEnhanced = () => {
     if (!selectedReservation || userRole !== "admin") return;
 
     try {
+      setLoading(`kick-${playerId}`, true);
       await kickPlayer(
         selectedReservation.backendId,
         playerId,
@@ -331,6 +372,7 @@ const ReservationsEnhanced = () => {
         suspensionDays
       );
       await loadReservations();
+      closeDialog("playerSuspension");
       toast({
         title: "Player Kicked",
         description: `Player has been removed and suspended for ${suspensionDays} day${
@@ -344,6 +386,8 @@ const ReservationsEnhanced = () => {
           error instanceof Error ? error.message : "Failed to kick the player",
         variant: "destructive",
       });
+    } finally {
+      setLoading(`kick-${playerId}`, false);
     }
   };
 
@@ -443,6 +487,7 @@ const ReservationsEnhanced = () => {
           }
           onKickPlayer={handleKickPlayer}
           onAddSummary={(reservation) => openDialog("gameSummary", reservation)}
+          loadingStates={loadingStates}
         />
       </div>
 
@@ -462,8 +507,9 @@ const ReservationsEnhanced = () => {
         onDeleteReservation={handleDeleteReservation}
         onCompleteGame={handleCompleteGame}
         onAddSummary={handleAddSummary}
-        onSuspendPlayer={handleSuspendPlayer}
+        onSuspendPlayer={handleConfirmKickWithSuspension}
         onPlayerClick={handlePlayerClick}
+        loadingStates={loadingStates}
       />
     </div>
   );
