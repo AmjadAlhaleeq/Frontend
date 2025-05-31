@@ -1,10 +1,22 @@
-
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Plus, Clock, MapPin, Users, DollarSign } from "lucide-react";
+import {
+  CalendarIcon,
+  Plus,
+  Clock,
+  MapPin,
+  Users,
+  DollarSign,
+} from "lucide-react";
 import { format, addDays } from "date-fns";
 import { useReservation } from "@/context/ReservationContext";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,28 +36,43 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { createReservation } from "@/lib/reservationApi";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   pitch: z.string().min(1, "Please select a pitch"),
-  date: z.date({
-    required_error: "Please select a date",
-  }).refine((date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date >= today;
-  }, "Date must be today or in the future"),
+  date: z
+    .date({
+      required_error: "Please select a date",
+    })
+    .refine((date) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date >= today;
+    }, "Date must be today or in the future"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   price: z.coerce.number().min(0, "Price must be positive"),
-  maxPlayers: z.coerce.number().min(6, "Minimum 6 players required").max(22, "Maximum 22 players allowed"),
+  maxPlayers: z.coerce
+    .number()
+    .min(12, "Minimum 12 players required")
+    .max(30, "Maximum 30 players allowed"),
 });
 
 interface BackendReservationFormProps {
@@ -53,9 +80,9 @@ interface BackendReservationFormProps {
   onSuccess?: () => void;
 }
 
-const BackendReservationForm: React.FC<BackendReservationFormProps> = ({ 
-  children, 
-  onSuccess 
+const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
+  children,
+  onSuccess,
 }) => {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,17 +96,17 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
       pitch: "",
       startTime: "",
       endTime: "",
-      price: 50,
+      price: 10,
       maxPlayers: 10,
     },
   });
 
   const validateTimeRange = (startTime: string, endTime: string): boolean => {
     if (!startTime || !endTime) return false;
-    
+
     const start = new Date(`2000-01-01 ${startTime}`);
     const end = new Date(`2000-01-01 ${endTime}`);
-    
+
     return end > start;
   };
 
@@ -94,12 +121,12 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const reservationData = {
         title: data.title,
         pitch: data.pitch,
-        date: format(data.date, 'yyyy-MM-dd'),
+        date: format(data.date, "yyyy-MM-dd"),
         startTime: data.startTime,
         endTime: data.endTime,
         price: data.price,
@@ -107,15 +134,18 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
       };
 
       await createReservation(reservationData);
-      
+
       toast({
         title: "Reservation Created Successfully!",
-        description: `Game "${data.title}" scheduled for ${format(data.date, 'MMM d, yyyy')} from ${data.startTime} to ${data.endTime}`,
+        description: `Game "${data.title}" scheduled for ${format(
+          data.date,
+          "MMM d, yyyy"
+        )} from ${data.startTime} to ${data.endTime}`,
       });
 
       setOpen(false);
       form.reset();
-      
+
       if (onSuccess) {
         onSuccess();
       }
@@ -123,7 +153,10 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
       console.error("Error creating reservation:", error);
       toast({
         title: "Failed to Create Reservation",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -132,9 +165,11 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
   };
 
   const handlePitchChange = (pitchId: string) => {
-    const selectedPitch = pitches.find(p => p._id === pitchId || p.id === pitchId);
-    if (selectedPitch && !form.getValues('title')) {
-      form.setValue('title', `Game at ${selectedPitch.name}`);
+    const selectedPitch = pitches.find(
+      (p) => p._id === pitchId || p.id === pitchId
+    );
+    if (selectedPitch && !form.getValues("title")) {
+      form.setValue("title", `Game at ${selectedPitch.name}`);
     }
   };
 
@@ -157,7 +192,7 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
             Create New Game Reservation
           </DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
@@ -166,7 +201,9 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                   <MapPin className="h-5 w-5 mr-2" />
                   Game Details
                 </CardTitle>
-                <CardDescription>Basic information about the game</CardDescription>
+                <CardDescription>
+                  Basic information about the game
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Game Title */}
@@ -177,9 +214,9 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                     <FormItem>
                       <FormLabel>Game Title</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g., Friday Night Football" 
-                          {...field} 
+                        <Input
+                          placeholder="e.g., Friday Night Football"
+                          {...field}
                           className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100"
                         />
                       </FormControl>
@@ -195,11 +232,11 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pitch</FormLabel>
-                      <Select 
+                      <Select
                         onValueChange={(value) => {
                           field.onChange(value);
                           handlePitchChange(value);
-                        }} 
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -209,7 +246,10 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                         </FormControl>
                         <SelectContent className="dark:bg-gray-800 max-h-40 overflow-y-auto">
                           {pitches.map((pitch) => (
-                            <SelectItem key={pitch._id || pitch.id} value={pitch._id || pitch.id || pitch.name}>
+                            <SelectItem
+                              key={pitch._id || pitch.id}
+                              value={pitch._id || pitch.id || pitch.name}
+                            >
                               {pitch.name} - {pitch.city}
                             </SelectItem>
                           ))}
@@ -228,7 +268,9 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                   <Clock className="h-5 w-5 mr-2" />
                   Date & Time
                 </CardTitle>
-                <CardDescription>When will the game take place?</CardDescription>
+                <CardDescription>
+                  When will the game take place?
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Date Selection */}
@@ -257,7 +299,10 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 dark:bg-gray-800" align="start">
+                        <PopoverContent
+                          className="w-auto p-0 dark:bg-gray-800"
+                          align="start"
+                        >
                           <Calendar
                             mode="single"
                             selected={field.value}
@@ -282,9 +327,9 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                       <FormItem>
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="time" 
-                            {...field} 
+                          <Input
+                            type="time"
+                            {...field}
                             className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100"
                           />
                         </FormControl>
@@ -300,9 +345,9 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                       <FormItem>
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="time" 
-                            {...field} 
+                          <Input
+                            type="time"
+                            {...field}
                             className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100"
                           />
                         </FormControl>
@@ -331,8 +376,10 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Maximum Players</FormLabel>
-                        <Select 
-                          onValueChange={(value) => field.onChange(parseInt(value, 10))} 
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(parseInt(value, 10))
+                          }
                           defaultValue={String(field.value)}
                         >
                           <FormControl>
@@ -341,9 +388,16 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="dark:bg-gray-800">
-                            <SelectItem value="10">5v5 (10 players)</SelectItem>
-                            <SelectItem value="14">7v7 (14 players)</SelectItem>
-                            <SelectItem value="22">11v11 (22 players)</SelectItem>
+                            <SelectItem value="12">(12 players)</SelectItem>
+                            <SelectItem value="14">(14 players)</SelectItem>
+                            <SelectItem value="16">(16 players)</SelectItem>
+                            <SelectItem value="18">(18 players)</SelectItem>
+                            <SelectItem value="20">(20 players)</SelectItem>
+                            <SelectItem value="22">(22 players)</SelectItem>
+                            <SelectItem value="24">(24 players)</SelectItem>
+                            <SelectItem value="26">(26 players)</SelectItem>
+                            <SelectItem value="28">(28 players)</SelectItem>
+                            <SelectItem value="30">(30 players)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -361,10 +415,10 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
                           Price per Player
                         </FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="50" 
-                            {...field} 
+                          <Input
+                            type="number"
+                            placeholder="50"
+                            {...field}
                             className="border-[#0F766E]/20 dark:border-teal-600/30 dark:bg-gray-700 dark:text-gray-100"
                           />
                         </FormControl>
@@ -378,16 +432,16 @@ const BackendReservationForm: React.FC<BackendReservationFormProps> = ({
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-3 pt-4 border-t">
-              <Button 
+              <Button
                 type="button"
-                variant="outline" 
+                variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
                 className="border-[#0F766E]/20 text-[#0F766E] hover:bg-[#0F766E]/10 dark:text-teal-400 dark:border-teal-600/40 dark:hover:bg-teal-600/20"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={isSubmitting}
                 className="bg-[#0F766E] hover:bg-[#0d6d66] text-white dark:bg-teal-600 dark:hover:bg-teal-700"
