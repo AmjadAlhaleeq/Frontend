@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -148,19 +147,19 @@ const AboutPage = () => {
           <TeamMemberCard
             name="Mohammed Alassi"
             role="Backend Developer"
-            image="/lovable-uploads/2e0ce39d-1fbe-42e1-b487-c8b0cf101a8c.png"
+            image="/BOKIT-Upload/2e0ce39d-1fbe-42e1-b487-c8b0cf101a8c.png"
             description="Responsible for all backend development, including setting up the server, creating APIs, handling database operations, and ensuring secure and efficient data flow."
           />
           <TeamMemberCard
             name="Osama Abbadi"
             role="Frontend Developer & UI/UX Designer"
-            image="/lovable-uploads/11003c1a-89df-4858-9bfb-b0340362cd87.png"
+            image="/BOKIT-Upload/11003c1a-89df-4858-9bfb-b0340362cd87.png"
             description="Focuses on designing the user interface and enhancing user experience. Works on implementing layouts, managing local storage, and connecting the frontend to backend services."
           />
           <TeamMemberCard
             name="Amjad Alhalleeq"
-            role="Full Stack Developer"
-            image="/lovable-uploads/801c7456-11c0-4592-88c8-1c7ff69fdde6.png"
+            role="Frontend Developer "
+            image="/BOKIT-Upload/801c7456-11c0-4592-88c8-1c7ff69fdde6.png"
             description="Handles development of interactive and reusable UI components. Works closely with Osama to integrate frontend logic with backend APIs, ensuring smooth data interaction."
           />
         </div>

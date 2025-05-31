@@ -196,7 +196,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       </div>
 
       {/* Kick button for admins within 3 days */}
-      {canKickPlayers && (
+      {!canKickPlayers && (
         <Button
           variant="outline"
           size="sm"
