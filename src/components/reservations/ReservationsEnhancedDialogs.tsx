@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Reservation } from "@/types/reservation";
 import { DialogStates } from "@/hooks/useReservationDialogs";
@@ -16,7 +15,7 @@ import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 interface ReservationsEnhancedDialogsProps {
   selectedReservation: Reservation | null;
   dialogStates: DialogStates;
-  suspensionData: { playerName: string; playerId: string };
+  suspensionData: { playerName: string; playerId: string; reason: string; suspensionDays: number };
   userRole: "admin" | "player" | null;
   currentUserId: string;
   pitchImages: Record<string, string>;
@@ -30,6 +29,7 @@ interface ReservationsEnhancedDialogsProps {
   onAddSummary: (summaryData: GameSummaryData) => Promise<void>;
   onSuspendPlayer: (playerId: string, suspensionDays: number, reason: string) => Promise<void>;
   onPlayerClick: (playerId: string, playerName?: string) => void;
+  loadingStates?: Record<string, boolean>;
 }
 
 const ReservationsEnhancedDialogs: React.FC<ReservationsEnhancedDialogsProps> = ({
@@ -49,6 +49,7 @@ const ReservationsEnhancedDialogs: React.FC<ReservationsEnhancedDialogsProps> = 
   onAddSummary,
   onSuspendPlayer,
   onPlayerClick,
+  loadingStates = {},
 }) => {
   if (!selectedReservation) return null;
 
@@ -124,6 +125,7 @@ const ReservationsEnhancedDialogs: React.FC<ReservationsEnhancedDialogsProps> = 
         playerName={suspensionData.playerName}
         playerId={suspensionData.playerId}
         onConfirm={onSuspendPlayer}
+        actionType="kick"
       />
     </>
   );

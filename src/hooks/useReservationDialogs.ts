@@ -38,7 +38,9 @@ export const useReservationDialogs = () => {
   const [suspensionData, setSuspensionData] = useState<{
     playerName: string;
     playerId: string;
-  }>({ playerName: "", playerId: "" });
+    reason: string;
+    suspensionDays: number;
+  }>({ playerName: "", playerId: "", reason: "", suspensionDays: 1 });
 
   const openDialog = (
     dialogName: keyof DialogStates,
