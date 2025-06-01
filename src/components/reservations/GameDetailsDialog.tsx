@@ -72,13 +72,14 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   const [kickingPlayers, setKickingPlayers] = useState<Record<string, boolean>>(
     {}
   );
+  const [localReservation, setLocalReservation] = useState(reservation);
   const navigate = useNavigate();
 
-  const currentPlayers = reservation.lineup?.length || 0;
+  const currentPlayers = localReservation.lineup?.length || 0;
 
   // Check if we're within 3 days of game start for kick functionality
   const gameDateTime = new Date(
-    `${reservation.date}T${reservation.time || "00:00"}`
+    `${localReservation.date}T${localReservation.time || "00:00"}`
   );
   const now = new Date();
   const threeDaysBeforeGame = new Date(
@@ -87,25 +88,25 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   const canKickPlayers =
     isAdmin &&
     now >= threeDaysBeforeGame &&
-    reservation.status !== "completed" &&
-    reservation.lineup &&
-    reservation.lineup.length > 0;
+    localReservation.status !== "completed" &&
+    localReservation.lineup &&
+    localReservation.lineup.length > 0;
 
   let formattedDate = "Invalid Date";
   try {
-    if (reservation.date) {
-      formattedDate = format(parseISO(reservation.date), "EEEE, MMMM d, yyyy");
+    if (localReservation.date) {
+      formattedDate = format(parseISO(localReservation.date), "EEEE, MMMM d, yyyy");
     }
   } catch (error) {
     console.error("Error formatting date:", error);
-    formattedDate = reservation.date?.substring(0, 10) || "Invalid Date";
+    formattedDate = localReservation.date?.substring(0, 10) || "Invalid Date";
   }
 
   const getCardImage = () => {
     if (pitchImage) return pitchImage;
-    if (reservation.backgroundImage) return reservation.backgroundImage;
+    if (localReservation.backgroundImage) return localReservation.backgroundImage;
     return `https://source.unsplash.com/800x400/?football,pitch,${encodeURIComponent(
-      reservation.pitchName || "football"
+      localReservation.pitchName || "football"
     )
       .split(" ")
       .join(",")}`;
@@ -136,7 +137,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
   const handleLocationClick = () => {
     const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-      reservation.location
+      localReservation.location
     )}`;
     window.open(googleMapsUrl, "_blank");
   };
@@ -153,25 +154,30 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         playerId,
         suspensionDays,
         reason,
-        reservationId: reservation.id,
-        reservationBackendId: reservation.backendId,
+        reservationId: localReservation.id,
+        reservationBackendId: localReservation.backendId,
       });
 
       setKickingPlayers((prev) => ({ ...prev, [playerId]: true }));
 
       // Use backendId if available, otherwise fall back to id
       const reservationIdToUse =
-        reservation.backendId || reservation.id.toString();
+        localReservation.backendId || localReservation.id.toString();
       console.log("Using reservation ID for kick:", reservationIdToUse);
 
       await kickPlayerApi(reservationIdToUse, playerId, reason, suspensionDays);
+
+      // Update local state to remove the player immediately
+      setLocalReservation(prev => ({
+        ...prev,
+        lineup: prev.lineup?.filter(player => player.userId !== playerId) || []
+      }));
 
       toast({
         title: "Player Kicked",
         description: `${kickDialog?.playerName} was removed and suspended.`,
       });
 
-      onClose();
     } catch (error: any) {
       console.error("Error in confirmKickPlayer:", error);
       toast({
@@ -186,7 +192,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   const renderHighlights = () => {
-    if (!reservation.highlights || reservation.highlights.length === 0) {
+    if (!localReservation.highlights || localReservation.highlights.length === 0) {
       return (
         <div className="text-center p-4 text-muted-foreground">
           <p>No highlights recorded for this game</p>
@@ -196,7 +202,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
     return (
       <div className="space-y-2">
-        {reservation.highlights.map((highlight, index) => (
+        {localReservation.highlights.map((highlight, index) => (
           <div
             key={index}
             className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800"
@@ -237,7 +243,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   const renderPlayersList = () => {
-    if (!reservation.lineup || reservation.lineup.length === 0) {
+    if (!localReservation.lineup || localReservation.lineup.length === 0) {
       return (
         <div className="text-center p-4 text-muted-foreground">
           <p>No players have joined this game yet</p>
@@ -247,7 +253,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
     return (
       <div className="space-y-3">
-        {reservation.lineup.map((player, index) => (
+        {localReservation.lineup.map((player, index) => (
           <div
             key={player.userId}
             className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
@@ -272,7 +278,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            {!canKickPlayers && (
+            {canKickPlayers && (
               <LoadingButton
                 variant="outline"
                 size="sm"
@@ -291,7 +297,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   // Get pitch details from reservation
-  const pitch = (reservation as any).pitch;
+  const pitch = (localReservation as any).pitch;
 
   return (
     <>
@@ -299,7 +305,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {reservation.title || reservation.pitchName}
+              {localReservation.title || localReservation.pitchName}
             </DialogTitle>
             <DialogDescription>
               Game details and player lineup
@@ -312,7 +318,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               <div className="relative h-48 w-full rounded-lg overflow-hidden">
                 <img
                   src={getCardImage()}
-                  alt={reservation.pitchName}
+                  alt={localReservation.pitchName}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -323,17 +329,17 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 <div className="absolute top-4 right-4">
                   <Badge
                     className={`${
-                      reservation.status === "upcoming"
+                      localReservation.status === "upcoming"
                         ? "bg-green-500"
-                        : reservation.status === "completed"
+                        : localReservation.status === "completed"
                         ? "bg-blue-500"
                         : "bg-red-500"
                     }`}
                   >
-                    {(reservation.status || "upcoming")
+                    {(localReservation.status || "upcoming")
                       .charAt(0)
                       .toUpperCase() +
-                      (reservation.status || "upcoming").slice(1)}
+                      (localReservation.status || "upcoming").slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -348,9 +354,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
                     <span>
-                      {reservation.startTime && reservation.endTime
-                        ? `${reservation.startTime} - ${reservation.endTime}`
-                        : reservation.time || "Time TBD"}
+                      {localReservation.startTime && localReservation.endTime
+                        ? `${localReservation.startTime} - ${localReservation.endTime}`
+                        : localReservation.time || "Time TBD"}
                     </span>
                   </div>
                 </div>
@@ -361,7 +367,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                       onClick={handleLocationClick}
                       className="text-current hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors text-left"
                     >
-                      {reservation.city || reservation.location}
+                      {localReservation.city || localReservation.location}
                     </button>
                   </div>
                   <div className="flex items-center">
@@ -443,14 +449,14 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               {/* Waiting List - Only show for admin */}
               {isAdmin && (
                 <WaitingListDisplay
-                  reservation={reservation}
+                  reservation={localReservation}
                   onAddPlayerFromWaitlist={handleAddPlayerFromWaitlist}
                   onRemoveFromWaitlist={handleRemoveFromWaitlist}
                 />
               )}
 
               {/* Game Highlights */}
-              {reservation.status === "completed" && (
+              {localReservation.status === "completed" && (
                 <div>
                   <h3 className="font-semibold text-lg mb-4 flex items-center">
                     <Star className="h-5 w-5 mr-2" />

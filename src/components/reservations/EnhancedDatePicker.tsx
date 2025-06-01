@@ -19,19 +19,18 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
   userRole,
 }) => {
   const today = new Date();
-  const minBookingDate = addDays(today, 4); // 5 days from today
+  const minBookingDate = addDays(today, 4); // 5 days from today for new bookings
 
+  // Allow all users to view past dates, only restrict booking new games
   const isDateDisabled = (checkDate: Date) => {
-    // Admin can view all dates, players can only view future dates
-    if (userRole === "admin") {
-      return false; // Admin can see all dates
-    }
-    return checkDate < minBookingDate;
+    // No dates are disabled for viewing - all users can see past and future games
+    return false;
   };
 
   const modifiers = {
     hasReservations: (day: Date) => hasReservations(day),
     disabled: isDateDisabled,
+    pastDate: (day: Date) => day < today && !isSameDay(day, today),
   };
 
   const modifiersStyles = {
@@ -44,6 +43,9 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
       color: "#d1d5db",
       backgroundColor: "#f3f4f6",
       cursor: "not-allowed",
+    },
+    pastDate: {
+      color: "#6b7280",
     },
   };
 
@@ -64,22 +66,24 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
           disabled={isDateDisabled}
-          fromDate={userRole === "admin" ? undefined : minBookingDate}
         />
         <div className="p-4 border-t">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <div className="w-3 h-3 rounded bg-emerald-600"></div>
             <span>Has games</span>
           </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <div className="w-3 h-3 rounded bg-gray-500"></div>
+            <span>Past dates</span>
+          </div>
+          <div className="text-xs text-teal-600 font-medium">
+            {userRole === "admin" 
+              ? "Admin: View and manage all games" 
+              : "View all games - past and upcoming"}
+          </div>
           {userRole !== "admin" && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="w-3 h-3 rounded bg-gray-300"></div>
-              <span>Booking not allowed (min 5 days advance)</span>
-            </div>
-          )}
-          {userRole === "admin" && (
-            <div className="text-xs text-teal-600 font-medium">
-              Admin: View all dates including past games
+            <div className="text-xs text-gray-500 mt-1">
+              Note: New bookings require 5 days advance notice
             </div>
           )}
         </div>

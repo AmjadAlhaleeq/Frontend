@@ -49,6 +49,16 @@ export const useWaitingListPersistence = (userId: string | null) => {
     return result;
   };
 
+  // Clear waiting list state for a specific reservation - useful when user joins main game
+  const clearWaitingListState = (reservationId: string) => {
+    console.log('Clearing waiting list state for:', reservationId);
+    setWaitingListState(prev => {
+      const newState = { ...prev };
+      delete newState[reservationId];
+      return newState;
+    });
+  };
+
   // Sync with server data - add this function to sync local state with server
   const syncWithServerData = (reservations: any[]) => {
     if (!userId) return;
@@ -57,15 +67,18 @@ export const useWaitingListPersistence = (userId: string | null) => {
     let hasChanges = false;
 
     reservations.forEach(reservation => {
-      const isInServerWaitlist = reservation.waitingList?.includes(userId);
-      const isInLocalWaitlist = updatedState[reservation.id.toString()];
+      const reservationKey = reservation.id?.toString() || reservation.backendId;
+      const isInServerWaitlist = reservation.waitingList?.includes(userId) || reservation.waitList?.includes(userId);
+      const isInLocalWaitlist = updatedState[reservationKey];
 
       if (isInServerWaitlist && !isInLocalWaitlist) {
-        updatedState[reservation.id.toString()] = true;
+        updatedState[reservationKey] = true;
         hasChanges = true;
+        console.log(`Syncing: Added ${reservationKey} to local waitlist`);
       } else if (!isInServerWaitlist && isInLocalWaitlist) {
-        delete updatedState[reservation.id.toString()];
+        delete updatedState[reservationKey];
         hasChanges = true;
+        console.log(`Syncing: Removed ${reservationKey} from local waitlist`);
       }
     });
 
@@ -79,5 +92,6 @@ export const useWaitingListPersistence = (userId: string | null) => {
     removeFromWaitingList,
     isInWaitingList,
     syncWithServerData,
+    clearWaitingListState,
   };
 };
