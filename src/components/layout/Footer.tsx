@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   Facebook,
@@ -9,16 +8,29 @@ import {
   MapPin,
 } from "lucide-react";
 import Logo from "../shared/Logo";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Footer component with company information, links, and contact details
  */
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const { user, isAuthenticated } = useAuth();
 
   const handleEmailClick = () => {
     const subject = encodeURIComponent("Contact from BOKIT Website");
-    const body = encodeURIComponent("Hello BOKIT Team,\n\nI would like to get in touch regarding:\n\n");
+    
+    // Get user email if logged in, otherwise use a default message
+    const userEmail = isAuthenticated && user?.email ? user.email : "your-email@example.com";
+    const userName = isAuthenticated && user ? `${user.firstName} ${user.lastName}` : "User";
+    
+    const body = encodeURIComponent(
+      `Hello BOKIT Team,\n\n` +
+      `I would like to get in touch regarding:\n\n` +
+      `From: ${userName} (${userEmail})\n\n` +
+      `Message:\n`
+    );
+    
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=bookitandkickit@gmail.com&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank');
   };
@@ -78,6 +90,11 @@ const Footer = () => {
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
                 >
                   bookitandkickit@gmail.com
+                  {isAuthenticated && user && (
+                    <span className="block text-xs text-gray-500 mt-1">
+                      From: {user.firstName} {user.lastName}
+                    </span>
+                  )}
                 </button>
               </div>
               <div className="flex items-start justify-center md:justify-start">
