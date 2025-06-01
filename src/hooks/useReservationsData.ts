@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -31,6 +30,7 @@ export const useReservationsData = () => {
         // Handle pitch object - it's populated with full pitch data
         const pitchId = res.pitch?._id || 'unknown';
         const pitchName = res.pitch?.name || `Pitch ${pitchId.substring(0, 8)}`;
+        const pitchLocation = res.pitch?.location || 'Football Complex';
         
         const now = new Date();
         const endTime = new Date(res.endTime);
@@ -42,7 +42,7 @@ export const useReservationsData = () => {
           backendId: res._id,
           pitchId: pitchId,
           pitchName: pitchName,
-          location: res.pitch?.location || 'Football Complex',
+          location: pitchLocation,
           city: res.pitch?.city || 'City',
           date: res.date.split('T')[0],
           startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -58,7 +58,16 @@ export const useReservationsData = () => {
             joinedAt: new Date().toISOString(),
             avatar: player.profilePicture || ''
           })),
-          waitingList: res.waitList || [],
+          waitingList: res.waitList ? res.waitList.map((player: any) => {
+            // If it's a full player object, return the ID
+            if (typeof player === 'object' && player._id) {
+              return player._id;
+            }
+            // If it's already an ID, return as is
+            return player;
+          }) : [],
+          // Keep the original waitList for the waiting list display component
+          waitList: res.waitList || [],
           status,
           createdBy: 'admin',
           price: res.price,

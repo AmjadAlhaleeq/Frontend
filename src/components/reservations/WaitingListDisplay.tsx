@@ -32,8 +32,10 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
       const waitList = (reservation as any).waitList || reservation.waitingList || [];
       
       console.log('Raw waitList from reservation:', waitList);
+      console.log('Reservation object:', reservation);
       
       if (!waitList || waitList.length === 0) {
+        console.log('No waiting list data found');
         setWaitingPlayers([]);
         return;
       }
@@ -56,6 +58,7 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
             preferredPosition: player.preferredPosition || '',
             bio: player.bio || '',
           }));
+          console.log('Processed players from backend format:', players);
           setWaitingPlayers(players);
         } else if (typeof waitList[0] === 'string') {
           console.log('Using frontend format with player IDs');
@@ -63,10 +66,13 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
           const playerIds = waitList.filter((id: any) => typeof id === 'string');
           if (playerIds.length > 0) {
             const players = await getMultiplePlayersByIds(playerIds);
+            console.log('Fetched players for IDs:', players);
             setWaitingPlayers(players);
           }
         } else {
           console.log('Unknown waitList format:', waitList);
+          console.log('First item type:', typeof waitList[0]);
+          console.log('First item value:', waitList[0]);
           setWaitingPlayers([]);
         }
       } catch (error) {
