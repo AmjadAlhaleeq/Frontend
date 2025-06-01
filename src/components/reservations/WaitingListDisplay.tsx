@@ -28,15 +28,40 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
 
   useEffect(() => {
     const fetchWaitingListPlayers = async () => {
-      if (!reservation.waitingList || reservation.waitingList.length === 0) {
+      // Handle both backend format (waitList) and frontend format (waitingList)
+      const waitList = (reservation as any).waitList || reservation.waitingList || [];
+      
+      if (!waitList || waitList.length === 0) {
         setWaitingPlayers([]);
         return;
       }
 
       setIsLoading(true);
       try {
-        const players = await getMultiplePlayersByIds(reservation.waitingList);
-        setWaitingPlayers(players);
+        // Check if waitList contains full player objects (backend format) or just IDs (frontend format)
+        if (waitList[0] && typeof waitList[0] === 'object' && waitList[0]._id) {
+          // Backend format: waitList contains full player objects
+          const players = waitList.map((player: any) => ({
+            _id: player._id,
+            firstName: player.firstName,
+            lastName: player.lastName,
+            email: player.email || '',
+            phoneNumber: player.phone,
+            city: player.city,
+            age: player.age,
+            profilePicture: player.profilePicture,
+            preferredPosition: player.preferredPosition,
+            bio: player.bio,
+          }));
+          setWaitingPlayers(players);
+        } else {
+          // Frontend format: waitList contains user IDs
+          const playerIds = waitList.filter((id: any) => typeof id === 'string');
+          if (playerIds.length > 0) {
+            const players = await getMultiplePlayersByIds(playerIds);
+            setWaitingPlayers(players);
+          }
+        }
       } catch (error) {
         console.error("Error fetching waiting list players:", error);
         toast({
@@ -45,41 +70,47 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
           variant: "destructive",
         });
         
-        // Fallback to localStorage approach
-        const fallbackPlayers = reservation.waitingList.map((userId) => {
-          try {
-            const userString = localStorage.getItem(`user_${userId}`);
-            if (userString) {
-              const user = JSON.parse(userString);
-              return {
-                _id: userId,
-                firstName: user.firstName || 'Unknown',
-                lastName: user.lastName || 'Player',
-                email: user.email || '',
-              };
+        // Fallback to localStorage approach for frontend format
+        const waitListIds = waitList.filter((item: any) => typeof item === 'string');
+        if (waitListIds.length > 0) {
+          const fallbackPlayers = waitListIds.map((userId: string) => {
+            try {
+              const userString = localStorage.getItem(`user_${userId}`);
+              if (userString) {
+                const user = JSON.parse(userString);
+                return {
+                  _id: userId,
+                  firstName: user.firstName || 'Unknown',
+                  lastName: user.lastName || 'Player',
+                  email: user.email || '',
+                };
+              }
+            } catch (error) {
+              console.error("Error parsing user from localStorage:", error);
             }
-          } catch (error) {
-            console.error("Error parsing user from localStorage:", error);
-          }
 
-          return {
-            _id: userId,
-            firstName: 'User',
-            lastName: userId.slice(0, 4),
-            email: '',
-          };
-        });
-        
-        setWaitingPlayers(fallbackPlayers as PlayerProfile[]);
+            return {
+              _id: userId,
+              firstName: 'User',
+              lastName: userId.slice(0, 4),
+              email: '',
+            };
+          });
+          
+          setWaitingPlayers(fallbackPlayers as PlayerProfile[]);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchWaitingListPlayers();
-  }, [reservation.waitingList, toast]);
+  }, [reservation, toast]);
 
-  if (!reservation.waitingList || reservation.waitingList.length === 0) {
+  // Get waitList from both possible formats
+  const waitList = (reservation as any).waitList || reservation.waitingList || [];
+  
+  if (!waitList || waitList.length === 0) {
     return (
       <div className="text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md">
         <Users className="h-10 w-10 text-gray-400 mx-auto mb-2" />
@@ -95,7 +126,7 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-md p-4">
         <h4 className="font-medium mb-3 flex items-center">
           <Users className="h-4 w-4 mr-2" />
-          Waiting List ({reservation.waitingList.length})
+          Waiting List ({waitList.length})
         </h4>
         <div className="flex items-center justify-center p-4">
           <Loader className="h-5 w-5 animate-spin mr-2" />

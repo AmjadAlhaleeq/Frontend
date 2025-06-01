@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import {
   Facebook,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import Logo from "../shared/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Footer component with company information, links, and contact details
@@ -16,23 +18,16 @@ import { useAuth } from "@/hooks/useAuth";
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleEmailClick = () => {
-    const subject = encodeURIComponent("Contact from BOKIT Website");
-    
-    // Get user email if logged in, otherwise use a default message
-    const userEmail = isAuthenticated && user?.email ? user.email : "your-email@example.com";
-    const userName = isAuthenticated && user ? `${user.firstName} ${user.lastName}` : "User";
-    
-    const body = encodeURIComponent(
-      `Hello BOKIT Team,\n\n` +
-      `I would like to get in touch regarding:\n\n` +
-      `From: ${userName} (${userEmail})\n\n` +
-      `Message:\n`
-    );
-    
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=bookitandkickit@gmail.com&su=${subject}&body=${body}`;
-    window.open(gmailUrl, '_blank');
+    if (isAuthenticated && user?.id) {
+      // Navigate to user's profile page where they can view/edit their email
+      navigate(`/profile`);
+    } else {
+      // If not logged in, navigate to login
+      navigate('/login');
+    }
   };
 
   return (
@@ -89,11 +84,20 @@ const Footer = () => {
                   onClick={handleEmailClick}
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
                 >
-                  bookitandkickit@gmail.com
-                  {isAuthenticated && user && (
-                    <span className="block text-xs text-gray-500 mt-1">
-                      From: {user.firstName} {user.lastName}
-                    </span>
+                  {isAuthenticated && user ? (
+                    <>
+                      {user.email || 'View Profile'}
+                      <span className="block text-xs text-gray-500 mt-1">
+                        View your profile and email
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Login to view email
+                      <span className="block text-xs text-gray-500 mt-1">
+                        Sign in to access your email
+                      </span>
+                    </>
                   )}
                 </button>
               </div>
