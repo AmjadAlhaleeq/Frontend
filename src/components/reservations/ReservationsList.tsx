@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
@@ -232,7 +231,7 @@ const ReservationsList: React.FC<ReservationsListProps> = ({
   // Check if user is in waiting list - combining server data with local persistence
   const isUserInWaitingListCheck = (reservation: Reservation): boolean => {
     // Check both server data and local persistence
-    const serverWaitlist = reservation.waitList?.includes(currentUserId || "");
+    const serverWaitlist = reservation.waitingList?.includes(currentUserId || "");
     const localWaitlist = isInWaitingList(reservation.id.toString());
     return serverWaitlist || localWaitlist;
   };

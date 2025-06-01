@@ -104,11 +104,6 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
     setKickDialog(null);
   };
 
-  const handleLocationClick = () => {
-    const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(reservation.location)}`;
-    window.open(googleMapsUrl, '_blank');
-  };
-
   const renderPlayerActions = () => {
     if (userRole === "admin" || !currentUserId) return null;
 
@@ -201,14 +196,14 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
         )}
 
         {/* Show waitlist management buttons */}
-        {reservation.waitList && reservation.waitList.length > 0 && (
+        {reservation.waitingList && reservation.waitingList.length > 0 && (
           <div className="w-full mt-2">
             <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
-              Waitlist: {reservation.waitList.length} player(s)
+              Waitlist: {reservation.waitingList.length} player(s)
             </div>
             <div className="flex flex-wrap gap-1">
-              {reservation.waitList.slice(0, 2).map((userId: string, index: number) => (
+              {reservation.waitingList.slice(0, 2).map((userId: string, index: number) => (
                 <Button
                   key={userId}
                   variant="outline"
@@ -220,9 +215,9 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
                   Remove #{index + 1}
                 </Button>
               ))}
-              {reservation.waitList.length > 2 && (
+              {reservation.waitingList.length > 2 && (
                 <span className="text-xs text-gray-500 self-center">
-                  +{reservation.waitList.length - 2} more
+                  +{reservation.waitingList.length - 2} more
                 </span>
               )}
             </div>
@@ -301,19 +296,14 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
           </div>
           <div className="flex items-center text-gray-600 dark:text-gray-400">
             <MapPin className="h-4 w-4 mr-2" />
-            <button 
-              onClick={handleLocationClick}
-              className="text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors"
-            >
-              {reservation.location}
-            </button>
+            {reservation.location}
           </div>
           <div className="flex items-center text-gray-600 dark:text-gray-400">
             <Users className="h-4 w-4 mr-2" />
             {reservation.playersJoined}/{reservation.maxPlayers} players
-            {reservation.waitList && reservation.waitList.length > 0 && (
+            {reservation.waitingList && reservation.waitingList.length > 0 && (
               <span className="ml-2 text-amber-600">
-                (+{reservation.waitList.length} waiting)
+                (+{reservation.waitingList.length} waiting)
               </span>
             )}
           </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReservation } from '@/context/ReservationContext';
@@ -59,6 +58,15 @@ export const useReservationsData = () => {
             joinedAt: new Date().toISOString(),
             avatar: player.profilePicture || ''
           })),
+          waitingList: res.waitList ? res.waitList.map((player: any) => {
+            // If it's a full player object, return the ID
+            if (typeof player === 'object' && player._id) {
+              return player._id;
+            }
+            // If it's already an ID, return as is
+            return player;
+          }) : [],
+          // Keep the original waitList for the waiting list display component
           waitList: res.waitList || [],
           status,
           createdBy: 'admin',
@@ -66,19 +74,7 @@ export const useReservationsData = () => {
           time: `${new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
           playersJoined: res.currentPlayers.length,
           summary: res.summary || null,
-          backgroundImage: res.pitch?.backgroundImage,
-          // Add pitch details for reservation details display
-          pitch: {
-            _id: res.pitch?._id,
-            name: res.pitch?.name,
-            location: res.pitch?.location,
-            city: res.pitch?.city,
-            playersPerSide: res.pitch?.playersPerSide,
-            services: res.pitch?.services,
-            description: res.pitch?.description,
-            images: res.pitch?.images,
-            backgroundImage: res.pitch?.backgroundImage
-          }
+          backgroundImage: res.pitch?.backgroundImage
         };
       });
       

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -25,13 +24,12 @@ import {
   Trophy,
   UserX,
   AlertCircle,
-  Info,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
 import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 import PlayersListWithKick from "./PlayersListWithKick";
-import { kickPlayer as kickPlayerApi } from "@/services/adminReservationApi";
+import { kickPlayer as kickPlayerApi } from "@/services/adminReservationApi"; // make sure it's imported
 import { toast, useToast } from "@/hooks/use-toast";
 
 interface GameDetailsDialogProps {
@@ -132,11 +130,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     setKickDialog({ open: true, playerId, playerName });
   };
 
-  const handleLocationClick = () => {
-    const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(reservation.location)}`;
-    window.open(googleMapsUrl, '_blank');
-  };
-
   const { toast } = useToast();
 
   const confirmKickPlayer = async (
@@ -219,9 +212,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     );
   };
 
-  // Get pitch details from reservation
-  const pitch = (reservation as any).pitch;
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -286,12 +276,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <button 
-                      onClick={handleLocationClick}
-                      className="text-current hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors text-left"
-                    >
-                      {reservation.city || reservation.location}
-                    </button>
+                    <span>{reservation.city || reservation.location}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className="h-5 w-5 mr-3 text-muted-foreground" />
@@ -301,46 +286,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* Pitch Information */}
-              {pitch && (
-                <div className="bg-teal-50 dark:bg-teal-900/20 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3 flex items-center text-teal-700 dark:text-teal-400">
-                    <Info className="h-5 w-5 mr-2" />
-                    Pitch Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium">Name:</p>
-                      <p className="text-muted-foreground">{pitch.name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Format:</p>
-                      <p className="text-muted-foreground">
-                        {pitch.playersPerSide ? `${pitch.playersPerSide} vs ${pitch.playersPerSide}` : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="font-medium">Description:</p>
-                      <p className="text-muted-foreground">{pitch.description || 'No description available'}</p>
-                    </div>
-                    {pitch.services && (
-                      <div className="md:col-span-2">
-                        <p className="font-medium">Facilities:</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(pitch.services)
-                            .filter(([key, value]) => key !== 'type' && value === true)
-                            .map(([facility]) => (
-                              <Badge key={facility} variant="outline" className="text-xs">
-                                {facility.replace('_', ' ')}
-                              </Badge>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Player Lineup */}
               <div>

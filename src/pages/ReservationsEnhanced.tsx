@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -98,7 +97,7 @@ const ReservationsEnhanced = () => {
             status: "joined",
             joinedAt: new Date().toISOString(),
           })) || [],
-        waitList: res.waitList || [],
+        waitingList: res.waitingList || [],
         status: res.status || "upcoming",
         price: res.pricePerPlayer,
         imageUrl: res.pitch?.images?.[0] || null,
@@ -147,7 +146,7 @@ const ReservationsEnhanced = () => {
   };
 
   const isUserInWaitlist = (reservation: Reservation): boolean => {
-    return !!reservation.waitList?.includes(currentUserId || "");
+    return !!reservation.waitingList?.includes(currentUserId || "");
   };
 
   const isFull = (reservation: Reservation): boolean => {

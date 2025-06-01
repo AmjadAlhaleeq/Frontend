@@ -58,7 +58,7 @@ export interface Reservation {
   title: string;
   maxPlayers: number;
   lineup?: Player[];
-  waitList?: string[];
+  waitingList?: string[];
   status: "upcoming" | "completed" | "cancelled";
   photos?: string[];
   backgroundImage?: string;
@@ -80,15 +80,4 @@ export interface Reservation {
       };
   additionalImages?: string[];
   userInWaitlist?: boolean;
-  pitch?: {
-    _id: string;
-    name: string;
-    location: string;
-    city: string;
-    playersPerSide: number;
-    services: Record<string, boolean | string>;
-    description: string;
-    images: string[];
-    backgroundImage: string;
-  };
 }

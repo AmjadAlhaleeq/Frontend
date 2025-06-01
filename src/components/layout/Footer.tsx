@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   Facebook,
@@ -58,6 +57,10 @@ const Footer = () => {
               Quick Links
             </h3>
             <div className="flex flex-col space-y-2">
+              <FooterLink to="/">Home</FooterLink>
+              <FooterLink to="/pitches">Pitches</FooterLink>
+              <FooterLink to="/reservations">Reservations</FooterLink>
+              <FooterLink to="/leaderboards">Leaderboards</FooterLink>
               <FooterLink to="/about">About Us</FooterLink>
               <FooterLink to="/faq">FAQ</FooterLink>
               <FooterLink to="/rules">Rules</FooterLink>

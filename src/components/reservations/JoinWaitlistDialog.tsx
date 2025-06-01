@@ -34,7 +34,7 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
   reservation,
   isLoading = false,
 }) => {
-  const waitlistPosition = (reservation.waitList?.length || 0) + 1;
+  const waitlistPosition = (reservation.waitingList?.length || 0) + 1;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

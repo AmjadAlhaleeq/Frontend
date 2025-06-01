@@ -26,16 +26,16 @@ export const useReservationStorage = () => {
       const waitingList = JSON.parse(waitingListState);
       setReservations(prev => prev.map(reservation => {
         const isInWaitingList = waitingList[reservation.id.toString()];
-        if (isInWaitingList && !reservation.waitList?.includes(userId)) {
+        if (isInWaitingList && !reservation.waitingList?.includes(userId)) {
           return {
             ...reservation,
-            waitList: [...(reservation.waitList || []), userId]
+            waitingList: [...(reservation.waitingList || []), userId]
           };
         }
-        if (!isInWaitingList && reservation.waitList?.includes(userId)) {
+        if (!isInWaitingList && reservation.waitingList?.includes(userId)) {
           return {
             ...reservation,
-            waitList: reservation.waitList.filter(id => id !== userId)
+            waitingList: reservation.waitingList.filter(id => id !== userId)
           };
         }
         return reservation;

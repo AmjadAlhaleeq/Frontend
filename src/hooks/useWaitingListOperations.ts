@@ -5,13 +5,13 @@ import { Reservation } from '@/types/reservation';
 export const useWaitingListOperations = (
   setReservations: React.Dispatch<React.SetStateAction<Reservation[]>>
 ) => {
-  const joinWaitList = useCallback((reservationId: number, userId: string) => {
+  const joinWaitingList = useCallback((reservationId: number, userId: string) => {
     setReservations(prevReservations =>
       prevReservations.map(reservation => {
         if (reservation.id === reservationId) {
           return {
             ...reservation,
-            waitList: [...(reservation.waitList || []), userId],
+            waitingList: [...(reservation.waitingList || []), userId],
           };
         }
         return reservation;
@@ -19,13 +19,13 @@ export const useWaitingListOperations = (
     );
   }, [setReservations]);
 
-  const leaveWaitList = useCallback((reservationId: number, userId: string) => {
+  const leaveWaitingList = useCallback((reservationId: number, userId: string) => {
     setReservations(prevReservations =>
       prevReservations.map(reservation => {
         if (reservation.id === reservationId) {
           return {
             ...reservation,
-            waitList: reservation.waitList?.filter(id => id !== userId),
+            waitingList: reservation.waitingList?.filter(id => id !== userId),
           };
         }
         return reservation;
@@ -34,7 +34,7 @@ export const useWaitingListOperations = (
   }, [setReservations]);
 
   return {
-    joinWaitList,
-    leaveWaitList
+    joinWaitingList,
+    leaveWaitingList
   };
 };
