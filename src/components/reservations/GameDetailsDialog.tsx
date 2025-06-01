@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -149,13 +150,27 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     reason: string
   ) => {
     try {
+      console.log("confirmKickPlayer called with:", {
+        playerId,
+        suspensionDays,
+        reason,
+        reservationId: reservation.id,
+        reservationBackendId: reservation.backendId
+      });
+
       setKickingPlayers((prev) => ({ ...prev, [playerId]: true }));
+      
+      // Use backendId if available, otherwise fall back to id
+      const reservationIdToUse = reservation.backendId || reservation.id.toString();
+      console.log("Using reservation ID for kick:", reservationIdToUse);
+      
       await kickPlayerApi(
-        reservation.id.toString(),
+        reservationIdToUse,
         playerId,
         reason,
         suspensionDays
       );
+      
       toast({
         title: "Player Kicked",
         description: `${kickDialog?.playerName} was removed and suspended.`,
@@ -163,6 +178,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
       onClose();
     } catch (error: any) {
+      console.error("Error in confirmKickPlayer:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to kick player",
@@ -261,7 +277,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            {!canKickPlayers && (
+            {canKickPlayers && (
               <LoadingButton
                 variant="outline"
                 size="sm"

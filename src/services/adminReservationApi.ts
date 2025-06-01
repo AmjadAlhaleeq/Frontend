@@ -43,17 +43,41 @@ export const kickPlayer = async (
       `Kicking player ${playerId} from reservation ${reservationId} for reason: ${reason}, suspension days: ${suspensionDays}`
     );
     
+    // Log the exact body being sent
+    const requestBody = {
+      userId: playerId,
+      reason,
+      suspensionDays,
+    };
+    console.log("Request body for kick:", JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/kick`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        userId: playerId,
-        reason,
-        suspensionDays,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    console.log("Response status:", response.status);
+    console.log("Response headers:", response.headers);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Raw error response:", errorText);
+      
+      let errorMessage = "Failed to kick player";
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (parseError) {
+        // If JSON parsing fails, use the raw text or a default message
+        errorMessage = errorText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
     const result = await response.json();
+    console.log("Kick player response:", result);
 
     if (result.status !== "success") {
       throw new Error(result.message || "Failed to kick player");
