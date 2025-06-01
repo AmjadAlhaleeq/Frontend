@@ -50,12 +50,8 @@ const ReservationsEnhanced = () => {
     closeDialog,
   } = useReservationDialogs();
 
-  const selectedDateString = currentDate ? format(currentDate, "yyyy-MM-dd") : null;
-  const { categorizedReservations } = useReservationFiltering(
-    reservations, 
-    selectedDateString, 
-    userRole
-  );
+  const { upcomingReservations, completedReservations } =
+    useReservationFiltering(reservations, currentDate);
 
   // Add loading states for better UX
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -468,8 +464,8 @@ const ReservationsEnhanced = () => {
 
         {/* Reservations List */}
         <ReservationsEnhancedList
-          upcomingReservations={[...categorizedReservations.current, ...categorizedReservations.upcoming]}
-          completedReservations={categorizedReservations.past}
+          upcomingReservations={upcomingReservations}
+          completedReservations={completedReservations}
           userRole={userRole}
           currentUserId={currentUserId || ""}
           pitchImages={pitchImages}
