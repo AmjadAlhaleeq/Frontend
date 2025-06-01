@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -155,22 +154,18 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         suspensionDays,
         reason,
         reservationId: reservation.id,
-        reservationBackendId: reservation.backendId
+        reservationBackendId: reservation.backendId,
       });
 
       setKickingPlayers((prev) => ({ ...prev, [playerId]: true }));
-      
+
       // Use backendId if available, otherwise fall back to id
-      const reservationIdToUse = reservation.backendId || reservation.id.toString();
+      const reservationIdToUse =
+        reservation.backendId || reservation.id.toString();
       console.log("Using reservation ID for kick:", reservationIdToUse);
-      
-      await kickPlayerApi(
-        reservationIdToUse,
-        playerId,
-        reason,
-        suspensionDays
-      );
-      
+
+      await kickPlayerApi(reservationIdToUse, playerId, reason, suspensionDays);
+
       toast({
         title: "Player Kicked",
         description: `${kickDialog?.playerName} was removed and suspended.`,
@@ -277,7 +272,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            {canKickPlayers && (
+            {!canKickPlayers && (
               <LoadingButton
                 variant="outline"
                 size="sm"

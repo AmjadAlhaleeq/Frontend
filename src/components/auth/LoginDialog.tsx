@@ -183,9 +183,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
 
   // Handle forgot password navigation
   const handleForgotPassword = () => {
-    console.log('Navigating to forgot password page');
+    console.log("Navigating to forgot password page");
     onClose(); // Close the auth dialog
-    navigate('/forgot-password'); // Navigate to the forgot password page
+    navigate("/forgot-password"); // Navigate to the forgot password page
   };
 
   /**
@@ -667,7 +667,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             required
           />
         </div>
-        <div className="space-y-1">
+        {/* <div className="space-y-1">
           <Label
             htmlFor="favoritePosition"
             className="flex items-center dark:text-gray-300"
@@ -684,7 +684,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             disabled={isProcessing}
             required
           />
-        </div>
+        </div> */}
         <div className="space-y-1">
           <Label
             htmlFor="phoneNumber"
@@ -763,7 +763,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             required
           />
         </div>
-        <div className="space-y-1 md:col-span-2">
+        {/* <div className="space-y-1 md:col-span-2">
           <Label htmlFor="bio" className="flex items-center dark:text-gray-300">
             <Users className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
             Bio (Optional)
@@ -776,7 +776,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
           />
-        </div>
+        </div> */}
       </div>
       <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center mt-4">
         <Button
