@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import LoadingButton from "@/components/ui/loading-button";
 import {
   MapPin,
   Calendar,
@@ -30,7 +30,6 @@ import {
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
 import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
-import PlayersListWithKick from "./PlayersListWithKick";
 import { kickPlayer as kickPlayerApi } from "@/services/adminReservationApi";
 import { toast, useToast } from "@/hooks/use-toast";
 
@@ -70,6 +69,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     playerId: string;
     playerName: string;
   } | null>(null);
+  const [kickingPlayers, setKickingPlayers] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
@@ -145,6 +145,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     reason: string
   ) => {
     try {
+      setKickingPlayers(prev => ({ ...prev, [playerId]: true }));
       await kickPlayerApi(
         reservation.id.toString(),
         playerId,
@@ -164,6 +165,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         variant: "destructive",
       });
     } finally {
+      setKickingPlayers(prev => ({ ...prev, [playerId]: false }));
       setKickDialog(null);
     }
   };
@@ -212,6 +214,60 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               <p className="text-xs text-muted-foreground max-w-xs">
                 {highlight.description}
               </p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPlayersList = () => {
+    if (!reservation.lineup || reservation.lineup.length === 0) {
+      return (
+        <div className="text-center p-4 text-muted-foreground">
+          <p>No players have joined this game yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {reservation.lineup.map((player, index) => (
+          <div
+            key={player.userId}
+            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={player.avatar} />
+                <AvatarFallback>
+                  {player.name?.charAt(0).toUpperCase() || "P"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <button
+                  onClick={() => handlePlayerClick(player.userId, player.name)}
+                  className="font-medium text-sm hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                >
+                  {player.name || player.playerName}
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  Joined {new Date(player.joinedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            {canKickPlayers && player.userId !== currentUserId && (
+              <LoadingButton
+                variant="outline"
+                size="sm"
+                onClick={() => handleKickPlayer(player.userId, player.name)}
+                loading={kickingPlayers[player.userId]}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <UserX className="h-4 w-4 mr-1" />
+                Kick
+              </LoadingButton>
             )}
           </div>
         ))}
@@ -354,13 +410,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     </div>
                   )}
                 </h3>
-                <PlayersListWithKick
-                  players={reservation.lineup || []}
-                  isAdmin={isAdmin}
-                  canKickPlayers={canKickPlayers}
-                  onPlayerClick={handlePlayerClick}
-                  onKickPlayer={handleKickPlayer}
-                />
+                {renderPlayersList()}
               </div>
 
               {/* Waiting List - Only show for admin */}

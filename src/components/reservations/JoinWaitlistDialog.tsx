@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import LoadingButton from "@/components/ui/loading-button";
 import {
   Calendar,
   Clock,
@@ -91,13 +92,14 @@ const JoinWaitlistDialog: React.FC<JoinWaitlistDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
+          <LoadingButton
             onClick={onConfirm}
-            disabled={isLoading}
+            loading={isLoading}
             className="bg-amber-600 hover:bg-amber-700"
           >
-            {isLoading ? "Joining..." : "Join Waiting List"}
-          </Button>
+            <UserPlus className="h-4 w-4 mr-1" />
+            Join Waiting List
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

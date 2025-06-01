@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Dialog,
@@ -8,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import LoadingButton from "@/components/ui/loading-button";
 import { Calendar, Clock, MapPin, Users, UserPlus } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 
@@ -68,13 +70,14 @@ const JoinGameDialog: React.FC<JoinGameDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
+          <LoadingButton
             onClick={onConfirm}
-            disabled={isLoading}
+            loading={isLoading}
             className="bg-green-600 hover:bg-green-700"
           >
-            {isLoading ? "Joining..." : "Join Game"}
-          </Button>
+            <UserPlus className="h-4 w-4 mr-1" />
+            Join Game
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

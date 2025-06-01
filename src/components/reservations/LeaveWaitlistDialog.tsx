@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import LoadingButton from "@/components/ui/loading-button";
 import { Calendar, Clock, UserMinus, AlertTriangle } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 
@@ -68,9 +69,14 @@ const LeaveWaitlistDialog: React.FC<LeaveWaitlistDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? 'Leaving...' : 'Leave Waiting List'}
-          </Button>
+          <LoadingButton
+            variant="destructive"
+            onClick={onConfirm}
+            loading={isLoading}
+          >
+            <UserMinus className="h-4 w-4 mr-1" />
+            Leave Waiting List
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

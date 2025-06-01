@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import LoadingButton from "@/components/ui/loading-button";
 import { UserMinus, AlertTriangle, Calendar, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -23,13 +24,9 @@ interface LeaveGameDialogProps {
   isPenalty: boolean;
   timeToGame?: string;
   cannotLeave?: boolean;
+  isLoading?: boolean;
 }
 
-/**
- * LeaveGameDialog component
- * Shows a confirmation dialog when a user wants to leave a game
- * Includes warning about penalties if leaving within 6 hours of game time
- */
 const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   isOpen,
   onClose,
@@ -39,7 +36,8 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
   gameTime,
   isPenalty,
   timeToGame,
-  cannotLeave = false
+  cannotLeave = false,
+  isLoading = false
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -98,10 +96,11 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
           {!cannotLeave && (
-            <AlertDialogAction 
-              onClick={onConfirm} 
+            <LoadingButton
+              onClick={onConfirm}
+              loading={isLoading}
               className={isPenalty ? 
                 "bg-red-600 hover:bg-red-700 text-white" : 
                 "bg-amber-600 hover:bg-amber-700 text-white"
@@ -109,7 +108,7 @@ const LeaveGameDialog: React.FC<LeaveGameDialogProps> = ({
             >
               <UserMinus className="h-4 w-4 mr-1.5" />
               {isPenalty ? "Leave Anyway" : "Leave Game"}
-            </AlertDialogAction>
+            </LoadingButton>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>
