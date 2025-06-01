@@ -31,6 +31,8 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
       // Handle both backend format (waitList) and frontend format (waitingList)
       const waitList = (reservation as any).waitList || reservation.waitingList || [];
       
+      console.log('Raw waitList from reservation:', waitList);
+      
       if (!waitList || waitList.length === 0) {
         setWaitingPlayers([]);
         return;
@@ -38,15 +40,16 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
 
       setIsLoading(true);
       try {
-        // Check if waitList contains full player objects (backend format) or just IDs (frontend format)
+        // Check if waitList contains full player objects (backend format)
         if (waitList[0] && typeof waitList[0] === 'object' && waitList[0]._id) {
+          console.log('Using backend format with full player objects');
           // Backend format: waitList contains full player objects
           const players = waitList.map((player: any) => ({
             _id: player._id,
             firstName: player.firstName,
             lastName: player.lastName,
             email: player.email || '',
-            phoneNumber: player.phone,
+            phoneNumber: player.phone || player.phoneNumber,
             city: player.city,
             age: player.age,
             profilePicture: player.profilePicture,
@@ -55,6 +58,7 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
           }));
           setWaitingPlayers(players);
         } else {
+          console.log('Using frontend format with player IDs');
           // Frontend format: waitList contains user IDs
           const playerIds = waitList.filter((id: any) => typeof id === 'string');
           if (playerIds.length > 0) {
@@ -69,36 +73,6 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
           description: "Failed to load waiting list players",
           variant: "destructive",
         });
-        
-        // Fallback to localStorage approach for frontend format
-        const waitListIds = waitList.filter((item: any) => typeof item === 'string');
-        if (waitListIds.length > 0) {
-          const fallbackPlayers = waitListIds.map((userId: string) => {
-            try {
-              const userString = localStorage.getItem(`user_${userId}`);
-              if (userString) {
-                const user = JSON.parse(userString);
-                return {
-                  _id: userId,
-                  firstName: user.firstName || 'Unknown',
-                  lastName: user.lastName || 'Player',
-                  email: user.email || '',
-                };
-              }
-            } catch (error) {
-              console.error("Error parsing user from localStorage:", error);
-            }
-
-            return {
-              _id: userId,
-              firstName: 'User',
-              lastName: userId.slice(0, 4),
-              email: '',
-            };
-          });
-          
-          setWaitingPlayers(fallbackPlayers as PlayerProfile[]);
-        }
       } finally {
         setIsLoading(false);
       }
@@ -109,6 +83,9 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
 
   // Get waitList from both possible formats
   const waitList = (reservation as any).waitList || reservation.waitingList || [];
+  
+  console.log('Final waitList for display:', waitList);
+  console.log('Processed waiting players:', waitingPlayers);
   
   if (!waitList || waitList.length === 0) {
     return (
