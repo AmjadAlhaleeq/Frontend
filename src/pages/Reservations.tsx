@@ -231,7 +231,6 @@ const Reservations = () => {
             date={currentDate}
             onDateChange={setCurrentDate}
             hasReservations={checkHasReservationsOnDate}
-            userRole={userRole}
           />
         </div>
 
