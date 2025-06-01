@@ -88,7 +88,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
   const { reservations, setReservations } = useReservationStorage();
   const { addReservation, updateReservation, deleteReservation, updateReservationStatus } = useReservationOperations(reservations, setReservations);
   const { joinReservation, cancelReservation, removePlayerFromReservation, joinGame, isUserJoined } = usePlayerOperations(reservations, setReservations);
-  const { joinWaitingList, leaveWaitingList } = useWaitingListOperations(setReservations);
+  const { joinWaitList, leaveWaitList } = useWaitingListOperations(setReservations);
   const { pitches, setPitches, addPitch, updatePitch, deletePitch } = usePitchOperations();
   const { getUserStats } = useUserStats(reservations);
   const { deleteHighlight } = useHighlightOperations(setReservations);
@@ -112,8 +112,8 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({
         deleteReservation,
         joinReservation,
         cancelReservation,
-        joinWaitingList,
-        leaveWaitingList,
+        joinWaitingList: joinWaitList,
+        leaveWaitingList: leaveWaitList,
         isUserJoined,
         addPitch,
         updatePitch,

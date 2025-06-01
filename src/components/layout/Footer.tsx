@@ -21,13 +21,10 @@ const Footer = () => {
   const navigate = useNavigate();
 
   const handleEmailClick = () => {
-    if (isAuthenticated && user?.id) {
-      // Navigate to user's profile page where they can view/edit their email
-      navigate(`/profile`);
-    } else {
-      // If not logged in, navigate to login
-      navigate('/login');
-    }
+    // Open Gmail compose window with company email
+    const companyEmail = "bookitandkickit@gmail.com";
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${companyEmail}&su=Contact%20from%20BOKIT%20Website`;
+    window.open(gmailUrl, '_blank');
   };
 
   return (
@@ -61,10 +58,6 @@ const Footer = () => {
               Quick Links
             </h3>
             <div className="flex flex-col space-y-2">
-              <FooterLink to="/">Home</FooterLink>
-              <FooterLink to="/pitches">Pitches</FooterLink>
-              <FooterLink to="/reservations">Reservations</FooterLink>
-              <FooterLink to="/leaderboards">Leaderboards</FooterLink>
               <FooterLink to="/about">About Us</FooterLink>
               <FooterLink to="/faq">FAQ</FooterLink>
               <FooterLink to="/rules">Rules</FooterLink>
@@ -84,21 +77,10 @@ const Footer = () => {
                   onClick={handleEmailClick}
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
                 >
-                  {isAuthenticated && user ? (
-                    <>
-                      {user.email || 'View Profile'}
-                      <span className="block text-xs text-gray-500 mt-1">
-                        View your profile and email
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      Login to view email
-                      <span className="block text-xs text-gray-500 mt-1">
-                        Sign in to access your email
-                      </span>
-                    </>
-                  )}
+                  bookitandkickit@gmail.com
+                  <span className="block text-xs text-gray-500 mt-1">
+                    Click to send us an email
+                  </span>
                 </button>
               </div>
               <div className="flex items-start justify-center md:justify-start">

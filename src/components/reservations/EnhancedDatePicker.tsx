@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -8,17 +9,23 @@ interface EnhancedDatePickerProps {
   date: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
   hasReservations: (date: Date) => boolean;
+  userRole?: "admin" | "player" | null;
 }
 
 const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
   date,
   onDateChange,
   hasReservations,
+  userRole,
 }) => {
   const today = new Date();
   const minBookingDate = addDays(today, 4); // 5 days from today
 
   const isDateDisabled = (checkDate: Date) => {
+    // Admin can view all dates, players can only view future dates
+    if (userRole === "admin") {
+      return false; // Admin can see all dates
+    }
     return checkDate < minBookingDate;
   };
 
@@ -57,17 +64,24 @@ const EnhancedDatePicker: React.FC<EnhancedDatePickerProps> = ({
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
           disabled={isDateDisabled}
-          fromDate={minBookingDate}
+          fromDate={userRole === "admin" ? undefined : minBookingDate}
         />
         <div className="p-4 border-t">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <div className="w-3 h-3 rounded bg-emerald-600"></div>
             <span>Has games</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded bg-gray-300"></div>
-            <span>Booking not allowed (min 5 days advance)</span>
-          </div>
+          {userRole !== "admin" && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-3 h-3 rounded bg-gray-300"></div>
+              <span>Booking not allowed (min 5 days advance)</span>
+            </div>
+          )}
+          {userRole === "admin" && (
+            <div className="text-xs text-teal-600 font-medium">
+              Admin: View all dates including past games
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

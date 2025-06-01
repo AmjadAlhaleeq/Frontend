@@ -31,6 +31,7 @@ export const useReservationsData = () => {
         // Handle pitch object - it's populated with full pitch data
         const pitchId = res.pitch?._id || 'unknown';
         const pitchName = res.pitch?.name || `Pitch ${pitchId.substring(0, 8)}`;
+        const pitchLocation = res.pitch?.location || 'Football Complex';
         
         const now = new Date();
         const endTime = new Date(res.endTime);
@@ -42,7 +43,7 @@ export const useReservationsData = () => {
           backendId: res._id,
           pitchId: pitchId,
           pitchName: pitchName,
-          location: res.pitch?.location || 'Football Complex',
+          location: pitchLocation,
           city: res.pitch?.city || 'City',
           date: res.date.split('T')[0],
           startTime: new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -58,14 +59,26 @@ export const useReservationsData = () => {
             joinedAt: new Date().toISOString(),
             avatar: player.profilePicture || ''
           })),
-          waitingList: res.waitList || [],
+          waitList: res.waitList || [],
           status,
           createdBy: 'admin',
           price: res.price,
           time: `${new Date(res.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${new Date(res.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
           playersJoined: res.currentPlayers.length,
           summary: res.summary || null,
-          backgroundImage: res.pitch?.backgroundImage
+          backgroundImage: res.pitch?.backgroundImage,
+          // Add pitch details for reservation details display
+          pitch: {
+            _id: res.pitch?._id,
+            name: res.pitch?.name,
+            location: res.pitch?.location,
+            city: res.pitch?.city,
+            playersPerSide: res.pitch?.playersPerSide,
+            services: res.pitch?.services,
+            description: res.pitch?.description,
+            images: res.pitch?.images,
+            backgroundImage: res.pitch?.backgroundImage
+          }
         };
       });
       

@@ -28,12 +28,14 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
 
   useEffect(() => {
     const fetchWaitingListPlayers = async () => {
-      // Handle both backend format (waitList) and frontend format (waitingList)
-      const waitList = (reservation as any).waitList || reservation.waitingList || [];
+      // Handle waitList format consistently
+      const waitList = (reservation as any).waitList || [];
       
       console.log('Raw waitList from reservation:', waitList);
+      console.log('Reservation object:', reservation);
       
       if (!waitList || waitList.length === 0) {
+        console.log('No waiting list data found');
         setWaitingPlayers([]);
         return;
       }
@@ -43,28 +45,35 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
         // Check if waitList contains full player objects (backend format)
         if (waitList[0] && typeof waitList[0] === 'object' && waitList[0]._id) {
           console.log('Using backend format with full player objects');
-          // Backend format: waitList contains full player objects
+          // Backend format: waitList contains full player objects with complete info
           const players = waitList.map((player: any) => ({
             _id: player._id,
             firstName: player.firstName,
             lastName: player.lastName,
             email: player.email || '',
-            phoneNumber: player.phone || player.phoneNumber,
-            city: player.city,
+            phoneNumber: player.phone || player.phoneNumber || '',
+            city: player.city || '',
             age: player.age,
             profilePicture: player.profilePicture,
-            preferredPosition: player.preferredPosition,
-            bio: player.bio,
+            preferredPosition: player.preferredPosition || '',
+            bio: player.bio || '',
           }));
+          console.log('Processed players from backend format:', players);
           setWaitingPlayers(players);
-        } else {
+        } else if (typeof waitList[0] === 'string') {
           console.log('Using frontend format with player IDs');
-          // Frontend format: waitList contains user IDs
+          // Frontend format: waitList contains user IDs, need to fetch player details
           const playerIds = waitList.filter((id: any) => typeof id === 'string');
           if (playerIds.length > 0) {
             const players = await getMultiplePlayersByIds(playerIds);
+            console.log('Fetched players for IDs:', players);
             setWaitingPlayers(players);
           }
+        } else {
+          console.log('Unknown waitList format:', waitList);
+          console.log('First item type:', typeof waitList[0]);
+          console.log('First item value:', waitList[0]);
+          setWaitingPlayers([]);
         }
       } catch (error) {
         console.error("Error fetching waiting list players:", error);
@@ -81,8 +90,8 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
     fetchWaitingListPlayers();
   }, [reservation, toast]);
 
-  // Get waitList from both possible formats
-  const waitList = (reservation as any).waitList || reservation.waitingList || [];
+  // Get waitList consistently
+  const waitList = (reservation as any).waitList || [];
   
   console.log('Final waitList for display:', waitList);
   console.log('Processed waiting players:', waitingPlayers);
