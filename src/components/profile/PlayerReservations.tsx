@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useReservation } from '@/context/ReservationContext';
 import { Reservation } from '@/types/reservation';
@@ -61,7 +62,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
               status: 'joined',
               joinedAt: new Date().toISOString()
             })) || [],
-            waitingList: res.waitList || [],
+            waitList: res.waitList || [],
             status: res.status || 'upcoming',
             price: res.pricePerPlayer,
             imageUrl: res.pitch?.images?.[0] || null,
@@ -91,7 +92,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
   // Get user's reservations from local state as fallback
   const localUserReservations = reservations.filter(res => {
     const isJoined = res.lineup && res.lineup.some(player => player.userId === userId && player.status === 'joined');
-    const isInWaitlist = res.waitingList && res.waitingList.includes(userId);
+    const isInWaitlist = res.waitList && res.waitList.includes(userId);
     return isJoined || isInWaitlist;
   });
 
@@ -155,7 +156,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
 
   // Check if user is in waitlist for a specific reservation
   const isUserInWaitlist = (reservation: Reservation) => {
-    return reservation.userInWaitlist || (reservation.waitingList && reservation.waitingList.includes(userId));
+    return reservation.userInWaitlist || (reservation.waitList && reservation.waitList.includes(userId));
   };
 
   // Check if user is joined to the game
@@ -201,7 +202,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
             status: 'joined',
             joinedAt: new Date().toISOString()
           })) || [],
-          waitingList: res.waitList || [],
+          waitList: res.waitList || [],
           status: res.status || 'upcoming',
           price: res.pricePerPlayer,
           imageUrl: res.pitch?.images?.[0] || null,
@@ -267,7 +268,7 @@ const PlayerReservations: React.FC<PlayerReservationsProps> = ({ userId }) => {
             status: 'joined',
             joinedAt: new Date().toISOString()
           })) || [],
-          waitingList: res.waitList || [],
+          waitList: res.waitList || [],
           status: res.status || 'upcoming',
           price: res.pricePerPlayer,
           imageUrl: res.pitch?.images?.[0] || null,

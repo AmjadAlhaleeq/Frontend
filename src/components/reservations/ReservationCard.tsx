@@ -61,8 +61,8 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   const isCompleted = reservation.status === "completed";
   const hasGameSummary = reservation.summary && typeof reservation.summary === "object" && (reservation.summary as any)?.completed;
   
-  // Get waiting list count - handle both backend format (waitList) and frontend format (waitingList)
-  const waitList = (reservation as any).waitList || reservation.waitingList || [];
+  // Get waiting list count - handle both backend format (waitList) and frontend format (waitList)
+  const waitList = reservation.waitList || [];
   const waitingListCount = Array.isArray(waitList) ? waitList.length : 0;
 
   const handleLocationClick = (e: React.MouseEvent) => {
