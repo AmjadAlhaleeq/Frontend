@@ -26,6 +26,7 @@ import {
   UserX,
   AlertCircle,
   Info,
+  Ban,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import WaitingListDisplay from "./WaitingListDisplay";
@@ -64,12 +65,13 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   pitchImage,
   onPlayerClick,
 }) => {
-  const [kickDialog, setKickDialog] = useState<{
+  const [actionDialog, setActionDialog] = useState<{
     open: boolean;
     playerId: string;
     playerName: string;
+    actionType: 'kick' | 'suspend';
   } | null>(null);
-  const [kickingPlayers, setKickingPlayers] = useState<Record<string, boolean>>({});
+  const [loadingPlayers, setLoadingPlayers] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
@@ -128,45 +130,49 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     navigate(`/player-profile/${playerId}`);
   };
 
-  const handleKickPlayer = (playerId: string, playerName: string) => {
-    setKickDialog({ open: true, playerId, playerName });
+  const handlePlayerAction = (playerId: string, playerName: string, actionType: 'kick' | 'suspend') => {
+    setActionDialog({ open: true, playerId, playerName, actionType });
   };
 
-  const handleLocationClick = () => {
-    const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(reservation.location)}`;
-    window.open(googleMapsUrl, '_blank');
-  };
-
-  const { toast } = useToast();
-
-  const confirmKickPlayer = async (
+  const confirmPlayerAction = async (
     playerId: string,
     suspensionDays: number,
     reason: string
   ) => {
+    if (!actionDialog) return;
+
     try {
-      setKickingPlayers(prev => ({ ...prev, [playerId]: true }));
-      await kickPlayerApi(
-        reservation.id.toString(),
-        playerId,
-        reason,
-        suspensionDays
-      );
-      toast({
-        title: "Player Kicked",
-        description: `${kickDialog?.playerName} was removed and suspended.`,
-      });
+      setLoadingPlayers(prev => ({ ...prev, [playerId]: true }));
+      
+      if (actionDialog.actionType === 'kick') {
+        await kickPlayerApi(
+          reservation.id.toString(),
+          playerId,
+          reason,
+          suspensionDays
+        );
+        toast({
+          title: "Player Kicked",
+          description: `${actionDialog.playerName} was removed and suspended.`,
+        });
+      } else if (actionDialog.actionType === 'suspend' && onSuspendPlayer) {
+        await onSuspendPlayer(playerId, suspensionDays, reason);
+        toast({
+          title: "Player Suspended",
+          description: `${actionDialog.playerName} has been suspended.`,
+        });
+      }
 
       onClose();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to kick player",
+        description: error.message || `Failed to ${actionDialog.actionType} player`,
         variant: "destructive",
       });
     } finally {
-      setKickingPlayers(prev => ({ ...prev, [playerId]: false }));
-      setKickDialog(null);
+      setLoadingPlayers(prev => ({ ...prev, [playerId]: false }));
+      setActionDialog(null);
     }
   };
 
@@ -258,16 +264,28 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             </div>
 
             {canKickPlayers && player.userId !== currentUserId && (
-              <LoadingButton
-                variant="outline"
-                size="sm"
-                onClick={() => handleKickPlayer(player.userId, player.name)}
-                loading={kickingPlayers[player.userId]}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <UserX className="h-4 w-4 mr-1" />
-                Kick
-              </LoadingButton>
+              <div className="flex gap-2">
+                <LoadingButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePlayerAction(player.userId, player.name, 'kick')}
+                  loading={loadingPlayers[player.userId]}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <UserX className="h-4 w-4 mr-1" />
+                  Kick
+                </LoadingButton>
+                <LoadingButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePlayerAction(player.userId, player.name, 'suspend')}
+                  loading={loadingPlayers[player.userId]}
+                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                >
+                  <Ban className="h-4 w-4 mr-1" />
+                  Suspend
+                </LoadingButton>
+              </div>
             )}
           </div>
         ))}
@@ -406,7 +424,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   {canKickPlayers && (
                     <div className="ml-4 text-xs text-red-600 flex items-center">
                       <AlertCircle className="h-3 w-3 mr-1" />
-                      Kick window active
+                      Admin actions available
                     </div>
                   )}
                 </h3>
@@ -437,15 +455,15 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Kick Player Dialog */}
-      {kickDialog && (
+      {/* Player Action Dialog */}
+      {actionDialog && (
         <PlayerSuspensionDialog
-          isOpen={kickDialog.open}
-          onClose={() => setKickDialog(null)}
-          playerName={kickDialog.playerName}
-          playerId={kickDialog.playerId}
-          onConfirm={confirmKickPlayer}
-          actionType="kick"
+          isOpen={actionDialog.open}
+          onClose={() => setActionDialog(null)}
+          playerName={actionDialog.playerName}
+          playerId={actionDialog.playerId}
+          onConfirm={confirmPlayerAction}
+          actionType={actionDialog.actionType}
         />
       )}
     </>
