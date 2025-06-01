@@ -59,15 +59,6 @@ export const useReservationsData = () => {
             joinedAt: new Date().toISOString(),
             avatar: player.profilePicture || ''
           })),
-          waitList: res.waitList ? res.waitList.map((player: any) => {
-            // If it's a full player object, return the ID
-            if (typeof player === 'object' && player._id) {
-              return player._id;
-            }
-            // If it's already an ID, return as is
-            return player;
-          }) : [],
-          // Keep the original waitList for the waiting list display component
           waitList: res.waitList || [],
           status,
           createdBy: 'admin',
