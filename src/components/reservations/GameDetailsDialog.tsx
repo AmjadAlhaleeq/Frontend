@@ -111,6 +111,14 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       .join(",")}`;
   };
 
+  const handleLocationClick = () => {
+    const location = reservation.city || reservation.location;
+    if (location) {
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+      window.open(googleMapsUrl, '_blank');
+    }
+  };
+
   const handleAddPlayerFromWaitlist = (userId: string) => {
     console.log("Adding player from waitlist:", userId);
   };
