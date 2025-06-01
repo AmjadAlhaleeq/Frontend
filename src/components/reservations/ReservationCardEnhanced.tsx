@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,13 @@ import {
   Trash2,
   Eye,
   FileText,
+  UserX,
   AlertCircle,
   Timer,
 } from "lucide-react";
 import { Reservation } from "@/types/reservation";
 import { cn } from "@/lib/utils";
-import AdminActionButtons from "./AdminActionButtons";
+import PlayerSuspensionDialog from "./PlayerSuspensionDialog";
 
 interface ReservationCardEnhancedProps {
   reservation: Reservation;
@@ -32,7 +34,6 @@ interface ReservationCardEnhancedProps {
   onViewDetails: () => void;
   onDeleteReservation?: () => void;
   onKickPlayer?: (playerId: string, suspensionDays: number, reason: string) => void;
-  onSuspendPlayer?: (playerId: string, suspensionDays: number, reason: string) => void;
   onAddSummary?: () => void;
   pitchImage?: string;
 }
@@ -51,7 +52,6 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
   onViewDetails,
   onDeleteReservation,
   onKickPlayer,
-  onSuspendPlayer,
   onAddSummary,
   pitchImage,
 }) => {
@@ -229,88 +229,122 @@ const ReservationCardEnhanced: React.FC<ReservationCardEnhancedProps> = ({
           </div>
         )}
 
-        {/* Admin Action Buttons for Kick & Suspend */}
-        <AdminActionButtons
-          reservation={reservation}
-          userRole={userRole}
-          onKickPlayer={onKickPlayer}
-          onSuspendPlayer={onSuspendPlayer}
-          className="w-full mt-2"
-        />
+        {/* Show joined players with kick option */}
+        {canKickPlayers && (
+          <div className="w-full mt-2">
+            <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Kick players from game
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {reservation.lineup.slice(0, 3).map((player: any) => (
+                <Button
+                  key={player.userId}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleKickPlayer(player.userId, player.name)}
+                  className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-7"
+                >
+                  <UserX className="h-3 w-3 mr-1" />
+                  Kick {player.name?.split(' ')[0]}
+                </Button>
+              ))}
+              {reservation.lineup.length > 3 && (
+                <span className="text-xs text-gray-500 self-center">
+                  +{reservation.lineup.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div
-      className={cn(
-        "bg-white dark:bg-gray-800 rounded-lg shadow-md border p-4 hover:shadow-lg transition-all duration-200",
-        isCompleted && "border-blue-200 bg-blue-50 dark:bg-blue-900/20",
-        isInProgress && "border-orange-200 bg-orange-50 dark:bg-orange-900/20"
+    <>
+      <div
+        className={cn(
+          "bg-white dark:bg-gray-800 rounded-lg shadow-md border p-4 hover:shadow-lg transition-all duration-200",
+          isCompleted && "border-blue-200 bg-blue-50 dark:bg-blue-900/20",
+          isInProgress && "border-orange-200 bg-orange-50 dark:bg-orange-900/20"
+        )}
+      >
+        {/* Pitch Image */}
+        {pitchImage && (
+          <div className="h-32 w-full rounded-md overflow-hidden mb-4">
+            <img
+              src={pitchImage}
+              alt={reservation.pitchName || reservation.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="font-semibold text-lg text-teal-700 dark:text-teal-400">
+            {reservation.pitchName || reservation.title}
+          </h3>
+          {getStatusBadge()}
+        </div>
+
+        {/* Game Details */}
+        <div className="space-y-2 text-sm mb-4">
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <Calendar className="h-4 w-4 mr-2" />
+            {reservation.date}
+          </div>
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <Clock className="h-4 w-4 mr-2" />
+            {reservation.time}
+          </div>
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <MapPin className="h-4 w-4 mr-2" />
+            <button 
+              onClick={handleLocationClick}
+              className="text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors"
+            >
+              {reservation.location}
+            </button>
+          </div>
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <Users className="h-4 w-4 mr-2" />
+            {reservation.playersJoined}/{reservation.maxPlayers} players
+            {reservation.waitList && reservation.waitList.length > 0 && (
+              <span className="ml-2 text-amber-600">
+                (+{reservation.waitList.length} waiting)
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-between items-center">
+          <Button variant="outline" size="sm" onClick={onViewDetails}>
+            <Eye className="h-4 w-4 mr-1" />
+            View Details
+          </Button>
+
+          <div className="flex gap-2">{renderPlayerActions()}</div>
+        </div>
+
+        {/* Admin Actions */}
+        {renderAdminActions()}
+      </div>
+
+      {/* Kick Player Dialog */}
+      {kickDialog && (
+        <PlayerSuspensionDialog
+          isOpen={kickDialog.open}
+          onClose={() => setKickDialog(null)}
+          playerName={kickDialog.playerName}
+          playerId={kickDialog.playerId}
+          onConfirm={confirmKickPlayer}
+          actionType="kick"
+        />
       )}
-    >
-      {/* Pitch Image */}
-      {pitchImage && (
-        <div className="h-32 w-full rounded-md overflow-hidden mb-4">
-          <img
-            src={pitchImage}
-            alt={reservation.pitchName || reservation.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-semibold text-lg text-teal-700 dark:text-teal-400">
-          {reservation.pitchName || reservation.title}
-        </h3>
-        {getStatusBadge()}
-      </div>
-
-      {/* Game Details */}
-      <div className="space-y-2 text-sm mb-4">
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
-          <Calendar className="h-4 w-4 mr-2" />
-          {reservation.date}
-        </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
-          <Clock className="h-4 w-4 mr-2" />
-          {reservation.time}
-        </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
-          <MapPin className="h-4 w-4 mr-2" />
-          <button 
-            onClick={handleLocationClick}
-            className="text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors"
-          >
-            {reservation.location}
-          </button>
-        </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
-          <Users className="h-4 w-4 mr-2" />
-          {reservation.playersJoined}/{reservation.maxPlayers} players
-          {reservation.waitList && reservation.waitList.length > 0 && (
-            <span className="ml-2 text-amber-600">
-              (+{reservation.waitList.length} waiting)
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex justify-between items-center">
-        <Button variant="outline" size="sm" onClick={onViewDetails}>
-          <Eye className="h-4 w-4 mr-1" />
-          View Details
-        </Button>
-
-        <div className="flex gap-2">{renderPlayerActions()}</div>
-      </div>
-
-      {/* Admin Actions */}
-      {renderAdminActions()}
-    </div>
+    </>
   );
 };
 

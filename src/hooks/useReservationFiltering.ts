@@ -1,74 +1,36 @@
 
-import { useMemo } from 'react';
-import { Reservation } from '@/types/reservation';
+import { useMemo } from "react";
+import { format } from "date-fns";
+import { Reservation } from "@/types/reservation";
 
 export const useReservationFiltering = (
   reservations: Reservation[],
-  selectedDate: string | null,
-  userRole: "admin" | "player" | null
+  currentDate: Date | undefined
 ) => {
   const filteredReservations = useMemo(() => {
-    let filtered = reservations;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // For players, show all reservations (including past ones)
-    // For admins, show all reservations as well
-    if (selectedDate) {
-      filtered = filtered.filter(reservation => 
-        reservation.date === selectedDate
-      );
-    }
+    return currentDate
+      ? reservations.filter(
+          (res) => res.date === format(currentDate, "yyyy-MM-dd")
+        )
+      : reservations.filter((res) => new Date(res.date) >= today);
+  }, [reservations, currentDate]);
 
-    // Sort by date and time, with most recent first
-    return filtered.sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
-      const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
-      return dateB.getTime() - dateA.getTime(); // Most recent first
-    });
-  }, [reservations, selectedDate, userRole]);
+  const upcomingReservations = useMemo(() => 
+    filteredReservations.filter((res) => res.status === "upcoming"),
+    [filteredReservations]
+  );
 
-  // Separate current, upcoming, and past reservations
-  const categorizedReservations = useMemo(() => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-
-    const current: Reservation[] = [];
-    const upcoming: Reservation[] = [];
-    const past: Reservation[] = [];
-
-    filteredReservations.forEach(reservation => {
-      const reservationDate = reservation.date;
-      const gameDateTime = new Date(`${reservation.date}T${reservation.time || '00:00'}`);
-
-      if (reservation.status === 'completed' || gameDateTime < now) {
-        past.push(reservation);
-      } else if (reservationDate === today) {
-        current.push(reservation);
-      } else {
-        upcoming.push(reservation);
-      }
-    });
-
-    return {
-      current: current.sort((a, b) => {
-        const timeA = new Date(`${a.date}T${a.time || '00:00'}`);
-        const timeB = new Date(`${b.date}T${b.time || '00:00'}`);
-        return timeA.getTime() - timeB.getTime();
-      }),
-      upcoming: upcoming.sort((a, b) => {
-        const timeA = new Date(`${a.date}T${a.time || '00:00'}`);
-        const timeB = new Date(`${b.date}T${b.time || '00:00'}`);
-        return timeA.getTime() - timeB.getTime();
-      }),
-      past: past.sort((a, b) => {
-        const timeA = new Date(`${a.date}T${a.time || '00:00'}`);
-        const timeB = new Date(`${b.date}T${b.time || '00:00'}`);
-        return timeB.getTime() - timeA.getTime(); // Most recent past games first
-      })
-    };
-  }, [filteredReservations]);
+  const completedReservations = useMemo(() => 
+    filteredReservations.filter((res) => res.status === "completed"),
+    [filteredReservations]
+  );
 
   return {
     filteredReservations,
-    categorizedReservations
+    upcomingReservations,
+    completedReservations,
   };
 };
