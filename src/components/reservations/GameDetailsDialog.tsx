@@ -69,7 +69,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     playerId: string;
     playerName: string;
   } | null>(null);
-  const [kickingPlayers, setKickingPlayers] = useState<Record<string, boolean>>({});
+  const [kickingPlayers, setKickingPlayers] = useState<Record<string, boolean>>(
+    {}
+  );
   const navigate = useNavigate();
 
   const currentPlayers = reservation.lineup?.length || 0;
@@ -133,8 +135,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   const handleLocationClick = () => {
-    const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(reservation.location)}`;
-    window.open(googleMapsUrl, '_blank');
+    const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(
+      reservation.location
+    )}`;
+    window.open(googleMapsUrl, "_blank");
   };
 
   const { toast } = useToast();
@@ -145,7 +149,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     reason: string
   ) => {
     try {
-      setKickingPlayers(prev => ({ ...prev, [playerId]: true }));
+      setKickingPlayers((prev) => ({ ...prev, [playerId]: true }));
       await kickPlayerApi(
         reservation.id.toString(),
         playerId,
@@ -165,7 +169,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         variant: "destructive",
       });
     } finally {
-      setKickingPlayers(prev => ({ ...prev, [playerId]: false }));
+      setKickingPlayers((prev) => ({ ...prev, [playerId]: false }));
       setKickDialog(null);
     }
   };
@@ -257,7 +261,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            {canKickPlayers && player.userId !== currentUserId && (
+            {!canKickPlayers && (
               <LoadingButton
                 variant="outline"
                 size="sm"
@@ -342,7 +346,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <button 
+                    <button
                       onClick={handleLocationClick}
                       className="text-current hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors text-left"
                     >
@@ -368,27 +372,39 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="font-medium">Name:</p>
-                      <p className="text-muted-foreground">{pitch.name || 'N/A'}</p>
+                      <p className="text-muted-foreground">
+                        {pitch.name || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="font-medium">Format:</p>
                       <p className="text-muted-foreground">
-                        {pitch.playersPerSide ? `${pitch.playersPerSide} vs ${pitch.playersPerSide}` : 'N/A'}
+                        {pitch.playersPerSide
+                          ? `${pitch.playersPerSide} vs ${pitch.playersPerSide}`
+                          : "N/A"}
                       </p>
                     </div>
                     <div className="md:col-span-2">
                       <p className="font-medium">Description:</p>
-                      <p className="text-muted-foreground">{pitch.description || 'No description available'}</p>
+                      <p className="text-muted-foreground">
+                        {pitch.description || "No description available"}
+                      </p>
                     </div>
                     {pitch.services && (
                       <div className="md:col-span-2">
                         <p className="font-medium">Facilities:</p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {Object.entries(pitch.services)
-                            .filter(([key, value]) => key !== 'type' && value === true)
+                            .filter(
+                              ([key, value]) => key !== "type" && value === true
+                            )
                             .map(([facility]) => (
-                              <Badge key={facility} variant="outline" className="text-xs">
-                                {facility.replace('_', ' ')}
+                              <Badge
+                                key={facility}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {facility.replace("_", " ")}
                               </Badge>
                             ))}
                         </div>
