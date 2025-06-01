@@ -28,8 +28,8 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
 
   useEffect(() => {
     const fetchWaitingListPlayers = async () => {
-      // Handle both backend format (waitList) and frontend format (waitingList)
-      const waitList = (reservation as any).waitList || reservation.waitingList || [];
+      // Handle waitList format consistently
+      const waitList = (reservation as any).waitList || [];
       
       console.log('Raw waitList from reservation:', waitList);
       console.log('Reservation object:', reservation);
@@ -90,8 +90,8 @@ const WaitingListDisplay: React.FC<WaitingListDisplayProps> = ({
     fetchWaitingListPlayers();
   }, [reservation, toast]);
 
-  // Get waitList from both possible formats
-  const waitList = (reservation as any).waitList || reservation.waitingList || [];
+  // Get waitList consistently
+  const waitList = (reservation as any).waitList || [];
   
   console.log('Final waitList for display:', waitList);
   console.log('Processed waiting players:', waitingPlayers);
