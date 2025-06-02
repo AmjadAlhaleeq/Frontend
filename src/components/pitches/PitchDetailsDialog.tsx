@@ -64,9 +64,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
     .filter(([key, value]) => key !== "type" && value === true)
     .map(([key]) => key);
 
-  const googleMapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-    address
-  )}`;
+  const googleMapsUrl = address;
 
   const getFacilityIcon = (facilityName: string): JSX.Element => {
     const lower = facilityName.toLowerCase();
@@ -219,12 +217,15 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                 <div className="flex items-center p-4 bg-green-50 rounded-lg">
                   <Badge
                     className={`text-lg px-3 py-1 ${
-                      typeof pitch.services?.type === 'string' && pitch.services.type.toLowerCase() === "indoor"
+                      typeof pitch.services?.type === "string" &&
+                      pitch.services.type.toLowerCase() === "indoor"
                         ? "bg-purple-600 hover:bg-purple-700"
                         : "bg-green-600 hover:bg-green-700"
                     }`}
                   >
-                    {typeof pitch.services?.type === 'string' ? pitch.services.type : "Pitch Type"}
+                    {typeof pitch.services?.type === "string"
+                      ? pitch.services.type
+                      : "Pitch Type"}
                   </Badge>
                 </div>
               </div>
