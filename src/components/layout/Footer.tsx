@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   Facebook,
@@ -24,7 +23,7 @@ const Footer = () => {
     // Open Gmail compose window with company email
     const companyEmail = "bookitandkickit@gmail.com";
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${companyEmail}&su=Contact%20from%20BOKIT%20Website`;
-    window.open(gmailUrl, '_blank');
+    window.open(gmailUrl, "_blank");
   };
 
   return (
@@ -37,16 +36,23 @@ const Footer = () => {
               <Logo height={145} />
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 max-w-sm">
-              BOKIT is the premier platform for football pitch reservations, connecting players with the best pitches in your area.
+              BOKIT is the premier platform for football pitch reservations,
+              connecting players with the best pitches in your area.
             </p>
             <div className="flex space-x-4 pt-2 justify-center md:justify-start">
-              <SocialLink href="#" aria-label="Facebook">
+              <SocialLink
+                href="https://www.facebook.com/"
+                aria-label="Facebook"
+              >
                 <Facebook size={20} />
               </SocialLink>
-              <SocialLink href="#" aria-label="Twitter">
+              <SocialLink href="https://x.com/" aria-label="Twitter">
                 <Twitter size={20} />
               </SocialLink>
-              <SocialLink href="#" aria-label="Instagram">
+              <SocialLink
+                href="https://www.instagram.com/"
+                aria-label="Instagram"
+              >
                 <Instagram size={20} />
               </SocialLink>
             </div>
@@ -73,7 +79,7 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-start justify-center md:justify-start">
                 <Mail className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3 flex-shrink-0" />
-                <button 
+                <button
                   onClick={handleEmailClick}
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors text-left"
                 >
@@ -85,7 +91,7 @@ const Footer = () => {
               </div>
               <div className="flex items-start justify-center md:justify-start">
                 <Phone className="h-5 w-5 text-[#0F766E] dark:text-[#34d399] mt-1 me-3 flex-shrink-0" />
-                <a 
+                <a
                   href="tel:+962795016133"
                   className="text-gray-600 dark:text-gray-400 hover:text-[#0F766E] dark:hover:text-[#34d399] transition-colors"
                 >

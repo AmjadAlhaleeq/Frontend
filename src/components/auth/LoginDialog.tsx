@@ -363,7 +363,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
       lastName &&
       age &&
       city &&
-      favoritePosition &&
       phoneNumber &&
       signUpEmail &&
       signUpPassword &&
@@ -406,7 +405,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
         password: signUpPassword,
         phone: phoneNumber,
         city,
-        preferredPosition: favoritePosition,
+        preferredPosition: favoritePosition || " ",
         age: parseInt(age),
         bio: bio || `I love football and play from ${city}.`,
         profilePicture: "",
@@ -682,7 +681,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({
             placeholder="Midfielder"
             className="border-gray-300 focus:border-bokit-500 focus:ring-bokit-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
             disabled={isProcessing}
-            required
           />
         </div> */}
         <div className="space-y-1">

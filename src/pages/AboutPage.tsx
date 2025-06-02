@@ -87,8 +87,8 @@ const AboutPage = () => {
           />
           <FeatureCard
             icon={<Shield className="h-8 w-8 text-[#0F766E]" />}
-            title="Secure Payments"
-            description="Pay for your bookings securely through our integrated payment system."
+            title="Payments"
+            description="Pay for your bookings. Our admin team handles all payment processing."
           />
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Star, Users, Shield, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -44,11 +43,11 @@ const Home: React.FC<HomeProps> = ({ isFirstTimeLogin = false }) => {
         <div className="absolute inset-0 bg-black/60" />
         <div className="container mx-auto px-4 text-center relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
-            Book Football Pitches{" "}
-            <span className="text-bokit-400">Instantly</span>
+            Your Game Just A <span className="text-bokit-400">Click Away</span>
           </h1>
           <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-200">
-            Find and reserve the best football pitches in your area, connect with players, and track your progress.
+            Find and reserve the best football pitches in your area, connect
+            with players, and track your progress.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button
@@ -73,9 +72,7 @@ const Home: React.FC<HomeProps> = ({ isFirstTimeLogin = false }) => {
       {/* Features Section */}
       <section className="py-16 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Our Services
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Our Services</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard
@@ -95,13 +92,13 @@ const Home: React.FC<HomeProps> = ({ isFirstTimeLogin = false }) => {
             />
             <FeatureCard
               icon={<Star className="h-10 w-10 text-[#0F766E]" />}
-              title="Rate & Review"
-              description="Share your experience by rating pitches and helping other players find the best venues."
+              title="Profile"
+              description="Show and edit your profile using our profile personalization system"
             />
             <FeatureCard
               icon={<Shield className="h-10 w-10 text-[#0F766E]" />}
-              title="Secure Payments"
-              description="Pay securely for your bookings. Our admin team handles all payment processing."
+              title="Payments"
+              description="Pay for your bookings. Our admin team handles all payment processing."
             />
             <FeatureCard
               icon={<Trophy className="h-10 w-10 text-[#0F766E]" />}
@@ -115,9 +112,7 @@ const Home: React.FC<HomeProps> = ({ isFirstTimeLogin = false }) => {
       {/* How It Works Section */}
       <section className="py-16 bg-gray-50 dark:bg-gray-800">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            How It Works
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <StepCard
@@ -144,7 +139,8 @@ const Home: React.FC<HomeProps> = ({ isFirstTimeLogin = false }) => {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6">Ready to Play?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of football enthusiasts who are using BOKIT to find and book pitches.
+            Join thousands of football enthusiasts who are using BOKIT to find
+            and book pitches.
           </p>
           <Button
             asChild
