@@ -125,14 +125,8 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
             <DialogDescription>
               <div className="flex items-center mt-2 mb-4">
                 <MapPin className="h-5 w-5 text-gray-500 mr-2" />
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-base text-gray-600 hover:underline hover:text-teal-600"
-                >
-                  {pitch.location}
-                </a>
+
+                {pitch.city}
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -207,7 +201,7 @@ const PitchDetailsDialog: React.FC<PitchDetailsDialogProps> = ({
                       rel="noopener noreferrer"
                       className="text-gray-600 hover:underline hover:text-blue-600"
                     >
-                      {address}
+                      {"click here to see directions"}
                     </a>
                   </div>
                 </div>

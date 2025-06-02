@@ -95,7 +95,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   let formattedDate = "Invalid Date";
   try {
     if (localReservation.date) {
-      formattedDate = format(parseISO(localReservation.date), "EEEE, MMMM d, yyyy");
+      formattedDate = format(
+        parseISO(localReservation.date),
+        "EEEE, MMMM d, yyyy"
+      );
     }
   } catch (error) {
     console.error("Error formatting date:", error);
@@ -104,7 +107,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
   const getCardImage = () => {
     if (pitchImage) return pitchImage;
-    if (localReservation.backgroundImage) return localReservation.backgroundImage;
+    if (localReservation.backgroundImage)
+      return localReservation.backgroundImage;
     return `https://source.unsplash.com/800x400/?football,pitch,${encodeURIComponent(
       localReservation.pitchName || "football"
     )
@@ -168,16 +172,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       await kickPlayerApi(reservationIdToUse, playerId, reason, suspensionDays);
 
       // Update local state to remove the player immediately
-      setLocalReservation(prev => ({
+      setLocalReservation((prev) => ({
         ...prev,
-        lineup: prev.lineup?.filter(player => player.userId !== playerId) || []
+        lineup:
+          prev.lineup?.filter((player) => player.userId !== playerId) || [],
       }));
 
       toast({
         title: "Player Kicked",
         description: `${kickDialog?.playerName} was removed and suspended.`,
       });
-
     } catch (error: any) {
       console.error("Error in confirmKickPlayer:", error);
       toast({
@@ -192,7 +196,10 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   };
 
   const renderHighlights = () => {
-    if (!localReservation.highlights || localReservation.highlights.length === 0) {
+    if (
+      !localReservation.highlights ||
+      localReservation.highlights.length === 0
+    ) {
       return (
         <div className="text-center p-4 text-muted-foreground">
           <p>No highlights recorded for this game</p>
@@ -278,7 +285,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
             </div>
 
-            {canKickPlayers && (
+            {isAdmin && !canKickPlayers && (
               <LoadingButton
                 variant="outline"
                 size="sm"
